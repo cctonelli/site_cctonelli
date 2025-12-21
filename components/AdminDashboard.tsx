@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
-import ReactQuill from 'react-quill';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { 
   fetchPendingTestimonials, approveTestimonial, 
   updateSiteContent, fetchMetrics, fetchInsights,
@@ -9,6 +8,9 @@ import {
   uploadInsightImage
 } from '../services/supabaseService';
 import { Testimonial, Metric, Insight, Product } from '../types';
+
+// Safe dynamic import for ReactQuill which can be finicky in ESM environments
+const ReactQuill = lazy(() => import('react-quill'));
 
 const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'content' | 'testimonials' | 'metrics' | 'store' | 'insights'>('content');
@@ -42,16 +44,20 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   useEffect(() => {
     const loadAdminData = async () => {
-      const [t, m, p, i] = await Promise.all([
-        fetchPendingTestimonials().catch(() => []),
-        fetchMetrics().catch(() => []),
-        fetchProducts().catch(() => []),
-        fetchInsights().catch(() => [])
-      ]);
-      setPendingTestimonials(t);
-      setMetrics(m);
-      setProducts(p);
-      setInsights(i);
+      try {
+        const [t, m, p, i] = await Promise.all([
+          fetchPendingTestimonials().catch(() => []),
+          fetchMetrics().catch(() => []),
+          fetchProducts().catch(() => []),
+          fetchInsights().catch(() => [])
+        ]);
+        setPendingTestimonials(t);
+        setMetrics(m);
+        setProducts(p);
+        setInsights(i);
+      } catch (err) {
+        console.error("Admin data load error", err);
+      }
     };
     loadAdminData();
   }, []);
@@ -214,8 +220,14 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
                 <div className="space-y-4">
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">Conteúdo Rico</label>
-                  <div className="bg-slate-950/50 rounded-xl overflow-hidden border border-white/10">
-                    <ReactQuill theme="snow" value={newInsight.content || ''} onChange={(c) => setNewInsight({...newInsight, content: c})} />
+                  <div className="bg-slate-950/50 rounded-xl overflow-hidden border border-white/10 min-h-[300px]">
+                    <Suspense fallback={<div className="p-12 text-center text-slate-500 italic">Carregando editor...</div>}>
+                      <ReactQuill 
+                        theme="snow" 
+                        value={newInsight.content || ''} 
+                        onChange={(c) => setNewInsight({...newInsight, content: c})} 
+                      />
+                    </Suspense>
                   </div>
                 </div>
 
