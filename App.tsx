@@ -3,21 +3,46 @@ import React, { useEffect, useState } from 'react';
 import Navbar from './components/Navbar';
 import ThreeGlobe from './components/ThreeGlobe';
 import ChatBot from './components/ChatBot';
-import { fetchMetrics, fetchInsights } from './services/supabaseService';
-import { Metric, Insight } from './types';
+import ProductsSection from './components/ProductsSection';
+import TestimonialsSection from './components/TestimonialsSection';
+import { fetchMetrics, fetchInsights, fetchProducts, fetchTestimonials } from './services/supabaseService';
+import { Metric, Insight, Product, Testimonial } from './types';
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
-      const [m, i] = await Promise.all([fetchMetrics(), fetchInsights()]);
+      const [m, i, p, t] = await Promise.all([
+        fetchMetrics(), 
+        fetchInsights(),
+        fetchProducts(),
+        fetchTestimonials()
+      ]);
       setMetrics(m);
       setInsights(i);
+      setProducts(p);
+      setTestimonials(t);
     };
     loadData();
-  }, []);
+
+    // Intersection Observer for reveal animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    const revealElements = document.querySelectorAll('.reveal');
+    revealElements.forEach(el => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [insights, products]); // Re-run when data loads to catch new elements
 
   return (
     <div className="relative min-h-screen selection:bg-blue-500/30">
@@ -32,21 +57,21 @@ const App: React.FC = () => {
         <div className="container mx-auto px-6 relative z-10 grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div className="inline-block px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-xs font-bold uppercase tracking-widest animate-pulse">
-              Consultoria de Alto Impacto
+              Consultoria Estratégica 2025
             </div>
             <h1 className="text-6xl md:text-8xl font-serif leading-tight">
               Estratégia <br />
               <span className="italic text-slate-400">Inesquecível.</span>
             </h1>
             <p className="text-xl text-slate-400 max-w-lg leading-relaxed font-light">
-              Transformamos dados em decisões críticas. Da visão à execução, elevamos sua consultoria para o patamar global através de tecnologia e expertise humana.
+              Elevando o C-Level através de inteligência artificial, design imersivo e resultados exponenciais. Bem-vindo à nova era da Claudio Tonelli Consultoria.
             </p>
             <div className="flex flex-wrap gap-4 pt-4">
-              <button className="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded-lg font-bold transition-all shadow-xl shadow-blue-600/20">
-                Começar Jornada
+              <button className="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded-lg font-bold transition-all shadow-xl shadow-blue-600/20 btn-premium">
+                Agendar Consulta
               </button>
               <button className="bg-transparent border border-white/20 hover:bg-white/5 px-8 py-4 rounded-lg font-bold transition-all">
-                Ver Portfólio
+                Nossa Metodologia
               </button>
             </div>
           </div>
@@ -54,7 +79,7 @@ const App: React.FC = () => {
 
         {/* Scroll Indicator */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-slate-500">
-          <span className="text-[10px] uppercase tracking-[0.3em]">Explore</span>
+          <span className="text-[10px] uppercase tracking-[0.3em]">Arraste para baixo</span>
           <div className="w-[1px] h-12 bg-gradient-to-b from-blue-500 to-transparent"></div>
         </div>
       </section>
@@ -64,7 +89,7 @@ const App: React.FC = () => {
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
             {metrics.map((m) => (
-              <div key={m.id} className="text-center group">
+              <div key={m.id} className="text-center group reveal">
                 <div className="text-5xl font-bold mb-2 text-white group-hover:text-blue-500 transition-colors">
                   {m.value}{m.suffix}
                 </div>
@@ -80,17 +105,17 @@ const App: React.FC = () => {
         </div>
       </section>
 
-      {/* Insights / Scrollytelling Section */}
+      {/* Insights Section */}
       <section id="insights" className="py-32 bg-slate-900/50">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-            <div className="max-w-xl">
+            <div className="max-w-xl reveal">
               <h2 className="text-4xl font-serif mb-4">Insights de Futuro</h2>
               <p className="text-slate-400 font-light">
                 Análises exclusivas sobre as tendências que estão redefinindo o mercado global e as indústrias em transformação.
               </p>
             </div>
-            <button className="text-blue-400 text-sm font-bold uppercase tracking-widest hover:text-blue-300 transition-colors flex items-center gap-2">
+            <button className="text-blue-400 text-sm font-bold uppercase tracking-widest hover:text-blue-300 transition-colors flex items-center gap-2 reveal">
               Ver Todos os Artigos
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -100,7 +125,7 @@ const App: React.FC = () => {
 
           <div className="grid md:grid-cols-3 gap-8">
             {insights.map((insight) => (
-              <article key={insight.id} className="group cursor-pointer">
+              <article key={insight.id} className="group cursor-pointer reveal">
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-6">
                   <img 
                     src={insight.imageUrl} 
@@ -130,18 +155,24 @@ const App: React.FC = () => {
         </div>
       </section>
 
+      {/* Products & Services Section */}
+      <ProductsSection products={products} />
+
+      {/* Testimonials Section */}
+      <TestimonialsSection testimonials={testimonials} />
+
       {/* CTA Section */}
       <section className="py-32 bg-gradient-to-b from-slate-900 to-slate-950">
         <div className="container mx-auto px-6 text-center">
-          <div className="max-w-3xl mx-auto space-y-10">
+          <div className="max-w-3xl mx-auto space-y-10 reveal">
             <h2 className="text-5xl font-serif leading-tight">
-              Pronto para elevar o nível da sua consultoria?
+              Pronto para elevar o nível da sua operação?
             </h2>
             <p className="text-xl text-slate-400 font-light">
-              Junte-se às empresas que já estão construindo o futuro com a Claudio Tonelli Consultoria. Soluções personalizadas para desafios complexos.
+              Estamos prontos para desenhar o seu próximo capítulo de sucesso. Fale com um de nossos consultores seniores hoje.
             </p>
             <div className="pt-6">
-              <button className="bg-white text-slate-950 px-12 py-5 rounded-full font-bold text-lg hover:bg-blue-600 hover:text-white transition-all shadow-2xl shadow-white/5">
+              <button className="bg-white text-slate-950 px-12 py-5 rounded-full font-bold text-lg hover:bg-blue-600 hover:text-white transition-all shadow-2xl shadow-white/5 btn-premium">
                 Solicitar Diagnóstico Estratégico
               </button>
             </div>
@@ -167,10 +198,10 @@ const App: React.FC = () => {
             <div>
               <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-slate-300">Navegação</h4>
               <ul className="space-y-4 text-sm text-slate-500">
-                <li><a href="#" className="hover:text-blue-400">Home</a></li>
-                <li><a href="#" className="hover:text-blue-400">Serviços</a></li>
-                <li><a href="#" className="hover:text-blue-400">Insights</a></li>
-                <li><a href="#" className="hover:text-blue-400">Metodologia</a></li>
+                <li><a href="#hero" className="hover:text-blue-400">Home</a></li>
+                <li><a href="#products" className="hover:text-blue-400">Serviços</a></li>
+                <li><a href="#insights" className="hover:text-blue-400">Insights</a></li>
+                <li><a href="#contact" className="hover:text-blue-400">Metodologia</a></li>
               </ul>
             </div>
             <div>
@@ -179,7 +210,6 @@ const App: React.FC = () => {
                 <li><a href="#" className="hover:text-blue-400">LinkedIn</a></li>
                 <li><a href="#" className="hover:text-blue-400">Instagram</a></li>
                 <li><a href="#" className="hover:text-blue-400">Twitter (X)</a></li>
-                <li><a href="#" className="hover:text-blue-400">Medium</a></li>
               </ul>
             </div>
           </div>
