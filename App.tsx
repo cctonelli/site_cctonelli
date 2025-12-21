@@ -19,7 +19,7 @@ import {
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// Mock Data for Demo Mode
+// Fallback Data
 const MOCK_INSIGHTS: Insight[] = [
   { id: '1', title: 'A Era da IA Generativa na Gestão', excerpt: 'Como CEOs estão redefinindo prioridades estratégicas.', content: '', category: 'ESTRATÉGIA', image_url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80', published_at: new Date().toISOString(), is_active: true, display_order: 1, link: '' },
   { id: '2', title: 'Sustentabilidade como Vantagem', excerpt: 'ESG não é mais opcional, é o motor da nova economia.', content: '', category: 'ESG', image_url: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80', published_at: new Date().toISOString(), is_active: true, display_order: 2, link: '' },
@@ -65,7 +65,6 @@ const HomePage: React.FC = () => {
   const loadAllData = async () => {
     try {
       setLoading(true);
-      
       if (supabase) {
         const [m, i, p, test, s, car, user] = await Promise.all([
           fetchMetrics(),
@@ -105,7 +104,7 @@ const HomePage: React.FC = () => {
     loadAllData();
   }, []);
 
-  // Carousel transition effect
+  // Carousel loop
   useEffect(() => {
     if (carouselImages.length <= 1) return;
     const interval = setInterval(() => {
@@ -113,18 +112,6 @@ const HomePage: React.FC = () => {
     }, 8000);
     return () => clearInterval(interval);
   }, [carouselImages]);
-
-  useEffect(() => {
-    if (loading) return;
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) entry.target.classList.add('active');
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-    return () => observer.disconnect();
-  }, [loading, insights]);
 
   const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || content['home.hero.title.pt'] || t.hero_title, [content, language, t.hero_title]);
   const heroSubtitle = useMemo(() => content[`home.hero.subtitle.${language}`] || content['home.hero.subtitle.pt'] || t.hero_subtitle, [content, language, t.hero_subtitle]);

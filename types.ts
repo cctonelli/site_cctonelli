@@ -62,6 +62,7 @@ export interface Profile {
   gender: string | null;
   whatsapp: string | null;
   user_type: 'client' | 'admin';
+  created_at?: string;
 }
 
 export interface SiteContent {
