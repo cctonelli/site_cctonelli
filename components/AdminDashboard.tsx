@@ -9,7 +9,7 @@ import {
 } from '../services/supabaseService';
 import { Testimonial, Metric, Insight, Product } from '../types';
 
-// Safe dynamic import for ReactQuill which can be finicky in ESM environments
+// Safe dynamic import for the React 19 compatible editor
 const ReactQuill = lazy(() => import('react-quill'));
 
 const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -225,7 +225,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       <ReactQuill 
                         theme="snow" 
                         value={newInsight.content || ''} 
-                        onChange={(c) => setNewInsight({...newInsight, content: c})} 
+                        onChange={(c: string) => setNewInsight({...newInsight, content: c})} 
                       />
                     </Suspense>
                   </div>
