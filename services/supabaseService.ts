@@ -25,7 +25,7 @@ export const signUp = async (email: string, password?: string, metadata?: any) =
   if (!supabase) return null;
   const { data, error } = await supabase.auth.signUp({
     email,
-    password: password || 'default-secure-pass', // In a real app, users provide this
+    password: password || 'default-secure-pass',
     options: { data: metadata }
   });
   if (error) logSecureError('SignUp', error);
@@ -90,6 +90,19 @@ export const fetchInsights = async (): Promise<Insight[]> => {
     if (error) throw error;
     return data || [];
   } catch (e) { logSecureError('Insights', e); return []; }
+};
+
+export const fetchInsightById = async (id: string): Promise<Insight | null> => {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('insights')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (e) { logSecureError('InsightDetail', e); return null; }
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
@@ -173,6 +186,38 @@ export const updateSiteContent = async (key: string, value: string): Promise<boo
     if (error) throw error;
     return true;
   } catch (e) { logSecureError('UpdateContent', e); return false; }
+};
+
+// --- CMS MANAGEMENT ---
+export const addInsight = async (insight: Omit<Insight, 'id' | 'published_at'>): Promise<Insight | null> => {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('insights')
+      .insert([{ ...insight, published_at: new Date().toISOString() }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (e) { logSecureError('AddInsight', e); return null; }
+};
+
+export const updateInsightLink = async (id: string, link: string): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('insights').update({ link }).eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (e) { logSecureError('UpdateInsightLink', e); return false; }
+};
+
+export const deleteInsight = async (id: string): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('insights').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (e) { logSecureError('DeleteInsight', e); return false; }
 };
 
 // --- STORE MANAGEMENT ---

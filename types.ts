@@ -21,6 +21,8 @@ export interface Insight {
   id: string;
   title: string;
   excerpt: string | null;
+  content: string | null;
+  category?: string;
   image_url: string | null;
   link: string | null;
   published_at: string;
