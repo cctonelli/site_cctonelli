@@ -20,6 +20,26 @@ const logSecureError = (context: string, error: any) => {
   }
 };
 
+// --- AUTHENTICATION ---
+export const signIn = async (email: string) => {
+  if (!supabase) return null;
+  // Use OTP (Magic Link) or simple password for demo
+  const { data, error } = await supabase.auth.signInWithOtp({ email });
+  if (error) logSecureError('SignIn', error);
+  return { data, error };
+};
+
+export const signOut = async () => {
+  if (!supabase) return;
+  await supabase.auth.signOut();
+};
+
+export const getCurrentUser = async () => {
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+};
+
 // --- DATA FETCHING ---
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   if (!supabase) return [];
@@ -103,7 +123,7 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, str
   } catch (e) { logSecureError('SiteContent', e); return {}; }
 };
 
-// --- ADMINISTRATIVE & AUTH ---
+// --- ADMINISTRATIVE & PROFILES ---
 export const getProfile = async (userId: string): Promise<Profile | null> => {
   if (!supabase) return null;
   try {

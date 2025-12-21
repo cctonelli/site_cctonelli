@@ -7,11 +7,13 @@ import ProductsSection from './components/ProductsSection';
 import TestimonialsSection from './components/TestimonialsSection';
 import ContactForm from './components/ContactForm';
 import AdminDashboard from './components/AdminDashboard';
+import ClientPortal from './components/ClientPortal';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
-  fetchTestimonials, fetchCarouselImages, fetchSiteContent 
+  fetchTestimonials, fetchCarouselImages, fetchSiteContent,
+  getCurrentUser, getProfile
 } from './services/supabaseService';
-import { Metric, Insight, Product, Testimonial, CarouselImage } from './types';
+import { Metric, Insight, Product, Testimonial, CarouselImage, Profile } from './types';
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -21,25 +23,38 @@ const App: React.FC = () => {
   const [carousel, setCarousel] = useState<CarouselImage[]>([]);
   const [content, setContent] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  
+  // UI States
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
+  
+  // Auth State
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     const loadAllData = async () => {
       try {
-        const [m, i, p, t, c, s] = await Promise.all([
+        const [m, i, p, t, c, s, user] = await Promise.all([
           fetchMetrics(),
           fetchInsights(),
           fetchProducts(),
           fetchTestimonials(),
           fetchCarouselImages(),
-          fetchSiteContent('home')
+          fetchSiteContent('home'),
+          getCurrentUser()
         ]);
+        
         setMetrics(m);
         setInsights(i);
         setProducts(p);
         setTestimonials(t);
         setCarousel(c);
         setContent(s);
+
+        if (user) {
+          const profile = await getProfile(user.id);
+          setUserProfile(profile);
+        }
       } catch (err) {
         console.error("App: Fatal data loading error", err);
       } finally {
@@ -47,37 +62,51 @@ const App: React.FC = () => {
       }
     };
     loadAllData();
-  }, [isAdminOpen]); // Reload data when admin panel closes
+  }, [isAdminOpen, isClientPortalOpen]);
 
   useEffect(() => {
     if (loading) return;
-
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('active');
-        }
+        if (entry.isIntersecting) entry.target.classList.add('active');
       });
     }, { threshold: 0.15 });
 
     const setupObserver = () => {
-      const revealElements = document.querySelectorAll('.reveal');
-      revealElements.forEach(el => observer.observe(el));
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
     };
 
     const timeout = setTimeout(setupObserver, 200);
-    return () => {
-      clearTimeout(timeout);
-      observer.disconnect();
-    };
+    return () => { clearTimeout(timeout); observer.disconnect(); };
   }, [loading, insights, products]);
 
   const heroTitle = useMemo(() => content['home.hero.title'] || 'Estratégia Inesquecível.', [content]);
   const heroSubtitle = useMemo(() => content['home.hero.subtitle'] || 'Redefinindo o futuro corporativo através de excelência operacional e inteligência estratégica.', [content]);
 
+  const handleAreaClick = () => {
+    if (!userProfile) {
+      // For demo purposes, we auto-assign a mock profile if not found
+      // Real app would redirect to login
+      const mockProfile: Profile = {
+        id: '123',
+        full_name: 'Executivo de Vanguarda',
+        cpf_cnpj: '00.000.000/0001-91',
+        gender: 'Outro',
+        whatsapp: '+55 11 99999-9999',
+        user_type: 'client'
+      };
+      setUserProfile(mockProfile);
+      setIsClientPortalOpen(true);
+    } else if (userProfile.user_type === 'admin') {
+      setIsAdminOpen(true);
+    } else {
+      setIsClientPortalOpen(true);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-[#030712] z-[100] flex flex-col items-center justify-center transition-opacity duration-1000">
+      <div className="fixed inset-0 bg-[#030712] z-[100] flex flex-col items-center justify-center">
         <div className="w-16 h-16 border-t-2 border-blue-500 rounded-full animate-spin mb-6"></div>
         <div className="text-sm tracking-[0.4em] uppercase font-bold text-slate-500 animate-pulse">
           Claudio Tonelli Consultoria
@@ -88,9 +117,16 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen">
-      <Navbar onAdminClick={() => setIsAdminOpen(true)} />
+      <Navbar onAdminClick={handleAreaClick} userProfile={userProfile} />
 
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
+      {isClientPortalOpen && userProfile && (
+        <ClientPortal 
+          profile={userProfile} 
+          products={products} 
+          onClose={() => setIsClientPortalOpen(false)} 
+        />
+      )}
 
       {/* Hero Section */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
@@ -136,14 +172,12 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Scroll Indicator */}
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 text-slate-600">
           <span className="text-[9px] uppercase tracking-[0.5em] font-bold">Explorar Experiência</span>
           <div className="w-[1px] h-16 bg-gradient-to-b from-blue-500 to-transparent"></div>
         </div>
       </section>
 
-      {/* Metrics Section */}
       {metrics.length > 0 && (
         <section id="metrics" className="py-32 bg-[#050a18] border-y border-white/5 relative overflow-hidden">
           <div className="absolute inset-0 bg-blue-500/5 blur-[120px] -translate-x-1/2"></div>
@@ -164,7 +198,6 @@ const App: React.FC = () => {
         </section>
       )}
 
-      {/* Insights Section */}
       {insights.length > 0 && (
         <section id="insights" className="py-40 bg-slate-950">
           <div className="container mx-auto px-6">
@@ -217,16 +250,10 @@ const App: React.FC = () => {
         </section>
       )}
 
-      {/* Products & Services Section */}
       {products.length > 0 && <ProductsSection products={products} />}
-
-      {/* Testimonials Section */}
       {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} />}
-
-      {/* Contact Form Section */}
       <ContactForm />
 
-      {/* Footer */}
       <footer id="contact" className="py-32 border-t border-white/5 bg-[#010309] relative overflow-hidden">
         <div className="absolute bottom-0 right-0 w-1/3 h-1/2 bg-blue-600/5 blur-[150px] rounded-full"></div>
         <div className="container mx-auto px-6 relative z-10">
@@ -271,7 +298,6 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
-          
           <div className="flex flex-col md:flex-row justify-between items-center gap-8 pt-12 border-t border-white/5 text-[9px] text-slate-600 font-bold uppercase tracking-[0.5em]">
             <span>© 2025 Claudio Tonelli Group. Excellence in Advisory.</span>
             <div className="flex gap-12">

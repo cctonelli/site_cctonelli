@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
+import { Profile } from '../types';
 
 interface NavbarProps {
   onAdminClick: () => void;
+  userProfile: Profile | null;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onAdminClick }) => {
+const Navbar: React.FC<NavbarProps> = ({ onAdminClick, userProfile }) => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -38,9 +40,14 @@ const Navbar: React.FC<NavbarProps> = ({ onAdminClick }) => {
 
         <button 
           onClick={onAdminClick}
-          className="bg-white text-slate-950 px-8 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-white/5 active:scale-95"
+          className="bg-white text-slate-950 px-8 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-white/5 active:scale-95 flex items-center gap-3"
         >
-          Área do Cliente
+          {userProfile ? (
+            <>
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              {userProfile.user_type === 'admin' ? 'Painel Admin' : 'Meu Portal'}
+            </>
+          ) : 'Área do Cliente'}
         </button>
       </div>
     </nav>
