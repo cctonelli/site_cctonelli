@@ -23,7 +23,6 @@ const logSecureError = (context: string, error: any) => {
 // --- AUTHENTICATION ---
 export const signIn = async (email: string) => {
   if (!supabase) return null;
-  // Use OTP (Magic Link) or simple password for demo
   const { data, error } = await supabase.auth.signInWithOtp({ email });
   if (error) logSecureError('SignIn', error);
   return { data, error };
@@ -83,7 +82,10 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 export const fetchProducts = async (): Promise<Product[]> => {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase.from('products').select('*');
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   } catch (e) { logSecureError('Products', e); return []; }
@@ -146,6 +148,25 @@ export const updateSiteContent = async (key: string, value: string): Promise<boo
     if (error) throw error;
     return true;
   } catch (e) { logSecureError('UpdateContent', e); return false; }
+};
+
+// --- STORE MANAGEMENT ---
+export const addProduct = async (product: Omit<Product, 'id' | 'created_at'>): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('products').insert([product]);
+    if (error) throw error;
+    return true;
+  } catch (e) { logSecureError('AddProduct', e); return false; }
+};
+
+export const deleteProduct = async (id: string): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (e) { logSecureError('DeleteProduct', e); return false; }
 };
 
 export const fetchPendingTestimonials = async (): Promise<Testimonial[]> => {

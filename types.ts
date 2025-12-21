@@ -34,7 +34,12 @@ export interface Product {
   description: string | null;
   price: number;
   type: 'product' | 'service';
-  config: any;
+  config: {
+    url?: string;
+    image_url?: string;
+    action_label?: string;
+  };
+  created_at?: string;
 }
 
 export interface Testimonial {
