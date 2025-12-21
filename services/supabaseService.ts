@@ -13,16 +13,12 @@ export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
   : null;
 
 const logSecureError = (context: string, error: any) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.error(`[Internal Debug] ${context}:`, error);
-  } else {
-    console.warn(`Recurso [${context}] temporariamente indisponível.`);
-  }
+  console.error(`[Supabase ${context}] Error:`, error);
 };
 
 // --- AUTHENTICATION ---
 export const signUp = async (email: string, password?: string, metadata?: any) => {
-  if (!supabase) return null;
+  if (!supabase) return { data: null, error: new Error("Supabase not initialized") };
   const { data, error } = await supabase.auth.signUp({
     email,
     password: password || 'default-secure-pass',
@@ -33,7 +29,7 @@ export const signUp = async (email: string, password?: string, metadata?: any) =
 };
 
 export const signIn = async (email: string, password?: string) => {
-  if (!supabase) return null;
+  if (!supabase) return { data: null, error: new Error("Supabase not initialized") };
   const { data, error } = password 
     ? await supabase.auth.signInWithPassword({ email, password })
     : await supabase.auth.signInWithOtp({ email });
@@ -53,11 +49,15 @@ export const getCurrentUser = async () => {
 };
 
 // --- STORAGE ---
+/**
+ * Uploads an image to the 'insight-images' bucket.
+ * Make sure the bucket is created and set to PUBLIC in Supabase.
+ */
 export const uploadInsightImage = async (file: File): Promise<string | null> => {
   if (!supabase) return null;
   try {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `insights/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -78,19 +78,6 @@ export const uploadInsightImage = async (file: File): Promise<string | null> => 
 };
 
 // --- DATA FETCHING ---
-export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
-  if (!supabase) return [];
-  try {
-    const { data, error } = await supabase
-      .from('carousel_images')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-    if (error) throw error;
-    return data || [];
-  } catch (e) { logSecureError('Carousel', e); return []; }
-};
-
 export const fetchMetrics = async (): Promise<Metric[]> => {
   if (!supabase) return [];
   try {
@@ -174,6 +161,19 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, str
     if (error) throw error;
     return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
   } catch (e) { logSecureError('SiteContent', e); return {}; }
+};
+
+export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('carousel_images')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (e) { logSecureError('Carousel', e); return []; }
 };
 
 // --- ADMINISTRATIVE & PROFILES ---

@@ -52,14 +52,15 @@ const HomePage: React.FC = () => {
 
   const loadAllData = async () => {
     try {
+      console.log("App: Starting data fetch...");
       const [m, i, p, t_data, c, s, user] = await Promise.all([
-        fetchMetrics(),
-        fetchInsights(),
-        fetchProducts(),
-        fetchTestimonials(),
-        fetchCarouselImages(),
-        fetchSiteContent('home'),
-        getCurrentUser()
+        fetchMetrics().catch(() => []),
+        fetchInsights().catch(() => []),
+        fetchProducts().catch(() => []),
+        fetchTestimonials().catch(() => []),
+        fetchCarouselImages().catch(() => []),
+        fetchSiteContent('home').catch(() => ({})),
+        getCurrentUser().catch(() => null)
       ]);
       
       setMetrics(m);
@@ -75,10 +76,12 @@ const HomePage: React.FC = () => {
       } else {
         setUserProfile(null);
       }
+      console.log("App: Data fetched successfully.");
     } catch (err) {
       console.error("App: Fatal data loading error", err);
     } finally {
-      setTimeout(() => setLoading(false), 1200);
+      // Ensure the loader disappears even if some queries fail
+      setLoading(false);
     }
   };
 
@@ -234,7 +237,7 @@ const HomePage: React.FC = () => {
               {insights.map((insight) => (
                 <Link key={insight.id} to={`/insight/${insight.id}`} className="group cursor-pointer reveal">
                   <div className="relative aspect-[16/10] rounded-3xl overflow-hidden mb-8 shadow-2xl transition-all group-hover:shadow-blue-500/10 border border-slate-100 dark:border-white/5">
-                    <img src={insight.image_url || ''} alt={insight.title} className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-105" />
+                    <img src={insight.image_url || 'https://images.unsplash.com/photo-1454165833767-027ffea9e77b?auto=format&fit=crop&q=80'} alt={insight.title} className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
                     <div className="absolute top-6 left-6">
                       <span className="glass text-[9px] px-4 py-1.5 rounded-full uppercase tracking-widest font-bold text-white">{insight.category || 'ESTRATÉGIA'}</span>
@@ -258,7 +261,7 @@ const HomePage: React.FC = () => {
       <footer id="contact" className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] relative transition-colors duration-500">
         <div className="container mx-auto px-6 text-center">
           <div className="flex flex-col items-center gap-8">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white text-2xl">CT</div>
+            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white text-2xl shadow-xl shadow-blue-600/20">CT</div>
             <p className="text-slate-500 max-w-sm font-light leading-loose text-lg">{t.footer_desc}</p>
             <div className="text-[9px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-[0.5em]">{t.copyright}</div>
           </div>

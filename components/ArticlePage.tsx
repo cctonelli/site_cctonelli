@@ -32,7 +32,7 @@ const ArticlePage: React.FC = () => {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-6 p-6 text-center">
       <h1 className="text-4xl font-serif text-white">Artigo não encontrado.</h1>
       <p className="text-slate-500 max-w-md">O insight solicitado pode ter sido removido ou o link está incorreto.</p>
-      <Link to="/" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-widest text-xs">Voltar para Home</Link>
+      <Link to="/" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-blue-600/20">Voltar para Home</Link>
     </div>
   );
 
@@ -45,7 +45,7 @@ const ArticlePage: React.FC = () => {
             <span className="font-bold tracking-tighter dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">Claudio Tonelli</span>
           </Link>
           <div className="flex items-center gap-4">
-             <div className="hidden md:block text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">{article.category}</div>
+             <div className="hidden md:block text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400">{article.category || 'INSIGHT'}</div>
              <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-500 hover:text-blue-400">Voltar</Link>
           </div>
         </div>
@@ -60,9 +60,11 @@ const ArticlePage: React.FC = () => {
             <h1 className="text-5xl md:text-7xl font-serif dark:text-white text-slate-900 leading-[1.15]">
               {article.title}
             </h1>
-            <p className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 font-light italic max-w-2xl mx-auto leading-relaxed">
-              {article.excerpt}
-            </p>
+            {article.excerpt && (
+              <p className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 font-light italic max-w-2xl mx-auto leading-relaxed">
+                {article.excerpt}
+              </p>
+            )}
             <div className="flex items-center justify-center gap-4 pt-4">
                <div className="w-8 h-[1px] bg-slate-200 dark:bg-white/10"></div>
                <div className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-400">
@@ -98,11 +100,12 @@ const ArticlePage: React.FC = () => {
       </footer>
 
       <style>{`
-        .rich-text h2 { font-family: 'Playfair Display', serif; font-style: italic; font-size: 2.25rem; margin-top: 3rem; color: var(--tw-prose-headings); }
-        .rich-text p { margin-bottom: 2rem; }
+        .rich-text h2 { font-family: 'Playfair Display', serif; font-style: italic; font-size: 2.25rem; margin-top: 3.5rem; color: var(--tw-prose-headings); line-height: 1.2; border-bottom: 1px solid rgba(59, 130, 246, 0.2); padding-bottom: 0.5rem; }
+        .rich-text h3 { font-family: 'Playfair Display', serif; font-size: 1.75rem; margin-top: 2.5rem; color: var(--tw-prose-headings); }
+        .rich-text p { margin-bottom: 2rem; font-size: 1.125rem; }
         .rich-text strong { font-weight: 700; color: #3b82f6; }
-        .rich-text blockquote { border-left: 4px solid #3b82f6; padding-left: 2rem; font-style: italic; color: #94a3b8; margin: 3rem 0; }
-        .rich-text img { border-radius: 2rem; margin: 3rem 0; width: 100%; }
+        .rich-text blockquote { border-left: 4px solid #3b82f6; padding-left: 2.5rem; font-style: italic; color: #94a3b8; margin: 4rem 0; font-family: 'Playfair Display', serif; font-size: 1.5rem; }
+        .rich-text img { border-radius: 2.5rem; margin: 4rem 0; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
         .rich-text ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 2rem; }
         .rich-text li { margin-bottom: 0.75rem; }
       `}</style>
