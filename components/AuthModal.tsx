@@ -36,12 +36,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           whatsapp: whatsapp,
           gender: gender,
         });
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+          // Se houver erro, pode ser RLS ou campo faltando
+          throw new Error(signUpError.message || 'Falha na persistência dos dados do perfil.');
+        }
       }
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro inesperado.');
+      console.error("Auth Error:", err);
+      setError(err.message || 'Ocorreu um erro inesperado. Verifique as permissões do banco.');
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +147,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
               className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-700"
             />
 
-            {error && <p className="text-red-500 text-xs text-center font-bold tracking-tight">{error}</p>}
+            {error && <p className="text-red-500 text-xs text-center font-bold tracking-tight px-4">{error}</p>}
 
             <button 
               disabled={isLoading}

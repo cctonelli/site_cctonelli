@@ -5,10 +5,16 @@ import {
   Testimonial, Profile, Contact, CarouselImage
 } from '../types';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://wvvnbkzodrolbndepkgj.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
+// Fallback para as chaves fornecidas se as variáveis de ambiente falharem
+const SUPABASE_URL = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) || 'https://wvvnbkzodrolbndepkgj.supabase.co';
+const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 // --- AUTH & PROFILE ---
 export const signIn = async (email: string, password?: string) => {
@@ -18,7 +24,8 @@ export const signIn = async (email: string, password?: string) => {
 };
 
 export const signUp = async (email: string, password?: string, metadata?: Partial<Profile>) => {
-  const { data, error } = await supabase.auth.signUp({
+  // 1. Criar o usuário no Auth
+  const { data, error: authError } = await supabase.auth.signUp({
     email,
     password: password || 'temp-pass-123',
     options: { 
@@ -28,8 +35,11 @@ export const signUp = async (email: string, password?: string, metadata?: Partia
     }
   });
   
-  if (!error && data.user) {
-    // Alinhamento total com a tabela profiles do Supabase
+  if (authError) return { data: null, error: authError };
+  
+  if (data.user) {
+    // 2. Criar o perfil na tabela pública profiles
+    // Importante: O ID deve ser o mesmo do auth.users
     const { error: profileError } = await supabase.from('profiles').insert([{
       id: data.user.id,
       full_name: metadata?.full_name || '',
@@ -38,9 +48,15 @@ export const signUp = async (email: string, password?: string, metadata?: Partia
       whatsapp: metadata?.whatsapp || '',
       user_type: 'client'
     }]);
-    if (profileError) console.error("Erro ao criar perfil:", profileError);
+
+    if (profileError) {
+      console.error("Critical: Auth user created but profile insertion failed:", profileError);
+      // Retornamos o erro do perfil para que a UI saiba que algo falhou na persistência
+      return { data, error: profileError };
+    }
   }
-  return { data, error };
+
+  return { data, error: null };
 };
 
 export const signOut = async () => {
@@ -54,7 +70,10 @@ export const getCurrentUser = async () => {
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
-  if (error) return null;
+  if (error) {
+    console.error("Error fetching profile:", error);
+    return null;
+  }
   return data;
 };
 
@@ -63,7 +82,7 @@ export const updateProfile = async (id: string, profile: Partial<Profile>) => {
   return !error;
 };
 
-// --- DATA FETCHING ---
+// --- DATA FETCHING (DEMAIS TABELAS) ---
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   const { data, error } = await supabase
     .from('carousel_images')
