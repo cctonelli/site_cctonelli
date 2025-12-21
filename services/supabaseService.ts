@@ -13,7 +13,7 @@ export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
   : null;
 
 const logSecureError = (context: string, error: any) => {
-  console.error(`[Supabase ${context}] Error:`, error);
+  console.error(`[Supabase ${context}]`, error);
 };
 
 // --- AUTHENTICATION ---
@@ -49,10 +49,6 @@ export const getCurrentUser = async () => {
 };
 
 // --- STORAGE ---
-/**
- * Uploads an image to the 'insight-images' bucket.
- * Make sure the bucket is created and set to PUBLIC in Supabase.
- */
 export const uploadInsightImage = async (file: File): Promise<string | null> => {
   if (!supabase) return null;
   try {
@@ -61,7 +57,7 @@ export const uploadInsightImage = async (file: File): Promise<string | null> => 
     const filePath = `insights/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('insight-images')
+      .from('insight-images') // User must create this bucket and set to public
       .upload(filePath, file);
 
     if (uploadError) throw uploadError;
@@ -78,19 +74,6 @@ export const uploadInsightImage = async (file: File): Promise<string | null> => 
 };
 
 // --- DATA FETCHING ---
-export const fetchMetrics = async (): Promise<Metric[]> => {
-  if (!supabase) return [];
-  try {
-    const { data, error } = await supabase
-      .from('metrics')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-    if (error) throw error;
-    return data || [];
-  } catch (e) { logSecureError('Metrics', e); return []; }
-};
-
 export const fetchInsights = async (): Promise<Insight[]> => {
   if (!supabase) return [];
   try {
@@ -115,6 +98,19 @@ export const fetchInsightById = async (id: string): Promise<Insight | null> => {
     if (error) throw error;
     return data;
   } catch (e) { logSecureError('InsightDetail', e); return null; }
+};
+
+export const fetchMetrics = async (): Promise<Metric[]> => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('metrics')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (e) { logSecureError('Metrics', e); return []; }
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
@@ -142,13 +138,17 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   } catch (e) { logSecureError('Testimonials', e); return []; }
 };
 
-export const submitContact = async (contact: Contact): Promise<boolean> => {
-  if (!supabase) return false;
+export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
+  if (!supabase) return [];
   try {
-    const { error } = await supabase.from('contacts').insert([contact]);
+    const { data, error } = await supabase
+      .from('carousel_images')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
     if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('Contact Submit', e); return false; }
+    return data || [];
+  } catch (e) { logSecureError('Carousel', e); return []; }
 };
 
 export const fetchSiteContent = async (page: string): Promise<Record<string, string>> => {
@@ -163,20 +163,16 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, str
   } catch (e) { logSecureError('SiteContent', e); return {}; }
 };
 
-export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
-  if (!supabase) return [];
+export const submitContact = async (contact: Contact): Promise<boolean> => {
+  if (!supabase) return false;
   try {
-    const { data, error } = await supabase
-      .from('carousel_images')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
+    const { error } = await supabase.from('contacts').insert([contact]);
     if (error) throw error;
-    return data || [];
-  } catch (e) { logSecureError('Carousel', e); return []; }
+    return true;
+  } catch (e) { logSecureError('Contact Submit', e); return false; }
 };
 
-// --- ADMINISTRATIVE & PROFILES ---
+// --- PROFILE & ADMIN ---
 export const getProfile = async (userId: string): Promise<Profile | null> => {
   if (!supabase) return null;
   try {
@@ -213,7 +209,7 @@ export const updateSiteContent = async (key: string, value: string): Promise<boo
   } catch (e) { logSecureError('UpdateContent', e); return false; }
 };
 
-// --- CMS MANAGEMENT ---
+// --- CMS CRUD ---
 export const addInsight = async (insight: Omit<Insight, 'id' | 'published_at'>): Promise<Insight | null> => {
   if (!supabase) return null;
   try {
@@ -245,7 +241,6 @@ export const deleteInsight = async (id: string): Promise<boolean> => {
   } catch (e) { logSecureError('DeleteInsight', e); return false; }
 };
 
-// --- STORE MANAGEMENT ---
 export const addProduct = async (product: Omit<Product, 'id' | 'created_at'>): Promise<boolean> => {
   if (!supabase) return false;
   try {

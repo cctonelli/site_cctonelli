@@ -27,6 +27,7 @@ const HomePage: React.FC = () => {
   const [carousel, setCarousel] = useState<CarouselImage[]>([]);
   const [content, setContent] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [errorOccurred, setErrorOccurred] = useState(false);
   
   // Settings States
   const [language, setLanguage] = useState<Language>('pt');
@@ -52,36 +53,43 @@ const HomePage: React.FC = () => {
 
   const loadAllData = async () => {
     try {
-      console.log("App: Starting data fetch...");
-      const [m, i, p, t_data, c, s, user] = await Promise.all([
-        fetchMetrics().catch(() => []),
-        fetchInsights().catch(() => []),
-        fetchProducts().catch(() => []),
-        fetchTestimonials().catch(() => []),
-        fetchCarouselImages().catch(() => []),
-        fetchSiteContent('home').catch(() => ({})),
-        getCurrentUser().catch(() => null)
-      ]);
-      
-      setMetrics(m);
-      setInsights(i);
-      setProducts(p);
-      setTestimonials(t_data);
-      setCarousel(c);
-      setContent(s);
+      setLoading(true);
+      setErrorOccurred(false);
+      console.log("Initializing Claudio Tonelli Experience...");
 
-      if (user) {
-        const profile = await getProfile(user.id);
+      // Wrap calls in Promise.allSettled to prevent total failure if one table is empty
+      const results = await Promise.allSettled([
+        fetchMetrics(),
+        fetchInsights(),
+        fetchProducts(),
+        fetchTestimonials(),
+        fetchCarouselImages(),
+        fetchSiteContent('home'),
+        getCurrentUser()
+      ]);
+
+      const [m, i, p, test, c, s, userResult] = results;
+
+      if (m.status === 'fulfilled') setMetrics(m.value);
+      if (i.status === 'fulfilled') setInsights(i.value);
+      if (p.status === 'fulfilled') setProducts(p.value);
+      if (test.status === 'fulfilled') setTestimonials(test.value);
+      if (c.status === 'fulfilled') setCarousel(c.value);
+      if (s.status === 'fulfilled') setContent(s.value);
+
+      if (userResult.status === 'fulfilled' && userResult.value) {
+        const profile = await getProfile(userResult.value.id);
         setUserProfile(profile);
       } else {
         setUserProfile(null);
       }
-      console.log("App: Data fetched successfully.");
+      
     } catch (err) {
-      console.error("App: Fatal data loading error", err);
+      console.error("Critical error during app initialization:", err);
+      setErrorOccurred(true);
     } finally {
-      // Ensure the loader disappears even if some queries fail
-      setLoading(false);
+      // Small artificial delay for aesthetic transition
+      setTimeout(() => setLoading(false), 1000);
     }
   };
 
@@ -115,8 +123,13 @@ const HomePage: React.FC = () => {
     return () => { clearTimeout(timeout); observer.disconnect(); };
   }, [loading, insights, products]);
 
-  const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || t.hero_title, [content, language, t.hero_title]);
-  const heroSubtitle = useMemo(() => content[`home.hero.subtitle.${language}`] || t.hero_subtitle, [content, language, t.hero_subtitle]);
+  const heroTitle = useMemo(() => {
+    return content[`home.hero.title.${language}`] || t.hero_title;
+  }, [content, language, t.hero_title]);
+
+  const heroSubtitle = useMemo(() => {
+    return content[`home.hero.subtitle.${language}`] || t.hero_subtitle;
+  }, [content, language, t.hero_subtitle]);
 
   const handleAreaClick = () => {
     if (!userProfile) {
@@ -138,10 +151,24 @@ const HomePage: React.FC = () => {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-[#030712] z-[100] flex flex-col items-center justify-center">
-        <div className="w-16 h-16 border-t-2 border-blue-500 rounded-full animate-spin mb-6"></div>
-        <div className="text-sm tracking-[0.4em] uppercase font-bold text-slate-500 animate-pulse">
-          Claudio Tonelli Consultoria
+        <div className="relative w-24 h-24 mb-12">
+           <div className="absolute inset-0 border-t-2 border-blue-600 rounded-full animate-spin"></div>
+           <div className="absolute inset-2 border-t-2 border-slate-700 rounded-full animate-spin duration-[2000ms]"></div>
+           <div className="absolute inset-0 flex items-center justify-center font-bold text-blue-500 font-serif italic">CT</div>
         </div>
+        <div className="text-[10px] tracking-[0.5em] uppercase font-bold text-slate-500 animate-pulse text-center px-6">
+          Arquitetando Excelência Estratégica
+        </div>
+      </div>
+    );
+  }
+
+  if (errorOccurred) {
+    return (
+      <div className="fixed inset-0 bg-[#030712] z-[100] flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-4xl font-serif text-white mb-4">Serviço Temporariamente Indisponível</h1>
+        <p className="text-slate-500 max-w-md mb-8">Estamos realizando ajustes técnicos para garantir a melhor experiência. Por favor, retorne em breve.</p>
+        <button onClick={() => window.location.reload()} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-widest text-[10px]">Tentar Novamente</button>
       </div>
     );
   }
@@ -172,7 +199,7 @@ const HomePage: React.FC = () => {
 
       {/* Hero Section */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-60"><ThreeGlobe /></div>
+        <div className="absolute inset-0 z-0 opacity-40 dark:opacity-60"><ThreeGlobe /></div>
         <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-10 reveal active">
             <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-blue-500/5">
@@ -188,11 +215,11 @@ const HomePage: React.FC = () => {
             </h1>
             <p className="text-xl text-slate-600 dark:text-slate-400 max-w-lg leading-relaxed font-light border-l-2 border-blue-500/30 pl-6">{heroSubtitle}</p>
             <div className="flex flex-wrap gap-6 pt-4">
-              <a href="#contact-form" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-xl font-bold transition-all shadow-2xl shadow-blue-600/30 btn-premium group flex items-center gap-3">
+              <a href="#contact-form" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-xl font-bold transition-all shadow-2xl shadow-blue-600/30 btn-premium group flex items-center gap-3 active:scale-95">
                 {t.btn_diagnosis}
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
               </a>
-              <a href="#insights" className="glass px-10 py-5 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-white/10 flex items-center gap-3 dark:text-white text-slate-900">{t.btn_insights}</a>
+              <a href="#insights" className="glass px-10 py-5 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-white/10 flex items-center gap-3 dark:text-white text-slate-900 active:scale-95">{t.btn_insights}</a>
             </div>
           </div>
         </div>
@@ -226,9 +253,9 @@ const HomePage: React.FC = () => {
                 <p className="text-slate-500 dark:text-slate-400 font-light text-lg leading-relaxed">{t.insights_subtitle}</p>
               </div>
               <div className="reveal">
-                <button className="group dark:text-white text-slate-900 text-sm font-bold uppercase tracking-widest hover:text-blue-500 transition-colors flex items-center gap-4 pb-2 border-b border-slate-200 dark:border-white/10 hover:border-blue-500/50">
+                <button className="group dark:text-white text-slate-900 text-[10px] font-bold uppercase tracking-widest hover:text-blue-500 transition-colors flex items-center gap-4 pb-2 border-b border-slate-200 dark:border-white/10 hover:border-blue-500/50 transition-all">
                   {t.insights_all}
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                 </button>
               </div>
             </div>
@@ -240,7 +267,7 @@ const HomePage: React.FC = () => {
                     <img src={insight.image_url || 'https://images.unsplash.com/photo-1454165833767-027ffea9e77b?auto=format&fit=crop&q=80'} alt={insight.title} className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
                     <div className="absolute top-6 left-6">
-                      <span className="glass text-[9px] px-4 py-1.5 rounded-full uppercase tracking-widest font-bold text-white">{insight.category || 'ESTRATÉGIA'}</span>
+                      <span className="glass text-[9px] px-4 py-1.5 rounded-full uppercase tracking-widest font-bold text-white border border-white/10">{insight.category || 'ESTRATÉGIA'}</span>
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -262,7 +289,7 @@ const HomePage: React.FC = () => {
         <div className="container mx-auto px-6 text-center">
           <div className="flex flex-col items-center gap-8">
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white text-2xl shadow-xl shadow-blue-600/20">CT</div>
-            <p className="text-slate-500 max-w-sm font-light leading-loose text-lg">{t.footer_desc}</p>
+            <p className="text-slate-500 max-w-sm font-light leading-loose text-lg italic">{t.footer_desc}</p>
             <div className="text-[9px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-[0.5em]">{t.copyright}</div>
           </div>
         </div>
