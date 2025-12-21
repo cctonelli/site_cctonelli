@@ -52,6 +52,31 @@ export const getCurrentUser = async () => {
   return user;
 };
 
+// --- STORAGE ---
+export const uploadInsightImage = async (file: File): Promise<string | null> => {
+  if (!supabase) return null;
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `insights/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('insight-images')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('insight-images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  } catch (e) {
+    logSecureError('UploadImage', e);
+    return null;
+  }
+};
+
 // --- DATA FETCHING ---
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   if (!supabase) return [];
@@ -86,7 +111,7 @@ export const fetchInsights = async (): Promise<Insight[]> => {
       .from('insights')
       .select('*')
       .eq('is_active', true)
-      .order('display_order', { ascending: true });
+      .order('published_at', { ascending: false });
     if (error) throw error;
     return data || [];
   } catch (e) { logSecureError('Insights', e); return []; }

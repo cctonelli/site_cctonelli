@@ -5,7 +5,8 @@ import {
   fetchPendingTestimonials, approveTestimonial, 
   updateSiteContent, fetchMetrics, fetchInsights,
   fetchProducts, addProduct, deleteProduct,
-  addInsight, deleteInsight, updateInsightLink
+  addInsight, deleteInsight, updateInsightLink,
+  uploadInsightImage
 } from '../services/supabaseService';
 import { Testimonial, Metric, Insight, Product } from '../types';
 
@@ -16,6 +17,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [heroTitle, setHeroTitle] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State for new Insight
   const [newInsight, setNewInsight] = useState({
@@ -28,6 +30,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     display_order: 0,
     link: ''
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   // Form State for new Product
   const [newProduct, setNewProduct] = useState({
@@ -67,13 +70,32 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const handleAddInsight = async (e: React.FormEvent) => {
     e.preventDefault();
-    const createdInsight = await addInsight(newInsight);
-    if (createdInsight) {
-      const insightLink = `/insight/${createdInsight.id}`;
-      await updateInsightLink(createdInsight.id, insightLink);
-      alert('Artigo publicado com sucesso!');
-      setNewInsight({ title: '', excerpt: '', content: '', category: 'ESTRATÉGIA', image_url: '', is_active: true, display_order: 0, link: '' });
-      fetchInsights().then(setInsights);
+    setIsSubmitting(true);
+    try {
+      let finalImageUrl = newInsight.image_url;
+      
+      if (imageFile) {
+        const uploadedUrl = await uploadInsightImage(imageFile);
+        if (uploadedUrl) finalImageUrl = uploadedUrl;
+      }
+
+      const createdInsight = await addInsight({
+        ...newInsight,
+        image_url: finalImageUrl
+      });
+
+      if (createdInsight) {
+        const insightLink = `/insight/${createdInsight.id}`;
+        await updateInsightLink(createdInsight.id, insightLink);
+        alert('Artigo publicado com sucesso!');
+        setNewInsight({ title: '', excerpt: '', content: '', category: 'ESTRATÉGIA', image_url: '', is_active: true, display_order: 0, link: '' });
+        setImageFile(null);
+        fetchInsights().then(setInsights);
+      }
+    } catch (err) {
+      alert('Erro ao publicar artigo.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -111,7 +133,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           
           <nav className="flex flex-col gap-2">
             <button onClick={() => setActiveTab('content')} className={`text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'content' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-white/5'}`}>Geral</button>
-            <button onClick={() => setActiveTab('insights')} className={`text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'insights' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-white/5'}`}>Artigos</button>
+            <button onClick={() => setActiveTab('insights')} className={`text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'insights' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-white/5'}`}>Insights</button>
             <button onClick={() => setActiveTab('store')} className={`text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'store' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-white/5'}`}>Loja</button>
             <button onClick={() => setActiveTab('testimonials')} className={`text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'testimonials' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-white/5'}`}>Feedback</button>
           </nav>
@@ -139,12 +161,12 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
           {activeTab === 'insights' && (
             <div className="space-y-12 animate-in fade-in duration-500">
-              <h2 className="text-3xl font-serif italic text-white">Gerenciar Insights & Artigos</h2>
+              <h2 className="text-3xl font-serif italic text-white">Publicar Novo Insight</h2>
               
               <form onSubmit={handleAddInsight} className="bg-slate-800/50 border border-white/5 p-8 rounded-3xl space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Título do Artigo</label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Título</label>
                     <input required type="text" value={newInsight.title} onChange={e => setNewInsight({...newInsight, title: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
                   </div>
                   <div>
@@ -152,36 +174,64 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <input type="text" value={newInsight.category} onChange={e => setNewInsight({...newInsight, category: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Imagem de Capa (URL)</label>
-                  <input type="text" value={newInsight.image_url} onChange={e => setNewInsight({...newInsight, image_url: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Imagem de Capa (Upload)</label>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={e => setImageFile(e.target.files?.[0] || null)}
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-slate-400 outline-none file:bg-blue-600 file:text-white file:border-none file:rounded-lg file:px-4 file:py-1 file:mr-4 file:cursor-pointer" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Ou URL da Imagem</label>
+                    <input type="text" value={newInsight.image_url} onChange={e => setNewInsight({...newInsight, image_url: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white outline-none" />
+                  </div>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Resumo (Excerpt)</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Subtítulo / Resumo</label>
                   <textarea value={newInsight.excerpt} onChange={e => setNewInsight({...newInsight, excerpt: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white outline-none h-20 resize-none" />
                 </div>
+                
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Conteúdo do Artigo</label>
-                  <ReactQuill theme="snow" value={newInsight.content} onChange={(content) => setNewInsight({...newInsight, content})} className="rounded-xl overflow-hidden" />
+                  <ReactQuill theme="snow" value={newInsight.content} onChange={(content) => setNewInsight({...newInsight, content})} className="rounded-xl overflow-hidden min-h-[200px]" />
                 </div>
-                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-600/20">Publicar Artigo</button>
+                
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-600/20 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Publicando...' : 'Publicar Insight'}
+                </button>
               </form>
 
               <div className="space-y-4">
-                <h3 className="text-xl font-serif text-white">Artigos Publicados</h3>
+                <h3 className="text-xl font-serif text-white">Insights Publicados</h3>
                 <div className="grid gap-4">
-                  {insights.map(i => (
-                    <div key={i.id} className="bg-slate-950 border border-white/5 p-4 rounded-2xl flex items-center gap-6">
-                      <div className="w-16 h-16 bg-slate-900 rounded-lg overflow-hidden border border-white/10">
-                        <img src={i.image_url || ''} alt="" className="w-full h-full object-cover opacity-50" />
+                  {insights.length === 0 ? (
+                    <div className="text-slate-500 italic py-8 border border-dashed border-white/5 rounded-2xl text-center">Nenhum insight publicado.</div>
+                  ) : (
+                    insights.map(i => (
+                      <div key={i.id} className="bg-slate-950 border border-white/5 p-4 rounded-2xl flex items-center gap-6 group">
+                        <div className="w-16 h-16 bg-slate-900 rounded-lg overflow-hidden border border-white/10">
+                          <img src={i.image_url || ''} alt="" className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-sm text-white truncate">{i.title}</h4>
+                          <p className="text-xs text-slate-500 truncate">{i.excerpt}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <button onClick={() => window.open(`/insight/${i.id}`, '_blank')} className="text-[10px] text-blue-500 hover:underline font-bold uppercase tracking-widest">Ver</button>
+                          <button onClick={() => handleDeleteInsight(i.id)} className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest">Excluir</button>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-sm text-white truncate">{i.title}</h4>
-                        <p className="text-xs text-slate-500 truncate">{i.excerpt}</p>
-                      </div>
-                      <button onClick={() => handleDeleteInsight(i.id)} className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest">Excluir</button>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
