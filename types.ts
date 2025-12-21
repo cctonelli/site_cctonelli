@@ -1,25 +1,37 @@
 
+export interface CarouselImage {
+  id: string;
+  url: string;
+  title: string | null;
+  subtitle: string | null;
+  display_order: number;
+  is_active: boolean;
+}
+
 export interface Metric {
   id: string;
   label: string;
-  value: number;
-  suffix: string;
-  description: string;
+  value: string;
+  icon: string | null;
+  display_order: number;
+  is_active: boolean;
 }
 
 export interface Insight {
   id: string;
   title: string;
-  category: string;
-  excerpt: string;
-  date: string;
-  imageUrl: string;
+  excerpt: string | null;
+  image_url: string | null;
+  link: string | null;
+  published_at: string;
+  is_active: boolean;
+  display_order: number;
 }
 
 export interface Product {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   price: number;
   type: 'product' | 'service';
   config: any;
@@ -28,8 +40,29 @@ export interface Product {
 export interface Testimonial {
   id: string;
   name: string;
-  role: string;
-  company: string;
-  content: string;
-  avatarUrl: string;
+  company: string | null;
+  quote: string;
+  approved: boolean;
+  created_at: string;
+}
+
+export interface Profile {
+  id: string;
+  full_name: string | null;
+  cpf_cnpj: string | null;
+  gender: string | null;
+  whatsapp: string | null;
+  user_type: 'client' | 'admin';
+}
+
+export interface SiteContent {
+  key: string;
+  value: string;
+  page: string;
+}
+
+export interface Contact {
+  name: string;
+  email: string;
+  message: string;
 }

@@ -1,174 +1,134 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Metric, Insight, Product, Testimonial } from '../types';
+import { 
+  CarouselImage, Metric, Insight, Product, 
+  Testimonial, Profile, SiteContent, Contact 
+} from '../types';
 
-const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
+// As chaves devem ser configuradas nas variáveis de ambiente do Vercel/GitHub
+// NUNCA hardcode chaves secretas (service_role) no frontend.
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Inicialização segura do cliente
+export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) 
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+/**
+ * Log de erro seguro: evita expor objetos de erro brutos que podem conter 
+ * informações de infraestrutura no console do cliente.
+ */
+const logSecureError = (context: string, error: any) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.error(`[Internal Debug] ${context}:`, error);
+  } else {
+    // Em produção, logamos apenas uma mensagem genérica para não dar pistas a atacantes
+    console.warn(`Acesso ao recurso [${context}] indisponível no momento.`);
+  }
+};
+
+export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('carousel_images')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    logSecureError('Carousel', e);
+    return [];
+  }
+};
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('metrics')
       .select('*')
-      .order('id', { ascending: true });
-      
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
     if (error) throw error;
-    if (!data || data.length === 0) return getFallbackMetrics();
-    
-    return data.map(m => ({
-      id: m.id?.toString(),
-      label: m.label || m.name,
-      value: parseFloat(m.value) || 0,
-      suffix: m.suffix || '',
-      description: m.description || ''
-    }));
-  } catch (err) {
-    console.error('Error fetching metrics:', err instanceof Error ? err.message : JSON.stringify(err));
-    return getFallbackMetrics();
+    return data || [];
+  } catch (e) {
+    logSecureError('Metrics', e);
+    return [];
   }
 };
 
 export const fetchInsights = async (): Promise<Insight[]> => {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('insights')
       .select('*')
-      .order('created_at', { ascending: false });
-      
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
     if (error) throw error;
-    if (!data || data.length === 0) return getFallbackInsights();
-    
-    return data.map(i => ({
-      id: i.id?.toString(),
-      title: i.title,
-      category: i.category,
-      excerpt: i.excerpt || i.description || i.content?.substring(0, 100),
-      date: i.date || new Date(i.created_at).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
-      imageUrl: i.image_url || i.imageUrl || `https://picsum.photos/seed/${i.id}/800/600`
-    }));
-  } catch (err) {
-    console.error('Error fetching insights:', err instanceof Error ? err.message : JSON.stringify(err));
-    return getFallbackInsights();
+    return data || [];
+  } catch (e) {
+    logSecureError('Insights', e);
+    return [];
   }
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('products')
       .select('*');
-      
     if (error) throw error;
-    if (!data || data.length === 0) return getFallbackProducts();
-    
-    return data.map(p => ({
-      id: p.id?.toString(),
-      name: p.name,
-      description: p.description,
-      price: parseFloat(p.price),
-      type: p.type,
-      config: p.config || {}
-    }));
-  } catch (err) {
-    console.error('Error fetching products:', err instanceof Error ? err.message : JSON.stringify(err));
-    return getFallbackProducts();
+    return data || [];
+  } catch (e) {
+    logSecureError('Products', e);
+    return [];
   }
 };
 
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from('testimonials')
-      .select('*');
-      
+      .select('*')
+      .eq('approved', true)
+      .order('created_at', { ascending: false });
     if (error) throw error;
-    if (!data || data.length === 0) return getFallbackTestimonials();
-    
-    return data.map(t => ({
-      id: t.id?.toString(),
-      name: t.name,
-      role: t.role,
-      company: t.company,
-      content: t.content,
-      avatarUrl: t.avatar_url || t.avatarUrl || `https://i.pravatar.cc/150?u=${t.id}`
-    }));
-  } catch (err) {
-    console.error('Error fetching testimonials:', err instanceof Error ? err.message : JSON.stringify(err));
-    return getFallbackTestimonials();
+    return data || [];
+  } catch (e) {
+    logSecureError('Testimonials', e);
+    return [];
   }
 };
 
-// Fallback data functions
-const getFallbackMetrics = (): Metric[] => [
-  { id: '1', label: 'Projetos Entregues', value: 450, suffix: '+', description: 'Eficiência e resultados tangíveis.' },
-  { id: '2', label: 'Retorno sobre Investimento', value: 32, suffix: '%', description: 'Média de ganho reportado por clientes.' },
-  { id: '3', label: 'Satisfação do Cliente', value: 98, suffix: '%', description: 'Net Promoter Score (NPS) de excelência.' },
-  { id: '4', label: 'Países Atendidos', value: 12, suffix: '', description: 'Presença global e adaptabilidade cultural.' },
-];
-
-const getFallbackInsights = (): Insight[] => [
-  {
-    id: '1',
-    title: 'A Nova Era da Gestão 5.0',
-    category: 'Estratégia',
-    excerpt: 'Como a inteligência artificial está moldando a tomada de decisão no C-Level.',
-    date: 'Maio 2025',
-    imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop'
-  },
-  {
-    id: '2',
-    title: 'Sustentabilidade como Driver de Lucro',
-    category: 'ESG',
-    excerpt: 'Por que empresas focadas em ESG estão superando o mercado em 20%.',
-    date: 'Abril 2025',
-    imageUrl: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?q=80&w=2070&auto=format&fit=crop'
-  },
-  {
-    id: '3',
-    title: 'Resiliência Digital nas Operações',
-    category: 'Tecnologia',
-    excerpt: 'Protegendo a cadeia de suprimentos contra rupturas globais.',
-    date: 'Março 2025',
-    imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2070&auto=format&fit=crop'
+export const submitContact = async (contact: Contact): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from('contacts').insert([contact]);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    logSecureError('Contact Submit', e);
+    return false;
   }
-];
+};
 
-const getFallbackProducts = (): Product[] => [
-  {
-    id: 'p1',
-    name: 'Workshop de Liderança Exponencial',
-    description: 'Treinamento intensivo para executivos focados no futuro.',
-    price: 1500,
-    type: 'service',
-    config: { duration: '2 dias' }
-  },
-  {
-    id: 'p2',
-    name: 'Dashboard de Métricas em Tempo Real',
-    description: 'Acesso vitalício à nossa ferramenta de BI personalizada.',
-    price: 2900,
-    type: 'product',
-    config: { license: 'Enterprise' }
+export const fetchSiteContent = async (page: string): Promise<Record<string, string>> => {
+  if (!supabase) return {};
+  try {
+    const { data, error } = await supabase
+      .from('site_content')
+      .select('key, value')
+      .eq('page', page);
+    if (error) throw error;
+    return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+  } catch (e) {
+    logSecureError('SiteContent', e);
+    return {};
   }
-];
-
-const getFallbackTestimonials = (): Testimonial[] => [
-  {
-    id: 't1',
-    name: 'Carlos Mendes',
-    role: 'CEO',
-    company: 'LogTech Global',
-    content: 'A consultoria do Claudio Tonelli mudou nossa visão de escala. Em 6 meses, dobramos nossa eficiência operacional.',
-    avatarUrl: 'https://i.pravatar.cc/150?u=carlos'
-  },
-  {
-    id: 't2',
-    name: 'Ana Silva',
-    role: 'Diretora de Inovação',
-    company: 'EnergyCo',
-    content: 'Profissionalismo impecável e insights que realmente movem o ponteiro do negócio.',
-    avatarUrl: 'https://i.pravatar.cc/150?u=ana'
-  }
-];
+};

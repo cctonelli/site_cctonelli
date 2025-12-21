@@ -5,31 +5,49 @@ import ThreeGlobe from './components/ThreeGlobe';
 import ChatBot from './components/ChatBot';
 import ProductsSection from './components/ProductsSection';
 import TestimonialsSection from './components/TestimonialsSection';
-import { fetchMetrics, fetchInsights, fetchProducts, fetchTestimonials } from './services/supabaseService';
-import { Metric, Insight, Product, Testimonial } from './types';
+import ContactForm from './components/ContactForm';
+import { 
+  fetchMetrics, fetchInsights, fetchProducts, 
+  fetchTestimonials, fetchCarouselImages, fetchSiteContent 
+} from './services/supabaseService';
+import { Metric, Insight, Product, Testimonial, CarouselImage } from './types';
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [carousel, setCarousel] = useState<CarouselImage[]>([]);
+  const [content, setContent] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadData = async () => {
-      const [m, i, p, t] = await Promise.all([
-        fetchMetrics(), 
-        fetchInsights(),
-        fetchProducts(),
-        fetchTestimonials()
-      ]);
-      setMetrics(m);
-      setInsights(i);
-      setProducts(p);
-      setTestimonials(t);
+    const loadAllData = async () => {
+      setLoading(true);
+      try {
+        const [m, i, p, t, c, s] = await Promise.all([
+          fetchMetrics(),
+          fetchInsights(),
+          fetchProducts(),
+          fetchTestimonials(),
+          fetchCarouselImages(),
+          fetchSiteContent('home')
+        ]);
+        setMetrics(m);
+        setInsights(i);
+        setProducts(p);
+        setTestimonials(t);
+        setCarousel(c);
+        setContent(s);
+      } catch (err) {
+        console.error("App: Fatal data loading error", err);
+      } finally {
+        setLoading(false);
+      }
     };
-    loadData();
+    loadAllData();
 
-    // Intersection Observer for reveal animations
+    // Intersection Observer for scroll reveal animations
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -38,14 +56,25 @@ const App: React.FC = () => {
       });
     }, { threshold: 0.1 });
 
-    const revealElements = document.querySelectorAll('.reveal');
-    revealElements.forEach(el => observer.observe(el));
+    const setupObserver = () => {
+      const revealElements = document.querySelectorAll('.reveal');
+      revealElements.forEach(el => observer.observe(el));
+    };
 
-    return () => observer.disconnect();
-  }, [insights, products]); // Re-run when data loads to catch new elements
+    // Delay to allow DOM to populate from state
+    const timeout = setTimeout(setupObserver, 500);
+
+    return () => {
+      clearTimeout(timeout);
+      observer.disconnect();
+    };
+  }, []);
+
+  const heroTitle = content['home.hero.title'] || 'Estratégia Inesquecível.';
+  const heroSubtitle = content['home.hero.subtitle'] || 'Transformamos visão em realidade através de excelência operacional e IA.';
 
   return (
-    <div className="relative min-h-screen selection:bg-blue-500/30">
+    <div className="relative min-h-screen selection:bg-blue-500/30 overflow-x-hidden">
       <Navbar />
 
       {/* Hero Section */}
@@ -55,130 +84,121 @@ const App: React.FC = () => {
         </div>
         
         <div className="container mx-auto px-6 relative z-10 grid md:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8">
+          <div className="space-y-8 reveal active">
             <div className="inline-block px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-xs font-bold uppercase tracking-widest animate-pulse">
-              Consultoria Estratégica 2025
+              Consultoria de Elite 2025
             </div>
             <h1 className="text-6xl md:text-8xl font-serif leading-tight">
-              Estratégia <br />
-              <span className="italic text-slate-400">Inesquecível.</span>
+              {heroTitle.split(' ').map((word, i) => (
+                <React.Fragment key={i}>
+                  {i === heroTitle.split(' ').length - 1 ? <span className="italic text-slate-400">{word}</span> : word + ' '}
+                  {i === 0 && <br />}
+                </React.Fragment>
+              ))}
             </h1>
             <p className="text-xl text-slate-400 max-w-lg leading-relaxed font-light">
-              Elevando o C-Level através de inteligência artificial, design imersivo e resultados exponenciais. Bem-vindo à nova era da Claudio Tonelli Consultoria.
+              {heroSubtitle}
             </p>
             <div className="flex flex-wrap gap-4 pt-4">
-              <button className="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded-lg font-bold transition-all shadow-xl shadow-blue-600/20 btn-premium">
-                Agendar Consulta
-              </button>
-              <button className="bg-transparent border border-white/20 hover:bg-white/5 px-8 py-4 rounded-lg font-bold transition-all">
-                Nossa Metodologia
-              </button>
+              <a href="#contact-form" className="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded-lg font-bold transition-all shadow-xl shadow-blue-600/20 btn-premium text-center">
+                Solicitar Diagnóstico
+              </a>
+              <a href="#insights" className="bg-transparent border border-white/20 hover:bg-white/5 px-8 py-4 rounded-lg font-bold transition-all text-center">
+                Insights Estratégicos
+              </a>
             </div>
           </div>
         </div>
 
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-slate-500">
-          <span className="text-[10px] uppercase tracking-[0.3em]">Arraste para baixo</span>
+        {/* Dynamic Carousel Indicators if needed */}
+        {carousel.length > 0 && (
+          <div className="absolute bottom-20 right-10 flex flex-col gap-4">
+            {carousel.map((_, i) => (
+              <div key={i} className="w-1 h-8 bg-white/10 rounded-full overflow-hidden">
+                <div className="w-full h-full bg-blue-500 origin-top scale-y-0 animate-progress"></div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-slate-500 opacity-50">
+          <span className="text-[10px] uppercase tracking-[0.3em]">Scrollytelling</span>
           <div className="w-[1px] h-12 bg-gradient-to-b from-blue-500 to-transparent"></div>
         </div>
       </section>
 
       {/* Metrics Section */}
-      <section id="metrics" className="py-24 bg-slate-950 border-y border-white/5">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
-            {metrics.map((m) => (
-              <div key={m.id} className="text-center group reveal">
-                <div className="text-5xl font-bold mb-2 text-white group-hover:text-blue-500 transition-colors">
-                  {m.value}{m.suffix}
+      {metrics.length > 0 && (
+        <section id="metrics" className="py-24 bg-slate-950 border-y border-white/5">
+          <div className="container mx-auto px-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
+              {metrics.map((m) => (
+                <div key={m.id} className="text-center group reveal">
+                  <div className="text-5xl font-bold mb-2 text-white group-hover:text-blue-500 transition-colors">
+                    {m.value}
+                  </div>
+                  <div className="text-sm font-bold uppercase tracking-widest text-blue-500/80 mb-3">
+                    {m.label}
+                  </div>
+                  {/* Metric icon could be rendered here if m.icon is specified */}
                 </div>
-                <div className="text-sm font-bold uppercase tracking-widest text-blue-500/80 mb-3">
-                  {m.label}
-                </div>
-                <p className="text-xs text-slate-500 leading-relaxed max-w-[160px] mx-auto">
-                  {m.description}
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Insights Section */}
-      <section id="insights" className="py-32 bg-slate-900/50">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-            <div className="max-w-xl reveal">
-              <h2 className="text-4xl font-serif mb-4">Insights de Futuro</h2>
-              <p className="text-slate-400 font-light">
-                Análises exclusivas sobre as tendências que estão redefinindo o mercado global e as indústrias em transformação.
-              </p>
+      {insights.length > 0 && (
+        <section id="insights" className="py-32 bg-slate-900/50">
+          <div className="container mx-auto px-6">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+              <div className="max-w-xl reveal">
+                <h2 className="text-4xl font-serif mb-4 italic">Visionary Insights</h2>
+                <p className="text-slate-400 font-light">
+                  Antecipando tendências globais para líderes que não apenas seguem, mas criam o futuro.
+                </p>
+              </div>
             </div>
-            <button className="text-blue-400 text-sm font-bold uppercase tracking-widest hover:text-blue-300 transition-colors flex items-center gap-2 reveal">
-              Ver Todos os Artigos
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </button>
-          </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {insights.map((insight) => (
-              <article key={insight.id} className="group cursor-pointer reveal">
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-6">
-                  <img 
-                    src={insight.imageUrl} 
-                    alt={insight.title} 
-                    className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <span className="bg-slate-950/80 backdrop-blur-md text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold">
-                      {insight.category}
-                    </span>
+            <div className="grid md:grid-cols-3 gap-8">
+              {insights.map((insight) => (
+                <article key={insight.id} className="group cursor-pointer reveal">
+                  <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-6 border border-white/5">
+                    <img 
+                      src={insight.image_url || `https://picsum.photos/seed/${insight.id}/800/600`} 
+                      alt={insight.title} 
+                      className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute top-4 left-4">
+                      <span className="bg-slate-950/80 backdrop-blur-md text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border border-white/10">
+                        {insight.category || 'Consultoria'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-3">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                    {insight.date}
-                  </span>
-                  <h3 className="text-2xl font-serif group-hover:text-blue-400 transition-colors">
-                    {insight.title}
-                  </h3>
-                  <p className="text-slate-400 text-sm leading-relaxed font-light">
-                    {insight.excerpt}
-                  </p>
-                </div>
-              </article>
-            ))}
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-serif group-hover:text-blue-400 transition-colors leading-tight">
+                      {insight.title}
+                    </h3>
+                    <p className="text-slate-400 text-sm leading-relaxed font-light line-clamp-3">
+                      {insight.excerpt}
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Products & Services Section */}
-      <ProductsSection products={products} />
+      {products.length > 0 && <ProductsSection products={products} />}
 
       {/* Testimonials Section */}
-      <TestimonialsSection testimonials={testimonials} />
+      {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} />}
 
-      {/* CTA Section */}
-      <section className="py-32 bg-gradient-to-b from-slate-900 to-slate-950">
-        <div className="container mx-auto px-6 text-center">
-          <div className="max-w-3xl mx-auto space-y-10 reveal">
-            <h2 className="text-5xl font-serif leading-tight">
-              Pronto para elevar o nível da sua operação?
-            </h2>
-            <p className="text-xl text-slate-400 font-light">
-              Estamos prontos para desenhar o seu próximo capítulo de sucesso. Fale com um de nossos consultores seniores hoje.
-            </p>
-            <div className="pt-6">
-              <button className="bg-white text-slate-950 px-12 py-5 rounded-full font-bold text-lg hover:bg-blue-600 hover:text-white transition-all shadow-2xl shadow-white/5 btn-premium">
-                Solicitar Diagnóstico Estratégico
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Contact Form Section */}
+      <ContactForm />
 
       {/* Footer */}
       <footer id="contact" className="py-20 border-t border-white/5 bg-slate-950">
@@ -186,44 +206,43 @@ const App: React.FC = () => {
           <div className="grid md:grid-cols-4 gap-12 mb-20">
             <div className="col-span-2 space-y-6">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xl">CT</div>
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-600/20">CT</div>
                 <span className="text-2xl font-bold tracking-tight">
                   <span className="text-blue-500">Claudio</span> Tonelli
                 </span>
               </div>
-              <p className="text-slate-500 max-w-sm font-light">
-                Consultoria boutique focada em excelência operacional, transformação digital e estratégia de alto nível para o mercado brasileiro e internacional.
+              <p className="text-slate-500 max-w-sm font-light leading-relaxed">
+                Referência em gestão estratégica e operações de alta performance. Redefinindo o padrão de consultoria empresarial para o século XXI.
               </p>
             </div>
             <div>
-              <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-slate-300">Navegação</h4>
+              <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-slate-300">Hub</h4>
               <ul className="space-y-4 text-sm text-slate-500">
-                <li><a href="#hero" className="hover:text-blue-400">Home</a></li>
-                <li><a href="#products" className="hover:text-blue-400">Serviços</a></li>
+                <li><a href="#hero" className="hover:text-blue-400">Início</a></li>
+                <li><a href="#products" className="hover:text-blue-400">Soluções</a></li>
                 <li><a href="#insights" className="hover:text-blue-400">Insights</a></li>
-                <li><a href="#contact" className="hover:text-blue-400">Metodologia</a></li>
+                <li><a href="#testimonials" className="hover:text-blue-400">Casos</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-slate-300">Redes Sociais</h4>
+              <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-slate-300">Conectar</h4>
               <ul className="space-y-4 text-sm text-slate-500">
-                <li><a href="#" className="hover:text-blue-400">LinkedIn</a></li>
-                <li><a href="#" className="hover:text-blue-400">Instagram</a></li>
-                <li><a href="#" className="hover:text-blue-400">Twitter (X)</a></li>
+                <li><a href="#" className="hover:text-blue-400 flex items-center gap-2">LinkedIn</a></li>
+                <li><a href="#" className="hover:text-blue-400 flex items-center gap-2">Instagram</a></li>
+                <li><a href="#" className="hover:text-blue-400 flex items-center gap-2">WhatsApp</a></li>
               </ul>
             </div>
           </div>
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-10 border-t border-white/5 text-xs text-slate-600 font-medium uppercase tracking-[0.2em]">
-            <span>© 2025 Claudio Tonelli Consultoria. Todos os direitos reservados.</span>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-10 border-t border-white/5 text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">
+            <span>© 2025 Claudio Tonelli Consultoria Executive.</span>
             <div className="flex gap-8">
               <a href="#" className="hover:text-white transition-colors">Privacidade</a>
-              <a href="#" className="hover:text-white transition-colors">Termos de Uso</a>
+              <a href="#" className="hover:text-white transition-colors">Termos</a>
             </div>
           </div>
         </div>
       </footer>
 
-      {/* Floating AI Consultant */}
       <ChatBot />
     </div>
   );
