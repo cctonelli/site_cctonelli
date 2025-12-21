@@ -59,7 +59,7 @@ export interface Profile {
   id: string;
   full_name: string | null;
   cpf_cnpj: string | null;
-  gender: string | null;
+  gender: 'Masculino' | 'Feminino' | 'Outro' | 'Prefiro não informar' | null;
   whatsapp: string | null;
   user_type: 'client' | 'admin';
   created_at?: string;

@@ -5,8 +5,6 @@ import {
   Testimonial, Profile, Contact, CarouselImage
 } from '../types';
 
-// Fix: Use process.env instead of import.meta.env to resolve TypeScript errors on ImportMeta
-// and ensure consistency with the environment variable access pattern used throughout the project.
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
@@ -19,21 +17,28 @@ export const signIn = async (email: string, password?: string) => {
     : await supabase.auth.signInWithOtp({ email });
 };
 
-export const signUp = async (email: string, password?: string, metadata?: any) => {
+export const signUp = async (email: string, password?: string, metadata?: Partial<Profile>) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password: password || 'temp-pass-123',
-    options: { data: metadata }
+    options: { 
+      data: {
+        full_name: metadata?.full_name,
+      } 
+    }
   });
   
   if (!error && data.user) {
-    // Criação automática de perfil na tabela profiles
-    await supabase.from('profiles').insert([{
+    // Alinhamento total com a tabela profiles do Supabase
+    const { error: profileError } = await supabase.from('profiles').insert([{
       id: data.user.id,
       full_name: metadata?.full_name || '',
       cpf_cnpj: metadata?.cpf_cnpj || '',
+      gender: metadata?.gender || null,
+      whatsapp: metadata?.whatsapp || '',
       user_type: 'client'
     }]);
+    if (profileError) console.error("Erro ao criar perfil:", profileError);
   }
   return { data, error };
 };
@@ -65,10 +70,7 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
     .select('*')
     .eq('is_active', true)
     .order('display_order', { ascending: true });
-  if (error) {
-    console.error("Error fetching carousel:", error);
-    return [];
-  }
+  if (error) return [];
   return data || [];
 };
 
@@ -135,10 +137,7 @@ export const addInsight = async (insight: any) => {
     .insert([{ ...insight, published_at: new Date().toISOString() }])
     .select()
     .single();
-  if (error) {
-    console.error("Add insight error:", error);
-    return null;
-  }
+  if (error) return null;
   return data;
 };
 
@@ -191,10 +190,7 @@ export const deleteCarouselImage = async (id: string) => {
 export const uploadInsightImage = async (file: File): Promise<string | null> => {
   const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
   const { error: uploadError } = await supabase.storage.from('insight-images').upload(`insights/${fileName}`, file);
-  if (uploadError) {
-    console.error("Upload error:", uploadError);
-    return null;
-  }
+  if (uploadError) return null;
   const { data } = supabase.storage.from('insight-images').getPublicUrl(`insights/${fileName}`);
   return data.publicUrl;
 };

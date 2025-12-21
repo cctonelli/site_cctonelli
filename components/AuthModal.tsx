@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signIn, signUp, updateProfile } from '../services/supabaseService';
+import { signIn, signUp } from '../services/supabaseService';
+import { Profile } from '../types';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -14,6 +15,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [taxId, setTaxId] = useState(''); // CPF/CNPJ
+  const [whatsapp, setWhatsapp] = useState('');
+  const [gender, setGender] = useState<Profile['gender']>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,18 +27,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
 
     try {
       if (mode === 'login') {
-        const { error } = await signIn(email, password);
-        if (error) throw error;
+        const { error: signInError } = await signIn(email, password);
+        if (signInError) throw signInError;
       } else {
-        const { data, error: signUpError } = await signUp(email, password);
+        const { error: signUpError } = await signUp(email, password, {
+          full_name: fullName,
+          cpf_cnpj: taxId,
+          whatsapp: whatsapp,
+          gender: gender,
+        });
         if (signUpError) throw signUpError;
-        if (data?.user) {
-          await updateProfile(data.user.id, {
-            full_name: fullName,
-            cpf_cnpj: taxId,
-            user_type: 'client'
-          });
-        }
       }
       onSuccess();
       onClose();
@@ -62,7 +63,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         className="relative bg-slate-900 border border-white/10 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl"
       >
-        <div className="p-12 space-y-8">
+        <div className="p-12 space-y-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-3xl shadow-xl shadow-blue-600/20">CT</div>
             <h2 className="text-3xl font-serif text-white">
@@ -90,14 +91,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
                     onChange={e => setFullName(e.target.value)}
                     className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-700"
                   />
-                  <input 
+                  <div className="grid grid-cols-2 gap-4">
+                    <input 
+                      required
+                      type="text" 
+                      placeholder="CPF ou CNPJ"
+                      value={taxId}
+                      onChange={e => setTaxId(e.target.value)}
+                      className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-700"
+                    />
+                    <input 
+                      required
+                      type="tel" 
+                      placeholder="WhatsApp"
+                      value={whatsapp}
+                      onChange={e => setWhatsapp(e.target.value)}
+                      className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-700"
+                    />
+                  </div>
+                  <select 
                     required
-                    type="text" 
-                    placeholder="CPF ou CNPJ"
-                    value={taxId}
-                    onChange={e => setTaxId(e.target.value)}
-                    className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-700"
-                  />
+                    value={gender || ''}
+                    onChange={e => setGender(e.target.value as Profile['gender'])}
+                    className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-slate-300 focus:border-blue-500 outline-none transition-all appearance-none"
+                  >
+                    <option value="" disabled>Selecione seu Gênero</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
+                    <option value="Outro">Outro</option>
+                    <option value="Prefiro não informar">Prefiro não informar</option>
+                  </select>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -132,7 +155,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
 
           <div className="text-center">
             <button 
-              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+              onClick={() => {
+                setMode(mode === 'login' ? 'register' : 'login');
+                setError(null);
+              }}
               className="text-xs text-slate-500 hover:text-white transition-colors"
             >
               {mode === 'login' ? 'Não possui conta? Associe-se' : 'Já é um associado? Entre aqui'}
@@ -144,6 +170,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           <p className="text-[9px] uppercase tracking-[0.4em] text-slate-600 font-bold">Protocolo de Segurança Ativo</p>
         </div>
       </motion.div>
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, 0.2); border-radius: 10px; }
+      `}</style>
     </div>
   );
 };
