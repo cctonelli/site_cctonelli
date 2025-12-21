@@ -30,6 +30,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         const { error: signInError } = await signIn(email, password);
         if (signInError) throw signInError;
       } else {
+        // Agora o signUp apenas inicia o processo de criação no Auth.
+        // O Trigger no banco de dados cuidará da tabela profiles de forma robusta.
         const { error: signUpError } = await signUp(email, password, {
           full_name: fullName,
           cpf_cnpj: taxId,
@@ -37,19 +39,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           gender: gender,
         });
         
-        if (signUpError) {
-          // Captura amigável para erro de RLS (Row Level Security)
-          if (signUpError.message?.toLowerCase().includes('row-level security')) {
-            throw new Error('Erro de Permissão (RLS): O banco de dados bloqueou a criação do seu perfil. Verifique as políticas de segurança no painel Supabase.');
-          }
-          throw signUpError;
-        }
+        if (signUpError) throw signUpError;
       }
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error("Erro na Autenticação:", err);
-      setError(err.message || 'Ocorreu um erro inesperado.');
+      console.error("Auth Exception:", err);
+      setError(err.message || 'Erro na autenticação. Verifique os dados e tente novamente.');
     } finally {
       setIsLoading(false);
     }

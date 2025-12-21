@@ -17,6 +17,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
+/** 
+ * Abordagem Recomendada: 
+ * O perfil (tabela profiles) é criado automaticamente via SQL Trigger no Supabase 
+ * baseado nos dados passados em 'options.data' (user_metadata).
+ */
+
 // --- AUTH & PROFILE ---
 export const signIn = async (email: string, password?: string) => {
   return password 
@@ -25,39 +31,22 @@ export const signIn = async (email: string, password?: string) => {
 };
 
 export const signUp = async (email: string, password?: string, metadata?: Partial<Profile>) => {
-  // 1. Criar o usuário no Auth
-  const { data, error: authError } = await supabase.auth.signUp({
+  // Enviamos todos os metadados para o Auth. O Trigger do banco cuidará da tabela 'profiles'.
+  const { data, error } = await supabase.auth.signUp({
     email,
     password: password || 'temp-pass-123',
     options: { 
       data: {
         full_name: metadata?.full_name,
+        cpf_cnpj: metadata?.cpf_cnpj,
+        gender: metadata?.gender,
+        whatsapp: metadata?.whatsapp,
+        user_type: 'client' // Padrão para novos cadastros via site
       } 
     }
   });
   
-  if (authError) return { data: null, error: authError };
-  
-  if (data.user) {
-    // 2. Criar o perfil na tabela pública profiles
-    // Se a confirmação de e-mail estiver ativada, o usuário pode não ter sessão ativa ainda,
-    // o que causará erro de RLS se a política exigir auth.uid() = id.
-    const { error: profileError } = await supabase.from('profiles').insert([{
-      id: data.user.id,
-      full_name: metadata?.full_name || '',
-      cpf_cnpj: metadata?.cpf_cnpj || '',
-      gender: metadata?.gender || null,
-      whatsapp: metadata?.whatsapp || '',
-      user_type: 'client'
-    }]);
-
-    if (profileError) {
-      console.error("Erro ao inserir perfil (possível falha de RLS):", profileError);
-      return { data, error: profileError };
-    }
-  }
-
-  return { data, error: null };
+  return { data, error };
 };
 
 export const signOut = async () => {
