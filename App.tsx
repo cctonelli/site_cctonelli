@@ -8,10 +8,11 @@ import TestimonialsSection from './components/TestimonialsSection';
 import ContactForm from './components/ContactForm';
 import AdminDashboard from './components/AdminDashboard';
 import ClientPortal from './components/ClientPortal';
+import AuthModal from './components/AuthModal';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchCarouselImages, fetchSiteContent,
-  getCurrentUser, getProfile
+  getCurrentUser, getProfile, supabase, signOut
 } from './services/supabaseService';
 import { Metric, Insight, Product, Testimonial, CarouselImage, Profile } from './types';
 
@@ -27,43 +28,62 @@ const App: React.FC = () => {
   // UI States
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   
   // Auth State
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  useEffect(() => {
-    const loadAllData = async () => {
-      try {
-        const [m, i, p, t, c, s, user] = await Promise.all([
-          fetchMetrics(),
-          fetchInsights(),
-          fetchProducts(),
-          fetchTestimonials(),
-          fetchCarouselImages(),
-          fetchSiteContent('home'),
-          getCurrentUser()
-        ]);
-        
-        setMetrics(m);
-        setInsights(i);
-        setProducts(p);
-        setTestimonials(t);
-        setCarousel(c);
-        setContent(s);
+  const loadAllData = async () => {
+    try {
+      const [m, i, p, t, c, s, user] = await Promise.all([
+        fetchMetrics(),
+        fetchInsights(),
+        fetchProducts(),
+        fetchTestimonials(),
+        fetchCarouselImages(),
+        fetchSiteContent('home'),
+        getCurrentUser()
+      ]);
+      
+      setMetrics(m);
+      setInsights(i);
+      setProducts(p);
+      setTestimonials(t);
+      setCarousel(c);
+      setContent(s);
 
-        if (user) {
-          const profile = await getProfile(user.id);
-          setUserProfile(profile);
-        }
-      } catch (err) {
-        console.error("App: Fatal data loading error", err);
-      } finally {
-        setTimeout(() => setLoading(false), 1200);
+      if (user) {
+        const profile = await getProfile(user.id);
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
       }
-    };
-    loadAllData();
-  }, [isAdminOpen, isClientPortalOpen]);
+    } catch (err) {
+      console.error("App: Fatal data loading error", err);
+    } finally {
+      setTimeout(() => setLoading(false), 1200);
+    }
+  };
 
+  useEffect(() => {
+    loadAllData();
+    
+    // Setup Realtime Listeners
+    if (supabase) {
+      const channel = supabase
+        .channel('public_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchProducts().then(setProducts))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'metrics' }, () => fetchMetrics().then(setMetrics))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'testimonials' }, () => fetchTestimonials().then(setTestimonials))
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, []);
+
+  // Intersection Observer for Reveal Animations
   useEffect(() => {
     if (loading) return;
     const observer = new IntersectionObserver((entries) => {
@@ -85,23 +105,19 @@ const App: React.FC = () => {
 
   const handleAreaClick = () => {
     if (!userProfile) {
-      // For demo purposes, we auto-assign a mock profile if not found
-      // Real app would redirect to login
-      const mockProfile: Profile = {
-        id: '123',
-        full_name: 'Executivo de Vanguarda',
-        cpf_cnpj: '00.000.000/0001-91',
-        gender: 'Outro',
-        whatsapp: '+55 11 99999-9999',
-        user_type: 'client'
-      };
-      setUserProfile(mockProfile);
-      setIsClientPortalOpen(true);
+      setIsAuthOpen(true);
     } else if (userProfile.user_type === 'admin') {
       setIsAdminOpen(true);
     } else {
       setIsClientPortalOpen(true);
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    setUserProfile(null);
+    setIsAdminOpen(false);
+    setIsClientPortalOpen(false);
   };
 
   if (loading) {
@@ -117,9 +133,19 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen">
-      <Navbar onAdminClick={handleAreaClick} userProfile={userProfile} />
+      <Navbar onAdminClick={handleAreaClick} userProfile={userProfile} onLogout={handleLogout} />
 
-      {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
+      {isAuthOpen && (
+        <AuthModal 
+          onClose={() => setIsAuthOpen(false)} 
+          onSuccess={loadAllData} 
+        />
+      )}
+
+      {isAdminOpen && userProfile?.user_type === 'admin' && (
+        <AdminDashboard onClose={() => setIsAdminOpen(false)} />
+      )}
+      
       {isClientPortalOpen && userProfile && (
         <ClientPortal 
           profile={userProfile} 

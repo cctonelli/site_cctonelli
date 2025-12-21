@@ -21,9 +21,22 @@ const logSecureError = (context: string, error: any) => {
 };
 
 // --- AUTHENTICATION ---
-export const signIn = async (email: string) => {
+export const signUp = async (email: string, password?: string, metadata?: any) => {
   if (!supabase) return null;
-  const { data, error } = await supabase.auth.signInWithOtp({ email });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: password || 'default-secure-pass', // In a real app, users provide this
+    options: { data: metadata }
+  });
+  if (error) logSecureError('SignUp', error);
+  return { data, error };
+};
+
+export const signIn = async (email: string, password?: string) => {
+  if (!supabase) return null;
+  const { data, error } = password 
+    ? await supabase.auth.signInWithPassword({ email, password })
+    : await supabase.auth.signInWithOtp({ email });
   if (error) logSecureError('SignIn', error);
   return { data, error };
 };
@@ -137,6 +150,18 @@ export const getProfile = async (userId: string): Promise<Profile | null> => {
     if (error) throw error;
     return data;
   } catch (e) { logSecureError('GetProfile', e); return null; }
+};
+
+export const updateProfile = async (userId: string, profile: Partial<Profile>): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update(profile)
+      .eq('id', userId);
+    if (error) throw error;
+    return true;
+  } catch (e) { logSecureError('UpdateProfile', e); return false; }
 };
 
 export const updateSiteContent = async (key: string, value: string): Promise<boolean> => {
