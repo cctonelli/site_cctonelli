@@ -11,46 +11,41 @@ const ThreeGlobe: React.FC = () => {
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
 
-    // Scene
     const scene = new THREE.Scene();
-
-    // Camera
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
     camera.position.z = 2.5;
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     containerRef.current.appendChild(renderer.domElement);
 
-    // Globe Geometry
+    const isDark = document.documentElement.classList.contains('dark');
+    const globeColor = isDark ? 0x3b82f6 : 0x1e40af;
+    const pointColor = isDark ? 0x60a5fa : 0x3b82f6;
+
     const geometry = new THREE.SphereGeometry(1, 64, 64);
-    
-    // Wireframe Material with glow effect
     const material = new THREE.MeshPhongMaterial({
-      color: 0x3b82f6,
+      color: globeColor,
       wireframe: true,
       transparent: true,
-      opacity: 0.3,
+      opacity: isDark ? 0.3 : 0.2,
     });
     
     const globe = new THREE.Mesh(geometry, material);
     scene.add(globe);
 
-    // Inner Solid Sphere
     const innerGeometry = new THREE.SphereGeometry(0.98, 64, 64);
     const innerMaterial = new THREE.MeshPhongMaterial({
-      color: 0x0f172a,
+      color: isDark ? 0x0f172a : 0xffffff,
       transparent: true,
       opacity: 0.5,
     });
     const innerSphere = new THREE.Mesh(innerGeometry, innerMaterial);
     scene.add(innerSphere);
 
-    // Points of light (Representing consulting impact)
     const pointsGeometry = new THREE.BufferGeometry();
-    const pointsCount = 1000;
+    const pointsCount = 1200;
     const positions = new Float32Array(pointsCount * 3);
     for (let i = 0; i < pointsCount; i++) {
       const theta = Math.random() * Math.PI * 2;
@@ -64,33 +59,30 @@ const ThreeGlobe: React.FC = () => {
     }
     pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const pointsMaterial = new THREE.PointsMaterial({
-      color: 0x60a5fa,
-      size: 0.005,
+      color: pointColor,
+      size: 0.006,
       transparent: true,
-      opacity: 0.8
+      opacity: isDark ? 0.8 : 0.6
     });
     const points = new THREE.Points(pointsGeometry, pointsMaterial);
     globe.add(points);
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, isDark ? 0.5 : 0.8);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0x60a5fa, 2, 50);
+    const pointLight = new THREE.PointLight(pointColor, 2.5, 50);
     pointLight.position.set(5, 5, 5);
     scene.add(pointLight);
 
-    // Animation
     const animate = () => {
       requestAnimationFrame(animate);
-      globe.rotation.y += 0.002;
-      globe.rotation.x += 0.0005;
+      globe.rotation.y += 0.0015;
+      globe.rotation.x += 0.0003;
       renderer.render(scene, camera);
     };
 
     animate();
 
-    // Handle Resize
     const handleResize = () => {
       if (!containerRef.current) return;
       const w = containerRef.current.clientWidth;
@@ -100,11 +92,24 @@ const ThreeGlobe: React.FC = () => {
       renderer.setSize(w, h);
     };
 
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const dark = document.documentElement.classList.contains('dark');
+          material.color.setHex(dark ? 0x3b82f6 : 0x1e40af);
+          innerMaterial.color.setHex(dark ? 0x0f172a : 0xffffff);
+          pointsMaterial.color.setHex(dark ? 0x60a5fa : 0x3b82f6);
+        }
+      });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (containerRef.current) {
+      observer.disconnect();
+      if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }
     };

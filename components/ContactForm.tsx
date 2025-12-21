@@ -1,8 +1,14 @@
 
 import React, { useState } from 'react';
 import { submitContact } from '../services/supabaseService';
+import { Language, translations } from '../services/i18nService';
 
-const ContactForm: React.FC = () => {
+interface ContactFormProps {
+  language: Language;
+}
+
+const ContactForm: React.FC<ContactFormProps> = ({ language }) => {
+  const t = translations[language];
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
@@ -20,76 +26,78 @@ const ContactForm: React.FC = () => {
   };
 
   return (
-    <section id="contact-form" className="py-32 bg-slate-950 reveal">
-      <div className="container mx-auto px-6 max-w-4xl">
-        <div className="grid md:grid-cols-2 gap-16">
-          <div className="space-y-6">
-            <h2 className="text-4xl font-serif">Vamos conversar?</h2>
-            <p className="text-slate-400 font-light leading-relaxed">
-              Dúvidas sobre nossas mentorias ou interessado em uma consultoria personalizada? Nossa equipe retornará em até 24h úteis.
-            </p>
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center gap-4 text-slate-300">
-                <div className="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center text-blue-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <section id="contact-form" className="py-40 bg-white dark:bg-slate-950 reveal transition-colors duration-500">
+      <div className="container mx-auto px-6 max-w-6xl">
+        <div className="grid lg:grid-cols-2 gap-24">
+          <div className="space-y-10">
+            <div className="space-y-4">
+              <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[10px]">Ready to Scale?</div>
+              <h2 className="text-5xl font-serif dark:text-white text-slate-900">{t.contact_title}</h2>
+              <p className="text-slate-500 dark:text-slate-400 font-light text-lg leading-relaxed">
+                {t.contact_subtitle}
+              </p>
+            </div>
+            
+            <div className="space-y-6 pt-6">
+              <div className="flex items-center gap-6 group">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span>contato@claudiotonelli.com.br</span>
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Global Desk</div>
+                  <span className="dark:text-white text-slate-900 font-medium">contato@claudiotonelli.com.br</span>
+                </div>
               </div>
-              <div className="flex items-center gap-4 text-slate-300">
-                <div className="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center text-blue-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex items-center gap-6 group">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <span>São Paulo - SP, Brasil</span>
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Corporate HQ</div>
+                  <span className="dark:text-white text-slate-900 font-medium">São Paulo - SP, Brasil</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
+          <form onSubmit={handleSubmit} className="space-y-8 bg-slate-50 dark:bg-slate-900/50 p-12 rounded-[3rem] border border-slate-100 dark:border-white/5 shadow-2xl">
+            <div className="space-y-4">
               <input 
                 required
                 type="text" 
-                placeholder="Nome Completo"
+                placeholder={t.contact_name}
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
-                className="w-full bg-slate-900 border border-white/10 rounded-xl px-6 py-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-2xl px-8 py-5 text-slate-900 dark:text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
               />
-            </div>
-            <div>
               <input 
                 required
                 type="email" 
-                placeholder="E-mail Corporativo"
+                placeholder={t.contact_email}
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
-                className="w-full bg-slate-900 border border-white/10 rounded-xl px-6 py-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-2xl px-8 py-5 text-slate-900 dark:text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
               />
-            </div>
-            <div>
               <textarea 
                 required
-                placeholder="Como podemos ajudar seu negócio?"
+                placeholder={t.contact_message}
                 rows={4}
                 value={formData.message}
                 onChange={e => setFormData({...formData, message: e.target.value})}
-                className="w-full bg-slate-900 border border-white/10 rounded-xl px-6 py-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none"
+                className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/5 rounded-2xl px-8 py-5 text-slate-900 dark:text-white focus:border-blue-500 outline-none transition-all resize-none placeholder:text-slate-400"
               ></textarea>
             </div>
             <button 
               disabled={status === 'loading'}
-              className={`w-full py-4 rounded-xl font-bold transition-all btn-premium ${
-                status === 'loading' ? 'bg-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
-              }`}
+              className="w-full py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] transition-all bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/20 active:scale-95"
             >
-              {status === 'loading' ? 'Enviando...' : 'Enviar Mensagem'}
+              {status === 'loading' ? t.contact_sending : t.contact_send}
             </button>
-            {status === 'success' && <p className="text-green-400 text-center text-sm">Mensagem enviada com sucesso!</p>}
-            {status === 'error' && <p className="text-red-400 text-center text-sm">Erro ao enviar. Tente novamente.</p>}
+            {status === 'success' && <p className="text-green-500 text-center text-xs font-bold uppercase tracking-widest">Sent Successfully</p>}
           </form>
         </div>
       </div>

@@ -114,8 +114,8 @@ const App: React.FC = () => {
     return () => { clearTimeout(timeout); observer.disconnect(); };
   }, [loading, insights, products]);
 
-  const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || t.hero_title, [content, language]);
-  const heroSubtitle = useMemo(() => content[`home.hero.subtitle.${language}`] || t.hero_subtitle, [content, language]);
+  const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || t.hero_title, [content, language, t.hero_title]);
+  const heroSubtitle = useMemo(() => content[`home.hero.subtitle.${language}`] || t.hero_subtitle, [content, language, t.hero_subtitle]);
 
   const handleAreaClick = () => {
     if (!userProfile) {
@@ -178,7 +178,7 @@ const App: React.FC = () => {
 
       {/* Hero Section */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-40 dark:opacity-60">
+        <div className="absolute inset-0 z-0 opacity-60">
            <ThreeGlobe />
         </div>
         
@@ -213,7 +213,7 @@ const App: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </a>
-              <a href="#insights" className="glass px-10 py-5 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-white/10 flex items-center gap-3">
+              <a href="#insights" className="glass px-10 py-5 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-white/10 flex items-center gap-3 dark:text-white text-slate-900">
                 {t.btn_insights}
               </a>
             </div>
@@ -228,9 +228,10 @@ const App: React.FC = () => {
 
       {/* Metrics Section */}
       {metrics.length > 0 && (
-        <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#050a18] border-y border-slate-200 dark:border-white/5 relative overflow-hidden">
+        <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#050a18] border-y border-slate-200 dark:border-white/5 relative overflow-hidden transition-colors duration-500">
           <div className="absolute inset-0 bg-blue-500/5 blur-[120px] -translate-x-1/2"></div>
           <div className="container mx-auto px-6 relative z-10">
+            <h2 className="text-center text-[10px] font-bold uppercase tracking-[0.5em] text-slate-400 dark:text-slate-500 mb-20">{t.metrics_title}</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-16">
               {metrics.map((m) => (
                 <div key={m.id} className="text-center group reveal">
@@ -249,7 +250,7 @@ const App: React.FC = () => {
 
       {/* Insights Section */}
       {insights.length > 0 && (
-        <section id="insights" className="py-40 bg-white dark:bg-slate-950">
+        <section id="insights" className="py-40 bg-white dark:bg-slate-950 transition-colors duration-500">
           <div className="container mx-auto px-6">
             <div className="flex flex-col lg:flex-row justify-between items-end mb-24 gap-8">
               <div className="max-w-2xl reveal">
@@ -300,11 +301,11 @@ const App: React.FC = () => {
         </section>
       )}
 
-      {products.length > 0 && <ProductsSection products={products} />}
-      {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} />}
-      <ContactForm />
+      {products.length > 0 && <ProductsSection products={products} language={language} />}
+      {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} language={language} />}
+      <ContactForm language={language} />
 
-      <footer id="contact" className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] relative overflow-hidden">
+      <footer id="contact" className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] relative overflow-hidden transition-colors duration-500">
         <div className="container mx-auto px-6 relative z-10">
           <div className="grid lg:grid-cols-5 gap-20 mb-24">
             <div className="lg:col-span-2 space-y-8">

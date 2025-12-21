@@ -33,14 +33,20 @@ const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const languages: { code: Language; label: string }[] = [
+    { code: 'pt', label: 'PT' },
+    { code: 'en', label: 'EN' },
+    { code: 'es', label: 'ES' }
+  ];
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-[80] transition-all duration-500 ${isScrolled ? 'bg-slate-950/80 dark:bg-slate-950/80 backdrop-blur-xl py-4 border-b border-white/5 shadow-2xl' : 'bg-transparent py-8'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-[80] transition-all duration-500 ${isScrolled ? 'bg-white/90 dark:bg-slate-950/80 backdrop-blur-xl py-4 border-b border-slate-200 dark:border-white/5 shadow-2xl' : 'bg-transparent py-8'}`}>
       <div className="container mx-auto px-6 flex justify-between items-center">
         {/* Logo */}
         <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
           <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl shadow-xl shadow-blue-600/30 group-hover:scale-105 transition-transform">CT</div>
           <div className="flex flex-col">
-            <span className="text-xl font-bold tracking-tighter leading-none dark:text-white text-slate-900">
+            <span className="text-xl font-bold tracking-tighter leading-none dark:text-white text-slate-900 transition-colors">
               Claudio Tonelli
             </span>
             <span className="text-[9px] uppercase tracking-[0.4em] text-slate-500 font-bold mt-1">Consultoria Executive</span>
@@ -58,14 +64,18 @@ const Navbar: React.FC<NavbarProps> = ({
         {/* Actions */}
         <div className="flex items-center gap-6">
           {/* Language Selector */}
-          <div className="hidden md:flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-            {(['pt', 'en', 'es'] as Language[]).map(lang => (
+          <div className="hidden md:flex items-center bg-slate-100 dark:bg-white/5 rounded-full p-1 border border-slate-200 dark:border-white/5">
+            {languages.map(lang => (
               <button 
-                key={lang}
-                onClick={() => setLanguage(lang)}
-                className={`hover:text-blue-500 transition-colors ${language === lang ? 'text-blue-500' : ''}`}
+                key={lang.code}
+                onClick={() => setLanguage(lang.code)}
+                className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${
+                  language === lang.code 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                }`}
               >
-                {lang}
+                {lang.label}
               </button>
             ))}
           </div>
@@ -73,8 +83,8 @@ const Navbar: React.FC<NavbarProps> = ({
           {/* Theme Toggle */}
           <button 
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors text-slate-500"
-            title="Trocar Tema"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-blue-500 transition-all"
+            title="Switch Theme"
           >
             {theme === 'dark' ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,7 +106,7 @@ const Navbar: React.FC<NavbarProps> = ({
               {userProfile ? (
                 <>
                   <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  <span className="max-w-[100px] truncate">{userProfile.full_name?.split(' ')[0] || 'Membro'}</span>
+                  <span className="max-w-[80px] truncate">{userProfile.full_name?.split(' ')[0] || 'Member'}</span>
                 </>
               ) : t.nav_client_area}
             </button>
