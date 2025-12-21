@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ThreeGlobe from './components/ThreeGlobe';
 import ChatBot from './components/ChatBot';
@@ -14,10 +14,24 @@ import ArticlePage from './components/ArticlePage';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent,
-  getCurrentUser, getProfile, supabase, signOut
+  getCurrentUser, getProfile, signOut, supabase
 } from './services/supabaseService';
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile } from './types';
+
+// Mock Data for Demo Mode
+const MOCK_INSIGHTS: Insight[] = [
+  { id: '1', title: 'A Era da IA Generativa na Gestão', excerpt: 'Como CEOs estão redefinindo prioridades estratégicas.', content: '', category: 'ESTRATÉGIA', image_url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80', published_at: new Date().toISOString(), is_active: true, display_order: 1, link: '' },
+  { id: '2', title: 'Sustentabilidade como Vantagem', excerpt: 'ESG não é mais opcional, é o motor da nova economia.', content: '', category: 'ESG', image_url: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80', published_at: new Date().toISOString(), is_active: true, display_order: 2, link: '' },
+  { id: '3', title: 'Liderança em Tempos de Crise', excerpt: 'Resiliência e visão de longo prazo no mercado global.', content: '', category: 'LIDERANÇA', image_url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80', published_at: new Date().toISOString(), is_active: true, display_order: 3, link: '' },
+];
+
+const MOCK_METRICS: Metric[] = [
+  { id: '1', label: 'EBITDA Médio Adicionado', value: '+24%', icon: null, display_order: 1, is_active: true },
+  { id: '2', label: 'Projetos Realizados', value: '150+', icon: null, display_order: 2, is_active: true },
+  { id: '3', label: 'Retenção de Clientes', value: '98%', icon: null, display_order: 3, is_active: true },
+  { id: '4', label: 'Países com Impacto', value: '12', icon: null, display_order: 4, is_active: true },
+];
 
 const HomePage: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -26,7 +40,6 @@ const HomePage: React.FC = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [content, setContent] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [errorState, setErrorState] = useState<string | null>(null);
   
   const [language, setLanguage] = useState<Language>('pt');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('dark');
@@ -49,30 +62,40 @@ const HomePage: React.FC = () => {
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [m, i, p, test, s, user] = await Promise.all([
-        fetchMetrics(),
-        fetchInsights(),
-        fetchProducts(),
-        fetchTestimonials(),
-        fetchSiteContent('home'),
-        getCurrentUser()
-      ]);
       
-      setMetrics(m);
-      setInsights(i);
-      setProducts(p);
-      setTestimonials(test);
-      setContent(s);
+      // Attempt to load from Supabase if keys exist
+      if (supabase) {
+        const [m, i, p, test, s, user] = await Promise.all([
+          fetchMetrics(),
+          fetchInsights(),
+          fetchProducts(),
+          fetchTestimonials(),
+          fetchSiteContent('home'),
+          getCurrentUser()
+        ]);
+        
+        setMetrics(m.length > 0 ? m : MOCK_METRICS);
+        setInsights(i.length > 0 ? i : MOCK_INSIGHTS);
+        setProducts(p);
+        setTestimonials(test);
+        setContent(s);
 
-      if (user) {
-        const profile = await getProfile(user.id);
-        setUserProfile(profile);
+        if (user) {
+          const profile = await getProfile(user.id);
+          setUserProfile(profile);
+        }
+      } else {
+        // Fallback to Demo Data
+        setMetrics(MOCK_METRICS);
+        setInsights(MOCK_INSIGHTS);
+        setLoading(false);
       }
     } catch (err) {
-      console.error("Initialization Error:", err);
-      setErrorState("Falha ao carregar a experiência. Verifique sua conexão.");
+      console.warn("Using fallback demo data due to connection error:", err);
+      setMetrics(MOCK_METRICS);
+      setInsights(MOCK_INSIGHTS);
     } finally {
-      setTimeout(() => setLoading(false), 800);
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -90,7 +113,7 @@ const HomePage: React.FC = () => {
 
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, [loading, insights, products]);
+  }, [loading, insights]);
 
   const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || t.hero_title, [content, language, t.hero_title]);
   const heroSubtitle = useMemo(() => content[`home.hero.subtitle.${language}`] || t.hero_subtitle, [content, language, t.hero_subtitle]);
@@ -110,15 +133,8 @@ const HomePage: React.FC = () => {
 
   if (loading) return (
     <div className="fixed inset-0 bg-[#030712] z-[100] flex flex-col items-center justify-center">
-      <div className="w-16 h-16 border-t-2 border-blue-600 rounded-full animate-spin mb-6"></div>
-      <div className="text-[10px] tracking-[0.5em] uppercase font-bold text-slate-500 animate-pulse">Claudio Tonelli Consultoria</div>
-    </div>
-  );
-
-  if (errorState) return (
-    <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-      <h1 className="text-2xl text-white mb-4 font-serif">{errorState}</h1>
-      <button onClick={() => window.location.reload()} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-widest text-[10px]">Tentar Novamente</button>
+      <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin mb-6"></div>
+      <div className="text-[9px] tracking-[0.5em] uppercase font-bold text-slate-500 animate-pulse">Iniciando Experiência</div>
     </div>
   );
 
