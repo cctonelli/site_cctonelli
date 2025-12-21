@@ -14,6 +14,7 @@ import {
   fetchTestimonials, fetchCarouselImages, fetchSiteContent,
   getCurrentUser, getProfile, supabase, signOut
 } from './services/supabaseService';
+import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, CarouselImage, Profile } from './types';
 
 const App: React.FC = () => {
@@ -25,6 +26,11 @@ const App: React.FC = () => {
   const [content, setContent] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   
+  // Settings States
+  const [language, setLanguage] = useState<Language>('pt');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('dark');
+  const t = translations[language];
+  
   // UI States
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
@@ -33,9 +39,19 @@ const App: React.FC = () => {
   // Auth State
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
+  // Apply Theme
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+
   const loadAllData = async () => {
     try {
-      const [m, i, p, t, c, s, user] = await Promise.all([
+      const [m, i, p, t_data, c, s, user] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
         fetchProducts(),
@@ -48,7 +64,7 @@ const App: React.FC = () => {
       setMetrics(m);
       setInsights(i);
       setProducts(p);
-      setTestimonials(t);
+      setTestimonials(t_data);
       setCarousel(c);
       setContent(s);
 
@@ -68,7 +84,6 @@ const App: React.FC = () => {
   useEffect(() => {
     loadAllData();
     
-    // Setup Realtime Listeners
     if (supabase) {
       const channel = supabase
         .channel('public_changes')
@@ -83,7 +98,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Intersection Observer for Reveal Animations
   useEffect(() => {
     if (loading) return;
     const observer = new IntersectionObserver((entries) => {
@@ -100,8 +114,8 @@ const App: React.FC = () => {
     return () => { clearTimeout(timeout); observer.disconnect(); };
   }, [loading, insights, products]);
 
-  const heroTitle = useMemo(() => content['home.hero.title'] || 'Estratégia Inesquecível.', [content]);
-  const heroSubtitle = useMemo(() => content['home.hero.subtitle'] || 'Redefinindo o futuro corporativo através de excelência operacional e inteligência estratégica.', [content]);
+  const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || t.hero_title, [content, language]);
+  const heroSubtitle = useMemo(() => content[`home.hero.subtitle.${language}`] || t.hero_subtitle, [content, language]);
 
   const handleAreaClick = () => {
     if (!userProfile) {
@@ -132,8 +146,16 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="relative min-h-screen">
-      <Navbar onAdminClick={handleAreaClick} userProfile={userProfile} onLogout={handleLogout} />
+    <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
+      <Navbar 
+        onAdminClick={handleAreaClick} 
+        userProfile={userProfile} 
+        onLogout={handleLogout} 
+        language={language}
+        setLanguage={setLanguage}
+        theme={theme}
+        setTheme={setTheme}
+      />
 
       {isAuthOpen && (
         <AuthModal 
@@ -156,22 +178,22 @@ const App: React.FC = () => {
 
       {/* Hero Section */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-60">
+        <div className="absolute inset-0 z-0 opacity-40 dark:opacity-60">
            <ThreeGlobe />
         </div>
         
         <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-10 reveal active">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-blue-500/5">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-blue-500/5">
               <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></span>
-              Consultoria Estratégica Visionária
+              {t.hero_badge}
             </div>
             
-            <h1 className="text-6xl md:text-8xl font-serif leading-[1.1] text-white">
+            <h1 className="text-6xl md:text-8xl font-serif leading-[1.1] text-slate-900 dark:text-white transition-colors duration-500">
               {heroTitle.split(' ').map((word, i, arr) => (
                 <span key={i} className="inline-block">
                   {i === arr.length - 1 ? (
-                    <span className="italic text-slate-400 font-light">{word}</span>
+                    <span className="italic text-slate-500 font-light">{word}</span>
                   ) : (
                     word + '\u00A0'
                   )}
@@ -180,38 +202,39 @@ const App: React.FC = () => {
               ))}
             </h1>
             
-            <p className="text-xl text-slate-400 max-w-lg leading-relaxed font-light border-l-2 border-blue-500/30 pl-6">
+            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-lg leading-relaxed font-light border-l-2 border-blue-500/30 pl-6">
               {heroSubtitle}
             </p>
             
             <div className="flex flex-wrap gap-6 pt-4">
-              <a href="#contact-form" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-xl font-bold transition-all shadow-2xl shadow-blue-600/30 btn-premium group flex items-center gap-3 particle-hover">
-                Solicitar Diagnóstico
+              <a href="#contact-form" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-xl font-bold transition-all shadow-2xl shadow-blue-600/30 btn-premium group flex items-center gap-3">
+                {t.btn_diagnosis}
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </a>
-              <a href="#insights" className="glass px-10 py-5 rounded-xl font-bold transition-all hover:bg-white/10 flex items-center gap-3">
-                Nossos Insights
+              <a href="#insights" className="glass px-10 py-5 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-white/10 flex items-center gap-3">
+                {t.btn_insights}
               </a>
             </div>
           </div>
         </div>
 
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 text-slate-600">
-          <span className="text-[9px] uppercase tracking-[0.5em] font-bold">Explorar Experiência</span>
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 text-slate-400 dark:text-slate-600">
+          <span className="text-[9px] uppercase tracking-[0.5em] font-bold">{t.explore_exp}</span>
           <div className="w-[1px] h-16 bg-gradient-to-b from-blue-500 to-transparent"></div>
         </div>
       </section>
 
+      {/* Metrics Section */}
       {metrics.length > 0 && (
-        <section id="metrics" className="py-32 bg-[#050a18] border-y border-white/5 relative overflow-hidden">
+        <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#050a18] border-y border-slate-200 dark:border-white/5 relative overflow-hidden">
           <div className="absolute inset-0 bg-blue-500/5 blur-[120px] -translate-x-1/2"></div>
           <div className="container mx-auto px-6 relative z-10">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-16">
               {metrics.map((m) => (
                 <div key={m.id} className="text-center group reveal">
-                  <div className="text-6xl font-bold mb-4 text-white font-serif tracking-tighter group-hover:text-blue-500 transition-colors">
+                  <div className="text-6xl font-bold mb-4 text-slate-900 dark:text-white font-serif tracking-tighter group-hover:text-blue-500 transition-colors">
                     {m.value}
                   </div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-500/60 mb-3">
@@ -224,20 +247,21 @@ const App: React.FC = () => {
         </section>
       )}
 
+      {/* Insights Section */}
       {insights.length > 0 && (
-        <section id="insights" className="py-40 bg-slate-950">
+        <section id="insights" className="py-40 bg-white dark:bg-slate-950">
           <div className="container mx-auto px-6">
             <div className="flex flex-col lg:flex-row justify-between items-end mb-24 gap-8">
               <div className="max-w-2xl reveal">
-                <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[10px] mb-4">Conhecimento Estratégico</div>
-                <h2 className="text-5xl font-serif mb-6 leading-tight">Antecipando a Próxima <br/><span className="italic text-slate-500">Grande Ruptura.</span></h2>
-                <p className="text-slate-400 font-light text-lg leading-relaxed">
-                  Insights proprietários que transformam incerteza em vantagem competitiva.
+                <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[10px] mb-4">{t.insights_badge}</div>
+                <h2 className="text-5xl font-serif mb-6 leading-tight dark:text-white text-slate-900">{t.insights_title}</h2>
+                <p className="text-slate-500 dark:text-slate-400 font-light text-lg leading-relaxed">
+                  {t.insights_subtitle}
                 </p>
               </div>
               <div className="reveal">
-                <button className="group text-white text-sm font-bold uppercase tracking-widest hover:text-blue-400 transition-colors flex items-center gap-4 pb-2 border-b border-white/10 hover:border-blue-400/50">
-                  Ver Todo o Acervo
+                <button className="group dark:text-white text-slate-900 text-sm font-bold uppercase tracking-widest hover:text-blue-500 transition-colors flex items-center gap-4 pb-2 border-b border-slate-200 dark:border-white/10 hover:border-blue-500/50">
+                  {t.insights_all}
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
@@ -248,24 +272,24 @@ const App: React.FC = () => {
             <div className="grid lg:grid-cols-3 gap-12">
               {insights.map((insight) => (
                 <article key={insight.id} className="group cursor-pointer reveal">
-                  <div className="relative aspect-[16/10] rounded-3xl overflow-hidden mb-8 shadow-2xl transition-all group-hover:shadow-blue-500/10 border border-white/5">
+                  <div className="relative aspect-[16/10] rounded-3xl overflow-hidden mb-8 shadow-2xl transition-all group-hover:shadow-blue-500/10 border border-slate-100 dark:border-white/5">
                     <img 
                       src={insight.image_url || `https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop`} 
                       alt={insight.title} 
                       className="object-cover w-full h-full transition-transform duration-1000 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
                     <div className="absolute top-6 left-6">
-                      <span className="glass text-[9px] px-4 py-1.5 rounded-full uppercase tracking-widest font-bold">
+                      <span className="glass text-[9px] px-4 py-1.5 rounded-full uppercase tracking-widest font-bold text-white">
                         {insight.category || 'ESTRATÉGIA'}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <h3 className="text-3xl font-serif text-white group-hover:text-blue-400 transition-colors leading-snug">
+                    <h3 className="text-3xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors leading-snug">
                       {insight.title}
                     </h3>
-                    <p className="text-slate-400 text-sm leading-relaxed font-light line-clamp-2">
+                    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed font-light line-clamp-2">
                       {insight.excerpt}
                     </p>
                   </div>
@@ -280,55 +304,52 @@ const App: React.FC = () => {
       {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} />}
       <ContactForm />
 
-      <footer id="contact" className="py-32 border-t border-white/5 bg-[#010309] relative overflow-hidden">
-        <div className="absolute bottom-0 right-0 w-1/3 h-1/2 bg-blue-600/5 blur-[150px] rounded-full"></div>
+      <footer id="contact" className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] relative overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="grid lg:grid-cols-5 gap-20 mb-24">
             <div className="lg:col-span-2 space-y-8">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl shadow-xl shadow-blue-600/30">CT</div>
                 <div className="flex flex-col">
-                  <span className="text-2xl font-bold tracking-tight text-white">Claudio Tonelli</span>
+                  <span className="text-2xl font-bold tracking-tight dark:text-white text-slate-900">Claudio Tonelli</span>
                   <span className="text-[10px] uppercase tracking-[0.4em] text-slate-500 font-bold">Consultoria Executive</span>
                 </div>
               </div>
               <p className="text-slate-500 max-w-sm font-light leading-loose text-lg">
-                Arquitetando o amanhã através de rigor metodológico e inovação digital. O parceiro estratégico para o C-Level de vanguarda.
+                {t.footer_desc}
               </p>
             </div>
             
-            <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-12">
+            <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-12 text-slate-600 dark:text-slate-400">
               <div>
-                <h4 className="font-bold mb-8 text-[11px] uppercase tracking-[0.3em] text-slate-300">Arquitetura</h4>
-                <ul className="space-y-4 text-sm text-slate-500">
-                  <li><a href="#hero" className="hover:text-blue-400 transition-colors">Vision</a></li>
-                  <li><a href="#products" className="hover:text-blue-400 transition-colors">Solutions</a></li>
-                  <li><a href="#insights" className="hover:text-blue-400 transition-colors">Knowledge</a></li>
-                  <li><a href="#testimonials" className="hover:text-blue-400 transition-colors">Success Cases</a></li>
+                <h4 className="font-bold mb-8 text-[11px] uppercase tracking-[0.3em] dark:text-slate-300 text-slate-900">Arquitetura</h4>
+                <ul className="space-y-4 text-sm">
+                  <li><a href="#hero" className="hover:text-blue-500 transition-colors">Vision</a></li>
+                  <li><a href="#products" className="hover:text-blue-500 transition-colors">Solutions</a></li>
+                  <li><a href="#insights" className="hover:text-blue-500 transition-colors">Knowledge</a></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold mb-8 text-[11px] uppercase tracking-[0.3em] text-slate-300">Ecosystem</h4>
-                <ul className="space-y-4 text-sm text-slate-500">
-                  <li><a href="#" className="hover:text-blue-400 transition-colors">LinkedIn</a></li>
-                  <li><a href="#" className="hover:text-blue-400 transition-colors">Intelligence Hub</a></li>
-                  <li><a href="#" className="hover:text-blue-400 transition-colors">Partner Portal</a></li>
+                <h4 className="font-bold mb-8 text-[11px] uppercase tracking-[0.3em] dark:text-slate-300 text-slate-900">Ecosystem</h4>
+                <ul className="space-y-4 text-sm">
+                  <li><a href="#" className="hover:text-blue-500 transition-colors">LinkedIn</a></li>
+                  <li><a href="#" className="hover:text-blue-500 transition-colors">Intelligence Hub</a></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold mb-8 text-[11px] uppercase tracking-[0.3em] text-slate-300">Contact</h4>
-                <ul className="space-y-4 text-sm text-slate-500">
-                  <li><span className="text-slate-300">São Paulo, BR</span></li>
-                  <li><a href="mailto:contato@claudiotonelli.com.br" className="hover:text-blue-400 transition-colors">E-mail Hub</a></li>
+                <h4 className="font-bold mb-8 text-[11px] uppercase tracking-[0.3em] dark:text-slate-300 text-slate-900">Contact</h4>
+                <ul className="space-y-4 text-sm">
+                  <li><span className="dark:text-slate-300 text-slate-600">São Paulo, BR</span></li>
+                  <li><a href="mailto:contato@claudiotonelli.com.br" className="hover:text-blue-500 transition-colors">E-mail Hub</a></li>
                 </ul>
               </div>
             </div>
           </div>
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8 pt-12 border-t border-white/5 text-[9px] text-slate-600 font-bold uppercase tracking-[0.5em]">
-            <span>© 2025 Claudio Tonelli Group. Excellence in Advisory.</span>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8 pt-12 border-t border-slate-200 dark:border-white/5 text-[9px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-[0.5em]">
+            <span>{t.copyright}</span>
             <div className="flex gap-12">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms of Engagement</a>
+              <a href="#" className="hover:text-blue-500 transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-blue-500 transition-colors">Terms of Engagement</a>
             </div>
           </div>
         </div>

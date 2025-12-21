@@ -9,19 +9,45 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#030712',
+              blue: '#3b82f6',
+              gold: '#d4af37'
+            }
+          }
+        }
+      }
+    }
+  </script>
   <style>
     :root {
       --bg-color: #030712;
       --accent-blue: #3b82f6;
+      transition: background-color 0.5s ease, color 0.5s ease;
     }
+    
+    html.dark {
+      --bg-color: #030712;
+    }
+    
+    html:not(.dark) {
+      --bg-color: #f8fafc;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       background-color: var(--bg-color);
-      color: #f9fafb;
       margin: 0;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
+    
     .font-serif {
       font-family: 'Playfair Display', serif;
     }
@@ -37,10 +63,10 @@
       width: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: #030712;
+      background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: #1f2937;
+      background: rgba(31, 41, 55, 0.5);
       border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb:hover {
@@ -60,44 +86,24 @@
     
     /* Glassmorphism */
     .glass {
-      background: rgba(15, 23, 42, 0.7);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    /* Ripple Button Effect */
-    .btn-premium {
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s ease;
+    .dark .glass {
+      background: rgba(15, 23, 42, 0.7);
     }
-    .btn-premium:active {
-      transform: scale(0.98);
-    }
-
-    /* Particles Hover Effect */
-    .particle-hover:hover::after {
-      content: '';
-      position: absolute;
-      inset: -10px;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
-      pointer-events: none;
-      animation: pulse 2s infinite;
+    
+    html:not(.dark) .glass {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     @keyframes pulse {
       0% { transform: scale(1); opacity: 0.5; }
       50% { transform: scale(1.5); opacity: 0; }
       100% { transform: scale(1); opacity: 0.5; }
-    }
-    
-    @keyframes progress-grow {
-      from { transform: scaleY(0); }
-      to { transform: scaleY(1); }
-    }
-    .animate-progress {
-      animation: progress-grow linear forwards;
     }
   </style>
 <script type="importmap">
@@ -114,7 +120,7 @@
 }
 </script>
 </head>
-<body class="bg-grid">
+<body class="bg-grid dark:text-white text-slate-900">
   <div id="root"></div>
 </body>
 </html>
