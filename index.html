@@ -12,7 +12,6 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css">
   
   <script>
-    // Critical Polyfill for ESM modules that expect Node-like 'process' object
     window.process = { 
       env: { 
         NODE_ENV: 'production',
@@ -30,9 +29,9 @@
         extend: {
           colors: {
             brand: {
-              navy: '#030712',
-              blue: '#3b82f6',
-              gold: '#d4af37'
+              navy: '#010309',
+              blue: '#2563eb',
+              gold: '#b4975a'
             }
           }
         }
@@ -41,36 +40,63 @@
   </script>
   <style>
     :root {
-      --bg-color: #030712;
-      --accent-blue: #3b82f6;
+      --bg-color: #010309;
+      --accent-blue: #2563eb;
     }
-    html.dark { --bg-color: #030712; }
-    html:not(.dark) { --bg-color: #f8fafc; }
+    html.dark { --bg-color: #010309; }
+    html:not(.dark) { --bg-color: #ffffff; }
     body {
       font-family: 'Inter', sans-serif;
       background-color: var(--bg-color);
       margin: 0;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
+      color: #94a3b8;
     }
     .font-serif { font-family: 'Playfair Display', serif; }
+    
+    /* Luxury Grid Overlay */
     .bg-grid {
-      background-image: radial-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px);
-      background-size: 40px 40px;
+      background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1.5px, transparent 1.5px);
+      background-size: 60px 60px;
     }
+
+    /* Immersive Animations */
     .reveal {
       opacity: 0;
-      transform: translateY(30px);
-      transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateY(40px);
+      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .reveal.active {
       opacity: 1;
       transform: translateY(0);
     }
+
+    /* Glassmorphism Refined */
     .glass {
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    ::selection {
+      background: #2563eb;
+      color: white;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #010309;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2563eb;
     }
   </style>
 
@@ -92,7 +118,7 @@
 }
 </script>
 </head>
-<body class="bg-grid dark:text-white text-slate-900">
+<body class="bg-grid dark:text-slate-300 text-slate-900 selection:bg-blue-600 selection:text-white">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
