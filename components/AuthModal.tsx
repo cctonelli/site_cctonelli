@@ -36,16 +36,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           whatsapp: whatsapp,
           gender: gender,
         });
+        
         if (signUpError) {
-          // Se houver erro, pode ser RLS ou campo faltando
-          throw new Error(signUpError.message || 'Falha na persistência dos dados do perfil.');
+          // Captura amigável para erro de RLS (Row Level Security)
+          if (signUpError.message?.toLowerCase().includes('row-level security')) {
+            throw new Error('Erro de Permissão (RLS): O banco de dados bloqueou a criação do seu perfil. Verifique as políticas de segurança no painel Supabase.');
+          }
+          throw signUpError;
         }
       }
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error("Auth Error:", err);
-      setError(err.message || 'Ocorreu um erro inesperado. Verifique as permissões do banco.');
+      console.error("Erro na Autenticação:", err);
+      setError(err.message || 'Ocorreu um erro inesperado.');
     } finally {
       setIsLoading(false);
     }
@@ -147,7 +151,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
               className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-700"
             />
 
-            {error && <p className="text-red-500 text-xs text-center font-bold tracking-tight px-4">{error}</p>}
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl"
+              >
+                <p className="text-red-500 text-[11px] text-center font-bold tracking-tight leading-relaxed">
+                  {error}
+                </p>
+              </motion.div>
+            )}
 
             <button 
               disabled={isLoading}

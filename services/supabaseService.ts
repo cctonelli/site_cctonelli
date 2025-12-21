@@ -13,6 +13,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true
   }
 });
 
@@ -39,7 +40,8 @@ export const signUp = async (email: string, password?: string, metadata?: Partia
   
   if (data.user) {
     // 2. Criar o perfil na tabela pública profiles
-    // Importante: O ID deve ser o mesmo do auth.users
+    // Se a confirmação de e-mail estiver ativada, o usuário pode não ter sessão ativa ainda,
+    // o que causará erro de RLS se a política exigir auth.uid() = id.
     const { error: profileError } = await supabase.from('profiles').insert([{
       id: data.user.id,
       full_name: metadata?.full_name || '',
@@ -50,8 +52,7 @@ export const signUp = async (email: string, password?: string, metadata?: Partia
     }]);
 
     if (profileError) {
-      console.error("Critical: Auth user created but profile insertion failed:", profileError);
-      // Retornamos o erro do perfil para que a UI saiba que algo falhou na persistência
+      console.error("Erro ao inserir perfil (possível falha de RLS):", profileError);
       return { data, error: profileError };
     }
   }
@@ -82,7 +83,7 @@ export const updateProfile = async (id: string, profile: Partial<Profile>) => {
   return !error;
 };
 
-// --- DATA FETCHING (DEMAIS TABELAS) ---
+// --- DATA FETCHING ---
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   const { data, error } = await supabase
     .from('carousel_images')
