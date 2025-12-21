@@ -5,8 +5,16 @@ import {
   Testimonial, Profile, SiteContent, Contact 
 } from '../types';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+// Safe access to environment variables
+const getEnv = (key: string) => {
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
+  }
+  return '';
+};
+
+const SUPABASE_URL = getEnv('SUPABASE_URL');
+const SUPABASE_ANON_KEY = getEnv('SUPABASE_ANON_KEY');
 
 export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -17,23 +25,22 @@ const logSecureError = (context: string, error: any) => {
 };
 
 // --- AUTHENTICATION ---
+export const signIn = async (email: string, password?: string) => {
+  if (!supabase) return { data: null, error: new Error("Supabase não inicializado") };
+  const { data, error } = password 
+    ? await supabase.auth.signInWithPassword({ email, password })
+    : await supabase.auth.signInWithOtp({ email });
+  if (error) logSecureError('SignIn', error);
+  return { data, error };
+};
+
 export const signUp = async (email: string, password?: string, metadata?: any) => {
-  if (!supabase) return { data: null, error: new Error("Supabase not initialized") };
+  if (!supabase) return { data: null, error: new Error("Supabase não inicializado") };
   const { data, error } = await supabase.auth.signUp({
     email,
     password: password || 'default-secure-pass',
     options: { data: metadata }
   });
-  if (error) logSecureError('SignUp', error);
-  return { data, error };
-};
-
-export const signIn = async (email: string, password?: string) => {
-  if (!supabase) return { data: null, error: new Error("Supabase not initialized") };
-  const { data, error } = password 
-    ? await supabase.auth.signInWithPassword({ email, password })
-    : await supabase.auth.signInWithOtp({ email });
-  if (error) logSecureError('SignIn', error);
   return { data, error };
 };
 
@@ -57,7 +64,7 @@ export const uploadInsightImage = async (file: File): Promise<string | null> => 
     const filePath = `insights/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('insight-images') // User must create this bucket and set to public
+      .from('insight-images')
       .upload(filePath, file);
 
     if (uploadError) throw uploadError;
@@ -131,24 +138,10 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
     const { data, error } = await supabase
       .from('testimonials')
       .select('*')
-      .eq('approved', true)
-      .order('created_at', { ascending: false });
+      .eq('approved', true);
     if (error) throw error;
     return data || [];
   } catch (e) { logSecureError('Testimonials', e); return []; }
-};
-
-export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
-  if (!supabase) return [];
-  try {
-    const { data, error } = await supabase
-      .from('carousel_images')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-    if (error) throw error;
-    return data || [];
-  } catch (e) { logSecureError('Carousel', e); return []; }
 };
 
 export const fetchSiteContent = async (page: string): Promise<Record<string, string>> => {
@@ -167,118 +160,72 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
   if (!supabase) return false;
   try {
     const { error } = await supabase.from('contacts').insert([contact]);
-    if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('Contact Submit', e); return false; }
+    return !error;
+  } catch (e) { return false; }
 };
 
-// --- PROFILE & ADMIN ---
-export const getProfile = async (userId: string): Promise<Profile | null> => {
-  if (!supabase) return null;
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (error) throw error;
-    return data;
-  } catch (e) { logSecureError('GetProfile', e); return null; }
-};
-
-export const updateProfile = async (userId: string, profile: Partial<Profile>): Promise<boolean> => {
-  if (!supabase) return false;
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .update(profile)
-      .eq('id', userId);
-    if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('UpdateProfile', e); return false; }
-};
-
-export const updateSiteContent = async (key: string, value: string): Promise<boolean> => {
-  if (!supabase) return false;
-  try {
-    const { error } = await supabase
-      .from('site_content')
-      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-    if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('UpdateContent', e); return false; }
-};
-
-// --- CMS CRUD ---
+// --- ADMIN CMS ---
 export const addInsight = async (insight: Omit<Insight, 'id' | 'published_at'>): Promise<Insight | null> => {
   if (!supabase) return null;
-  try {
-    const { data, error } = await supabase
-      .from('insights')
-      .insert([{ ...insight, published_at: new Date().toISOString() }])
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  } catch (e) { logSecureError('AddInsight', e); return null; }
+  const { data, error } = await supabase
+    .from('insights')
+    .insert([{ ...insight, published_at: new Date().toISOString() }])
+    .select()
+    .single();
+  if (error) logSecureError('AddInsight', error);
+  return data;
 };
 
-export const updateInsightLink = async (id: string, link: string): Promise<boolean> => {
+export const deleteInsight = async (id: string) => {
   if (!supabase) return false;
-  try {
-    const { error } = await supabase.from('insights').update({ link }).eq('id', id);
-    if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('UpdateInsightLink', e); return false; }
+  const { error } = await supabase.from('insights').delete().eq('id', id);
+  return !error;
 };
 
-export const deleteInsight = async (id: string): Promise<boolean> => {
+export const updateInsightLink = async (id: string, link: string) => {
   if (!supabase) return false;
-  try {
-    const { error } = await supabase.from('insights').delete().eq('id', id);
-    if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('DeleteInsight', e); return false; }
+  const { error } = await supabase.from('insights').update({ link }).eq('id', id);
+  return !error;
 };
 
-export const addProduct = async (product: Omit<Product, 'id' | 'created_at'>): Promise<boolean> => {
-  if (!supabase) return false;
-  try {
-    const { error } = await supabase.from('products').insert([product]);
-    if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('AddProduct', e); return false; }
-};
-
-export const deleteProduct = async (id: string): Promise<boolean> => {
-  if (!supabase) return false;
-  try {
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('DeleteProduct', e); return false; }
-};
-
-export const fetchPendingTestimonials = async (): Promise<Testimonial[]> => {
+export const fetchPendingTestimonials = async () => {
   if (!supabase) return [];
-  try {
-    const { data, error } = await supabase
-      .from('testimonials')
-      .select('*')
-      .eq('approved', false);
-    if (error) throw error;
-    return data || [];
-  } catch (e) { logSecureError('PendingTestimonials', e); return []; }
+  const { data } = await supabase.from('testimonials').select('*').eq('approved', false);
+  return data || [];
 };
 
-export const approveTestimonial = async (id: string): Promise<boolean> => {
+export const approveTestimonial = async (id: string) => {
   if (!supabase) return false;
-  try {
-    const { error } = await supabase
-      .from('testimonials')
-      .update({ approved: true })
-      .eq('id', id);
-    if (error) throw error;
-    return true;
-  } catch (e) { logSecureError('ApproveTestimonial', e); return false; }
+  const { error } = await supabase.from('testimonials').update({ approved: true }).eq('id', id);
+  return !error;
+};
+
+export const getProfile = async (id: string): Promise<Profile | null> => {
+  if (!supabase) return null;
+  const { data } = await supabase.from('profiles').select('*').eq('id', id).single();
+  return data;
+};
+
+export const updateProfile = async (id: string, profile: Partial<Profile>) => {
+  if (!supabase) return false;
+  const { error } = await supabase.from('profiles').update(profile).eq('id', id);
+  return !error;
+};
+
+export const updateSiteContent = async (key: string, value: string) => {
+  if (!supabase) return false;
+  const { error } = await supabase.from('site_content').upsert({ key, value, page: 'home' }, { onConflict: 'key' });
+  return !error;
+};
+
+export const addProduct = async (product: any) => {
+  if (!supabase) return false;
+  const { error } = await supabase.from('products').insert([product]);
+  return !error;
+};
+
+export const deleteProduct = async (id: string) => {
+  if (!supabase) return false;
+  const { error } = await supabase.from('products').delete().eq('id', id);
+  return !error;
 };
