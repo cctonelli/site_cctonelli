@@ -6,6 +6,7 @@ export interface CarouselImage {
   subtitle: string | null;
   display_order: number;
   is_active: boolean;
+  created_at?: string;
 }
 
 export interface Metric {
@@ -20,6 +21,7 @@ export interface Metric {
 export interface Insight {
   id: string;
   title: string;
+  subtitle?: string | null;
   excerpt: string | null;
   content: string | null;
   category?: string;

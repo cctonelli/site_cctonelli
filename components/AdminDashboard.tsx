@@ -5,9 +5,10 @@ import {
   updateSiteContent, fetchMetrics, fetchInsights,
   fetchProducts, addProduct, deleteProduct,
   addInsight, deleteInsight, updateInsightLink,
-  uploadInsightImage
+  uploadInsightImage, fetchCarouselImages,
+  addCarouselImage, deleteCarouselImage
 } from '../services/supabaseService';
-import { Testimonial, Metric, Insight, Product } from '../types';
+import { Testimonial, Metric, Insight, Product, CarouselImage } from '../types';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -35,13 +36,17 @@ const MenuBar = ({ editor }: { editor: any }) => {
 };
 
 const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'content' | 'testimonials' | 'metrics' | 'store' | 'insights'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'testimonials' | 'metrics' | 'store' | 'insights' | 'carousel'>('content');
   const [pendingTestimonials, setPendingTestimonials] = useState<Testimonial[]>([]);
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
+  const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
   const [heroTitle, setHeroTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Carousel form state
+  const [newCarousel, setNewCarousel] = useState({ title: '', subtitle: '', url: '', display_order: 0 });
 
   const [newInsight, setNewInsight] = useState({
     title: '',
@@ -76,23 +81,26 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     config: { url: '', image_url: '', action_label: 'Contratar Agora' }
   });
 
+  const loadAdminData = async () => {
+    try {
+      const [t, m, p, i, c] = await Promise.all([
+        fetchPendingTestimonials().catch(() => []),
+        fetchMetrics().catch(() => []),
+        fetchProducts().catch(() => []),
+        fetchInsights().catch(() => []),
+        fetchCarouselImages().catch(() => [])
+      ]);
+      setPendingTestimonials(t);
+      setMetrics(m);
+      setProducts(p);
+      setInsights(i);
+      setCarouselImages(c);
+    } catch (err) {
+      console.error("Admin data load error", err);
+    }
+  };
+
   useEffect(() => {
-    const loadAdminData = async () => {
-      try {
-        const [t, m, p, i] = await Promise.all([
-          fetchPendingTestimonials().catch(() => []),
-          fetchMetrics().catch(() => []),
-          fetchProducts().catch(() => []),
-          fetchInsights().catch(() => [])
-        ]);
-        setPendingTestimonials(t);
-        setMetrics(m);
-        setProducts(p);
-        setInsights(i);
-      } catch (err) {
-        console.error("Admin data load error", err);
-      }
-    };
     loadAdminData();
   }, []);
 
@@ -133,7 +141,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setNewInsight({ title: '', excerpt: '', category: 'ESTRATÉGIA', image_url: '', is_active: true, display_order: 0 });
         editor.commands.setContent('');
         setImageFile(null);
-        fetchInsights().then(setInsights);
+        loadAdminData();
       }
     } catch (err) {
       console.error(err);
@@ -156,7 +164,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     if (success) {
       alert('Produto adicionado ao catálogo!');
       setNewProduct({ name: '', description: '', price: 0, type: 'service', config: { url: '', image_url: '', action_label: 'Contratar Agora' } });
-      fetchProducts().then(setProducts);
+      loadAdminData();
     }
   };
 
@@ -167,11 +175,28 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
   };
 
+  const handleAddCarousel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const success = await addCarouselImage(newCarousel);
+    if (success) {
+      alert('Imagem adicionada ao carrossel!');
+      setNewCarousel({ title: '', subtitle: '', url: '', display_order: 0 });
+      loadAdminData();
+    }
+  };
+
+  const handleDeleteCarousel = async (id: string) => {
+    if (confirm('Remover esta imagem do fundo do site?')) {
+      const success = await deleteCarouselImage(id);
+      if (success) setCarouselImages(prev => prev.filter(c => c.id !== id));
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-6 overflow-hidden">
       <div className="bg-slate-900 border border-white/5 w-full max-w-7xl h-full sm:h-[92vh] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl">
         
-        {/* Sidebar Sidebar */}
+        {/* Sidebar */}
         <div className="w-full md:w-64 bg-slate-950 border-r border-white/5 p-8 flex flex-row md:flex-col gap-8 overflow-x-auto md:overflow-y-auto shrink-0">
           <div className="flex items-center gap-3 mb-0 md:mb-10 min-w-fit">
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-xl shadow-blue-600/30">CT</div>
@@ -181,6 +206,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <nav className="flex flex-row md:flex-col gap-2 flex-1">
             {[
               { id: 'content', label: 'Dashboard' },
+              { id: 'carousel', label: 'Carrossel' },
               { id: 'insights', label: 'Insights' },
               { id: 'store', label: 'Mercado' },
               { id: 'testimonials', label: 'Feedback' }
@@ -200,7 +226,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </button>
         </div>
 
-        {/* Content Area Area */}
+        {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-8 sm:p-16 bg-grid">
           <div className="max-w-4xl mx-auto">
             {activeTab === 'content' && (
@@ -221,6 +247,48 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     />
                   </div>
                   <button onClick={handleUpdateContent} className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] transition-all shadow-xl shadow-blue-600/20">Publicar Alterações</button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'carousel' && (
+              <div className="space-y-12 animate-in fade-in">
+                <header className="space-y-2">
+                  <h2 className="text-4xl font-serif italic text-white">Fundo Visual (Carrossel)</h2>
+                  <p className="text-slate-500 text-sm">Gerencie as imagens e frases de impacto do fundo da Home.</p>
+                </header>
+                
+                <form onSubmit={handleAddCarousel} className="bg-slate-800/20 border border-white/5 p-10 rounded-[2.5rem] space-y-8">
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">Badge/Título</label>
+                      <input required value={newCarousel.title} onChange={e => setNewCarousel({...newCarousel, title: e.target.value})} className="w-full bg-slate-950/50 border border-white/10 rounded-2xl px-6 py-5 text-white outline-none" placeholder="Ex: Expertise Global" />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">URL da Imagem</label>
+                      <input required value={newCarousel.url} onChange={e => setNewCarousel({...newCarousel, url: e.target.value})} className="w-full bg-slate-950/50 border border-white/10 rounded-2xl px-6 py-5 text-white outline-none" placeholder="https://..." />
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">Subtítulo (Frase de Impacto)</label>
+                    <textarea value={newCarousel.subtitle} onChange={e => setNewCarousel({...newCarousel, subtitle: e.target.value})} className="w-full bg-slate-950/50 border border-white/10 rounded-2xl px-6 py-5 text-white outline-none h-24 resize-none" placeholder="Descreva o impacto visual..." />
+                  </div>
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px]">Adicionar ao Fundo</button>
+                </form>
+
+                <div className="grid gap-4">
+                  {carouselImages.map(img => (
+                    <div key={img.id} className="bg-slate-950/50 border border-white/5 p-6 rounded-3xl flex items-center justify-between group">
+                      <div className="flex items-center gap-6">
+                        <img src={img.url} className="w-20 h-12 object-cover rounded-xl" alt="" />
+                        <div>
+                          <div className="font-bold text-white text-sm">{img.title}</div>
+                          <div className="text-[10px] text-slate-500 truncate max-w-xs">{img.subtitle}</div>
+                        </div>
+                      </div>
+                      <button onClick={() => handleDeleteCarousel(img.id)} className="text-[10px] font-bold uppercase text-red-600">Excluir</button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

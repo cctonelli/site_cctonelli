@@ -13,11 +13,11 @@ import AuthModal from './components/AuthModal';
 import ArticlePage from './components/ArticlePage';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
-  fetchTestimonials, fetchSiteContent,
+  fetchTestimonials, fetchSiteContent, fetchCarouselImages,
   getCurrentUser, getProfile, signOut, supabase
 } from './services/supabaseService';
 import { Language, translations } from './services/i18nService';
-import { Metric, Insight, Product, Testimonial, Profile } from './types';
+import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 // Mock Data for Demo Mode
 const MOCK_INSIGHTS: Insight[] = [
@@ -38,6 +38,7 @@ const HomePage: React.FC = () => {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
   const [content, setContent] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   
@@ -49,6 +50,8 @@ const HomePage: React.FC = () => {
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
+
+  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -63,14 +66,14 @@ const HomePage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Attempt to load from Supabase if keys exist
       if (supabase) {
-        const [m, i, p, test, s, user] = await Promise.all([
+        const [m, i, p, test, s, car, user] = await Promise.all([
           fetchMetrics(),
           fetchInsights(),
           fetchProducts(),
           fetchTestimonials(),
           fetchSiteContent('home'),
+          fetchCarouselImages(),
           getCurrentUser()
         ]);
         
@@ -79,19 +82,18 @@ const HomePage: React.FC = () => {
         setProducts(p);
         setTestimonials(test);
         setContent(s);
+        setCarouselImages(car);
 
         if (user) {
           const profile = await getProfile(user.id);
           setUserProfile(profile);
         }
       } else {
-        // Fallback to Demo Data
         setMetrics(MOCK_METRICS);
         setInsights(MOCK_INSIGHTS);
-        setLoading(false);
       }
     } catch (err) {
-      console.warn("Using fallback demo data due to connection error:", err);
+      console.warn("Using fallback demo data:", err);
       setMetrics(MOCK_METRICS);
       setInsights(MOCK_INSIGHTS);
     } finally {
@@ -102,6 +104,15 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  // Carousel transition effect
+  useEffect(() => {
+    if (carouselImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveCarouselIndex(prev => (prev + 1) % carouselImages.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [carouselImages]);
 
   useEffect(() => {
     if (loading) return;
@@ -115,8 +126,8 @@ const HomePage: React.FC = () => {
     return () => observer.disconnect();
   }, [loading, insights]);
 
-  const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || t.hero_title, [content, language, t.hero_title]);
-  const heroSubtitle = useMemo(() => content[`home.hero.subtitle.${language}`] || t.hero_subtitle, [content, language, t.hero_subtitle]);
+  const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || content['home.hero.title.pt'] || t.hero_title, [content, language, t.hero_title]);
+  const heroSubtitle = useMemo(() => content[`home.hero.subtitle.${language}`] || content['home.hero.subtitle.pt'] || t.hero_subtitle, [content, language, t.hero_subtitle]);
 
   const handleAreaClick = () => {
     if (!userProfile) setIsAuthOpen(true);
@@ -132,9 +143,9 @@ const HomePage: React.FC = () => {
   };
 
   if (loading) return (
-    <div className="fixed inset-0 bg-[#030712] z-[100] flex flex-col items-center justify-center">
-      <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin mb-6"></div>
-      <div className="text-[9px] tracking-[0.5em] uppercase font-bold text-slate-500 animate-pulse">Iniciando Experiência</div>
+    <div className="fixed inset-0 bg-[#010309] z-[100] flex flex-col items-center justify-center">
+      <div className="w-16 h-16 border-t-2 border-blue-600 rounded-full animate-spin mb-8"></div>
+      <div className="text-[10px] tracking-[0.6em] uppercase font-bold text-slate-500 animate-pulse">Arquitetando o Futuro</div>
     </div>
   );
 
@@ -154,34 +165,60 @@ const HomePage: React.FC = () => {
       {isAdminOpen && userProfile?.user_type === 'admin' && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      <section id="hero" className="relative h-screen flex items-center">
-        <div className="absolute inset-0 z-0 opacity-40 dark:opacity-60"><ThreeGlobe /></div>
-        <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 items-center">
-          <div className="space-y-10 reveal active">
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></span>{t.hero_badge}
+      <section id="hero" className="relative h-screen flex items-center overflow-hidden">
+        {/* Background Layer: 3D Globe + Carousel Images */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 opacity-40 dark:opacity-60"><ThreeGlobe /></div>
+          {carouselImages.length > 0 && carouselImages.map((img, idx) => (
+            <div 
+              key={img.id}
+              className={`absolute inset-0 transition-opacity duration-[3s] ${idx === activeCarouselIndex ? 'opacity-20' : 'opacity-0'}`}
+            >
+              <img src={img.url} className="w-full h-full object-cover" alt="" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#010309] via-transparent to-transparent"></div>
             </div>
-            <h1 className="text-6xl md:text-8xl font-serif leading-[1.1] dark:text-white text-slate-900">
+          ))}
+        </div>
+
+        <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 items-center">
+          <div className="space-y-12 reveal active">
+            <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-bold uppercase tracking-widest">
+              <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+              {carouselImages[activeCarouselIndex]?.title || t.hero_badge}
+            </div>
+            <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 transition-all duration-700">
               {heroTitle}
             </h1>
-            <p className="text-xl text-slate-500 max-w-lg leading-relaxed font-light border-l-2 border-blue-500/30 pl-6">{heroSubtitle}</p>
-            <div className="flex gap-6 pt-4">
-              <a href="#contact-form" className="bg-blue-600 text-white px-10 py-5 rounded-xl font-bold transition-all shadow-2xl shadow-blue-600/30 hover:scale-105 active:scale-95">{t.btn_diagnosis}</a>
-              <a href="#insights" className="glass px-10 py-5 rounded-xl font-bold transition-all dark:text-white text-slate-900 border border-white/10">{t.btn_insights}</a>
+            <p className="text-xl text-slate-500 max-w-xl leading-relaxed font-light border-l-2 border-blue-500/30 pl-8">
+              {carouselImages[activeCarouselIndex]?.subtitle || heroSubtitle}
+            </p>
+            <div className="flex flex-wrap gap-6 pt-6">
+              <a href="#contact-form" className="bg-blue-600 text-white px-12 py-6 rounded-2xl font-bold uppercase tracking-widest text-[11px] transition-all shadow-2xl shadow-blue-600/30 hover:bg-blue-500 hover:scale-105 active:scale-95">
+                {t.btn_diagnosis}
+              </a>
+              <a href="#insights" className="glass px-12 py-6 rounded-2xl font-bold uppercase tracking-widest text-[11px] dark:text-white text-slate-900 border border-white/10 hover:bg-white/5 transition-all">
+                {t.btn_insights}
+              </a>
             </div>
           </div>
+        </div>
+        
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 opacity-40">
+          <div className="w-[1px] h-20 bg-gradient-to-b from-transparent via-blue-500 to-transparent"></div>
+          <span className="text-[9px] uppercase tracking-[0.4em] font-bold text-slate-500">Explore</span>
         </div>
       </section>
 
       {metrics.length > 0 && (
-        <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#050a18] border-y border-white/5 relative overflow-hidden">
+        <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] border-y border-white/5 relative overflow-hidden">
           <div className="container mx-auto px-6 text-center">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.5em] text-slate-400 mb-20">{t.metrics_title}</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-16">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.5em] text-slate-500 mb-24">{t.metrics_title}</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-20">
               {metrics.map(m => (
-                <div key={m.id} className="reveal">
-                  <div className="text-6xl font-bold mb-4 dark:text-white text-slate-900 font-serif">{m.value}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-500">{m.label}</div>
+                <div key={m.id} className="reveal group">
+                  <div className="text-6xl md:text-7xl font-bold mb-6 dark:text-white text-slate-900 font-serif group-hover:text-blue-500 transition-colors duration-500">{m.value}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-500">{m.label}</div>
                 </div>
               ))}
             </div>
@@ -190,23 +227,35 @@ const HomePage: React.FC = () => {
       )}
 
       {insights.length > 0 && (
-        <section id="insights" className="py-40 bg-white dark:bg-slate-950">
+        <section id="insights" className="py-48 bg-white dark:bg-slate-950">
           <div className="container mx-auto px-6">
-            <div className="mb-24 reveal">
-              <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[10px] mb-4">{t.insights_badge}</div>
-              <h2 className="text-5xl font-serif mb-6 dark:text-white text-slate-900">{t.insights_title}</h2>
-              <p className="text-slate-500 max-w-2xl font-light text-lg">{t.insights_subtitle}</p>
+            <div className="mb-24 reveal max-w-4xl">
+              <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[10px] mb-6">{t.insights_badge}</div>
+              <h2 className="text-5xl md:text-6xl font-serif mb-8 dark:text-white text-slate-900 italic leading-tight">{t.insights_title}</h2>
+              <p className="text-slate-500 max-w-2xl font-light text-xl leading-relaxed">{t.insights_subtitle}</p>
             </div>
-            <div className="grid lg:grid-cols-3 gap-12">
-              {insights.map(insight => (
+            <div className="grid lg:grid-cols-3 gap-16">
+              {insights.slice(0, 3).map(insight => (
                 <Link key={insight.id} to={`/insight/${insight.id}`} className="group reveal">
-                  <div className="aspect-[16/10] rounded-3xl overflow-hidden mb-8 shadow-2xl border border-white/5">
+                  <div className="aspect-[4/3] rounded-[2.5rem] overflow-hidden mb-10 shadow-2xl border border-white/5 relative">
                     <img src={insight.image_url || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80'} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-1000" alt={insight.title} />
+                    <div className="absolute top-6 left-6 px-4 py-1.5 bg-slate-950/80 backdrop-blur-md rounded-full text-[9px] font-bold uppercase tracking-widest text-blue-400 border border-white/10">
+                      {insight.category || 'ESTRATÉGIA'}
+                    </div>
                   </div>
-                  <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors mb-4">{insight.title}</h3>
-                  <p className="text-slate-500 text-sm font-light line-clamp-2">{insight.excerpt}</p>
+                  <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors mb-4 italic leading-snug">{insight.title}</h3>
+                  <p className="text-slate-500 text-base font-light line-clamp-2 leading-relaxed">{insight.excerpt}</p>
                 </Link>
               ))}
+            </div>
+            
+            <div className="mt-20 text-center reveal">
+              <a href="#insights" className="inline-flex items-center gap-4 text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-blue-500 transition-colors group">
+                {t.insights_all}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transform group-hover:translate-x-2 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </a>
             </div>
           </div>
         </section>
@@ -216,10 +265,19 @@ const HomePage: React.FC = () => {
       {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} language={language} />}
       <ContactForm language={language} />
 
-      <footer className="py-20 border-t border-white/5 bg-slate-50 dark:bg-[#010309] text-center">
-        <div className="w-12 h-12 bg-blue-600 rounded-xl mx-auto flex items-center justify-center font-bold text-white mb-8">CT</div>
-        <p className="text-slate-500 text-sm max-w-sm mx-auto mb-6">{t.footer_desc}</p>
-        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.5em]">{t.copyright}</div>
+      <footer className="py-32 border-t border-white/5 bg-slate-50 dark:bg-[#010309] transition-colors relative">
+        <div className="container mx-auto px-6 text-center">
+          <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-white text-2xl mb-12 shadow-2xl shadow-blue-600/30">CT</div>
+          <p className="text-slate-400 text-base max-w-sm mx-auto mb-10 font-light leading-relaxed">{t.footer_desc}</p>
+          
+          <div className="flex justify-center gap-10 mb-16 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+            <a href="#" className="hover:text-blue-500 transition-colors">LinkedIn</a>
+            <a href="#" className="hover:text-blue-500 transition-colors">Twitter X</a>
+            <a href="#" className="hover:text-blue-500 transition-colors">Executive HQ</a>
+          </div>
+
+          <div className="text-[9px] text-slate-700 font-bold uppercase tracking-[0.6em]">{t.copyright}</div>
+        </div>
       </footer>
 
       <ChatBot />

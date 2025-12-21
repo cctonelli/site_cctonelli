@@ -2,19 +2,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, 
-  Testimonial, Profile, Contact 
+  Testimonial, Profile, Contact, CarouselImage
 } from '../types';
 
-// Safely retrieve env vars
-const getEnv = (key: string) => {
-  if (typeof window !== 'undefined' && (window as any).process?.env?.[key]) {
-    return (window as any).process.env[key];
-  }
-  return '';
-};
-
-const SUPABASE_URL = getEnv('SUPABASE_URL');
-const SUPABASE_ANON_KEY = getEnv('SUPABASE_ANON_KEY');
+// Standard environment access using process.env
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
 export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -47,7 +40,13 @@ export const getCurrentUser = async () => {
   return user;
 };
 
-// --- FETCHING (With potential for demo fallbacks handled in App.tsx) ---
+// --- FETCHING ---
+export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
+  if (!supabase) return [];
+  const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
+  return data || [];
+};
+
 export const fetchInsights = async (): Promise<Insight[]> => {
   if (!supabase) return [];
   const { data } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
@@ -74,7 +73,7 @@ export const fetchProducts = async (): Promise<Product[]> => {
 
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   if (!supabase) return [];
-  const { data } = await supabase.from('testimonials').select('*').eq('approved', true);
+  const { data } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
   return data || [];
 };
 
@@ -153,9 +152,24 @@ export const deleteProduct = async (id: string) => {
 
 export const uploadInsightImage = async (file: File): Promise<string | null> => {
   if (!supabase) return null;
-  const fileName = `${Date.now()}-${file.name}`;
+  const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
   const { error: uploadError } = await supabase.storage.from('insight-images').upload(`insights/${fileName}`, file);
-  if (uploadError) return null;
+  if (uploadError) {
+    console.error("Upload error:", uploadError);
+    return null;
+  }
   const { data } = supabase.storage.from('insight-images').getPublicUrl(`insights/${fileName}`);
   return data.publicUrl;
+};
+
+export const addCarouselImage = async (image: any) => {
+  if (!supabase) return false;
+  const { error } = await supabase.from('carousel_images').insert([image]);
+  return !error;
+};
+
+export const deleteCarouselImage = async (id: string) => {
+  if (!supabase) return false;
+  const { error } = await supabase.from('carousel_images').delete().eq('id', id);
+  return !error;
 };
