@@ -6,6 +6,7 @@ import ChatBot from './components/ChatBot';
 import ProductsSection from './components/ProductsSection';
 import TestimonialsSection from './components/TestimonialsSection';
 import ContactForm from './components/ContactForm';
+import AdminDashboard from './components/AdminDashboard';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchCarouselImages, fetchSiteContent 
@@ -20,6 +21,7 @@ const App: React.FC = () => {
   const [carousel, setCarousel] = useState<CarouselImage[]>([]);
   const [content, setContent] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   useEffect(() => {
     const loadAllData = async () => {
@@ -41,12 +43,11 @@ const App: React.FC = () => {
       } catch (err) {
         console.error("App: Fatal data loading error", err);
       } finally {
-        // Minimum loading time for aesthetic effect
         setTimeout(() => setLoading(false), 1200);
       }
     };
     loadAllData();
-  }, []);
+  }, [isAdminOpen]); // Reload data when admin panel closes
 
   useEffect(() => {
     if (loading) return;
@@ -87,7 +88,9 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen">
-      <Navbar />
+      <Navbar onAdminClick={() => setIsAdminOpen(true)} />
+
+      {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
 
       {/* Hero Section */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
@@ -120,7 +123,7 @@ const App: React.FC = () => {
             </p>
             
             <div className="flex flex-wrap gap-6 pt-4">
-              <a href="#contact-form" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-xl font-bold transition-all shadow-2xl shadow-blue-600/30 btn-premium group flex items-center gap-3">
+              <a href="#contact-form" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-xl font-bold transition-all shadow-2xl shadow-blue-600/30 btn-premium group flex items-center gap-3 particle-hover">
                 Solicitar Diagnóstico
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />

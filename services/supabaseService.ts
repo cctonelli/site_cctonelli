@@ -5,29 +5,22 @@ import {
   Testimonial, Profile, SiteContent, Contact 
 } from '../types';
 
-// As chaves devem ser configuradas nas variáveis de ambiente do Vercel/GitHub
-// NUNCA hardcode chaves secretas (service_role) no frontend.
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 
-// Inicialização segura do cliente
 export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-/**
- * Log de erro seguro: evita expor objetos de erro brutos que podem conter 
- * informações de infraestrutura no console do cliente.
- */
 const logSecureError = (context: string, error: any) => {
   if (process.env.NODE_ENV === 'development') {
     console.error(`[Internal Debug] ${context}:`, error);
   } else {
-    // Em produção, logamos apenas uma mensagem genérica para não dar pistas a atacantes
-    console.warn(`Acesso ao recurso [${context}] indisponível no momento.`);
+    console.warn(`Recurso [${context}] temporariamente indisponível.`);
   }
 };
 
+// --- DATA FETCHING ---
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   if (!supabase) return [];
   try {
@@ -38,10 +31,7 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
       .order('display_order', { ascending: true });
     if (error) throw error;
     return data || [];
-  } catch (e) {
-    logSecureError('Carousel', e);
-    return [];
-  }
+  } catch (e) { logSecureError('Carousel', e); return []; }
 };
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
@@ -54,10 +44,7 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
       .order('display_order', { ascending: true });
     if (error) throw error;
     return data || [];
-  } catch (e) {
-    logSecureError('Metrics', e);
-    return [];
-  }
+  } catch (e) { logSecureError('Metrics', e); return []; }
 };
 
 export const fetchInsights = async (): Promise<Insight[]> => {
@@ -70,24 +57,16 @@ export const fetchInsights = async (): Promise<Insight[]> => {
       .order('display_order', { ascending: true });
     if (error) throw error;
     return data || [];
-  } catch (e) {
-    logSecureError('Insights', e);
-    return [];
-  }
+  } catch (e) { logSecureError('Insights', e); return []; }
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*');
+    const { data, error } = await supabase.from('products').select('*');
     if (error) throw error;
     return data || [];
-  } catch (e) {
-    logSecureError('Products', e);
-    return [];
-  }
+  } catch (e) { logSecureError('Products', e); return []; }
 };
 
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
@@ -100,10 +79,7 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
-  } catch (e) {
-    logSecureError('Testimonials', e);
-    return [];
-  }
+  } catch (e) { logSecureError('Testimonials', e); return []; }
 };
 
 export const submitContact = async (contact: Contact): Promise<boolean> => {
@@ -112,10 +88,7 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
     const { error } = await supabase.from('contacts').insert([contact]);
     if (error) throw error;
     return true;
-  } catch (e) {
-    logSecureError('Contact Submit', e);
-    return false;
-  }
+  } catch (e) { logSecureError('Contact Submit', e); return false; }
 };
 
 export const fetchSiteContent = async (page: string): Promise<Record<string, string>> => {
@@ -127,8 +100,54 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, str
       .eq('page', page);
     if (error) throw error;
     return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
-  } catch (e) {
-    logSecureError('SiteContent', e);
-    return {};
-  }
+  } catch (e) { logSecureError('SiteContent', e); return {}; }
+};
+
+// --- ADMINISTRATIVE & AUTH ---
+export const getProfile = async (userId: string): Promise<Profile | null> => {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    if (error) throw error;
+    return data;
+  } catch (e) { logSecureError('GetProfile', e); return null; }
+};
+
+export const updateSiteContent = async (key: string, value: string): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase
+      .from('site_content')
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) throw error;
+    return true;
+  } catch (e) { logSecureError('UpdateContent', e); return false; }
+};
+
+export const fetchPendingTestimonials = async (): Promise<Testimonial[]> => {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('testimonials')
+      .select('*')
+      .eq('approved', false);
+    if (error) throw error;
+    return data || [];
+  } catch (e) { logSecureError('PendingTestimonials', e); return []; }
+};
+
+export const approveTestimonial = async (id: string): Promise<boolean> => {
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase
+      .from('testimonials')
+      .update({ approved: true })
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (e) { logSecureError('ApproveTestimonial', e); return false; }
 };
