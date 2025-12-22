@@ -178,8 +178,18 @@ export const deleteProduct = async (id: string) => {
   return !error;
 };
 
+export const addMetric = async (metric: any) => {
+  const { error } = await supabase.from('metrics').insert([metric]);
+  return !error;
+};
+
 export const updateMetric = async (id: string, updates: Partial<Metric>) => {
   const { error } = await supabase.from('metrics').update(updates).eq('id', id);
+  return !error;
+};
+
+export const deleteMetric = async (id: string) => {
+  const { error } = await supabase.from('metrics').delete().eq('id', id);
   return !error;
 };
 
