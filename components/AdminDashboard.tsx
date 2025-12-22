@@ -142,10 +142,12 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         editor.commands.setContent('');
         setImageFile(null);
         loadAdminData();
+      } else {
+        throw new Error("Falha ao criar registro no banco.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Erro ao publicar insight.');
+      alert(`Erro ao publicar insight: ${err.message || 'Verifique se o RLS permite a inserção.'}`);
     } finally {
       setIsSubmitting(false);
     }

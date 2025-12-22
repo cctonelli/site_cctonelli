@@ -75,7 +75,6 @@ const HomePage: React.FC = () => {
         getCurrentUser()
       ]);
       
-      // Fallbacks para garantir que a página não fique vazia
       setMetrics(m.length > 0 ? m : MOCK_METRICS);
       setInsights(i.length > 0 ? i : MOCK_INSIGHTS);
       setProducts(p);
@@ -122,6 +121,7 @@ const HomePage: React.FC = () => {
     setUserProfile(null);
     setIsAdminOpen(false);
     setIsClientPortalOpen(false);
+    window.location.reload(); // Garante limpeza total da sessão
   };
 
   if (loading) return (
@@ -185,7 +185,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Seção de Performance/Métricas */}
       <section id="performance" className="py-40 bg-slate-50 dark:bg-[#010309] border-y border-white/5 relative overflow-hidden">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.5em] text-slate-500 mb-24">{t.metrics_title}</h2>
@@ -200,7 +199,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Seção de Insights */}
       <section id="insights" className="py-48 bg-white dark:bg-slate-950">
         <div className="container mx-auto px-6">
           <div className="mb-24 reveal active max-w-4xl">
@@ -225,7 +223,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Outras seções sincronizadas com IDs */}
       <section id="strategy">
         {products.length > 0 && <ProductsSection products={products} language={language} />}
       </section>

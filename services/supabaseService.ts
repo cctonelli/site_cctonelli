@@ -23,9 +23,6 @@ export const signIn = async (email: string, password?: string) => {
     : await supabase.auth.signInWithOtp({ email });
 };
 
-/**
- * Cadastro completo enviando metadados para o trigger public.handle_new_user
- */
 export const signUp = async (email: string, password?: string, metadata?: Partial<Profile>) => {
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -36,11 +33,10 @@ export const signUp = async (email: string, password?: string, metadata?: Partia
         cpf_cnpj: metadata?.cpf_cnpj || '',
         gender: metadata?.gender || '',
         whatsapp: metadata?.whatsapp || '',
-        user_type: 'client' // Padrão para novos registros
+        user_type: 'client'
       } 
     }
   });
-  
   return { data, error };
 };
 
@@ -61,49 +57,49 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
     .single();
     
   if (error) {
-    console.warn(`[Supabase] Perfil ${id} não acessível ou inexistente.`);
+    console.warn(`[Supabase] Perfil ${id} erro:`, error.message);
     return null;
   }
   return data;
 };
 
 // --- DATA FETCHING ---
-export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
-  const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
+export const fetchCarouselImages = async () => {
+  const { data, error } = await supabase.from('carousel_images').select('*').order('display_order', { ascending: true });
   return error ? [] : data || [];
 };
 
-export const fetchInsights = async (): Promise<Insight[]> => {
-  const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
+export const fetchInsights = async () => {
+  const { data, error } = await supabase.from('insights').select('*').order('published_at', { ascending: false });
   return error ? [] : data || [];
 };
 
-export const fetchInsightById = async (id: string): Promise<Insight | null> => {
+export const fetchInsightById = async (id: string) => {
   const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
   return error ? null : data;
 };
 
-export const fetchMetrics = async (): Promise<Metric[]> => {
-  const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
+export const fetchMetrics = async () => {
+  const { data, error } = await supabase.from('metrics').select('*').order('display_order', { ascending: true });
   return error ? [] : data || [];
 };
 
-export const fetchProducts = async (): Promise<Product[]> => {
+export const fetchProducts = async () => {
   const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
   return error ? [] : data || [];
 };
 
-export const fetchTestimonials = async (): Promise<Testimonial[]> => {
-  const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
+export const fetchTestimonials = async () => {
+  const { data, error } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false });
   return error ? [] : data || [];
 };
 
-export const fetchSiteContent = async (page: string): Promise<Record<string, string>> => {
+export const fetchSiteContent = async (page: string) => {
   const { data, error } = await supabase.from('site_content').select('key, value').eq('page', page);
   return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
 };
 
-export const submitContact = async (contact: Contact): Promise<boolean> => {
+export const submitContact = async (contact: Contact) => {
   const { error } = await supabase.from('contacts').insert([contact]);
   return !error;
 };
@@ -111,7 +107,11 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
 // --- ADMIN CMS ---
 export const addInsight = async (insight: any) => {
   const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select().single();
-  return error ? null : data;
+  if (error) {
+    console.error("[Supabase Admin] Erro ao adicionar insight:", error);
+    throw error;
+  }
+  return data;
 };
 
 export const deleteInsight = async (id: string) => {
@@ -162,7 +162,10 @@ export const deleteCarouselImage = async (id: string) => {
 export const uploadInsightImage = async (file: File): Promise<string | null> => {
   const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
   const { error: uploadError } = await supabase.storage.from('insight-images').upload(`insights/${fileName}`, file);
-  if (uploadError) return null;
+  if (uploadError) {
+    console.error("[Supabase Storage] Erro no upload:", uploadError);
+    return null;
+  }
   const { data } = supabase.storage.from('insight-images').getPublicUrl(`insights/${fileName}`);
   return data.publicUrl;
 };
