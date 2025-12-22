@@ -96,6 +96,11 @@ export const fetchSiteContent = async (page: string) => {
   return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
 };
 
+export const fetchAllSiteContent = async () => {
+  const { data, error } = await supabase.from('site_content').select('*').order('key', { ascending: true });
+  return error ? [] : data || [];
+};
+
 export const submitContact = async (contact: Contact) => {
   const { error } = await supabase.from('contacts').insert([contact]);
   return !error;
@@ -103,9 +108,10 @@ export const submitContact = async (contact: Contact) => {
 
 // --- ADMIN CMS ---
 export const addInsight = async (insight: any) => {
-  const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select().single();
+  // Removido .single() para evitar falhas silenciosas caso o RLS atrase o retorno
+  const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select();
   if (error) throw error;
-  return data;
+  return data ? data[0] : null;
 };
 
 export const deleteInsight = async (id: string) => {
