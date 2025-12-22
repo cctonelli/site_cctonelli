@@ -4,7 +4,7 @@ import {
   updateSiteContent, fetchMetrics, fetchInsights,
   addInsight, deleteInsight, updateInsight,
   fetchCarouselImages, addCarouselImage, deleteCarouselImage, updateCarouselImage,
-  fetchAllSiteContent, fetchContacts,
+  fetchAllSiteContent, fetchContacts, deleteContact,
   deleteTestimonial, updateTestimonial, fetchTestimonials,
   upsertTranslation, fetchTranslationsForEntity,
   fetchProducts, updateProduct, deleteProduct, addProduct,
@@ -145,7 +145,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const filteredInsights = useMemo(() => insights.filter(ins => ins.title.toLowerCase().includes(searchTerm.toLowerCase())), [insights, searchTerm]);
   const filteredProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())), [products, searchTerm]);
   const filteredMetrics = useMemo(() => metrics.filter(m => m.label.toLowerCase().includes(searchTerm.toLowerCase())), [metrics, searchTerm]);
-  const filteredLeads = useMemo(() => leads.filter(l => l.name.toLowerCase().includes(searchTerm.toLowerCase()) || l.email.toLowerCase().includes(searchTerm.toLowerCase())), [leads, searchTerm]);
+  const filteredLeads = useMemo(() => (leads || []).filter(l => (l.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (l.email || '').toLowerCase().includes(searchTerm.toLowerCase())), [leads, searchTerm]);
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-950/98 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-6 overflow-hidden">
@@ -342,7 +342,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     </div>
                     <div className="flex gap-3">
                       <button onClick={() => updateTestimonial(t.id, { approved: !t.approved }).then(loadAdminData)} className={`px-4 py-1.5 rounded-lg text-[8px] font-bold uppercase transition-all ${t.approved ? 'bg-green-600/10 text-green-500 border border-green-600/20' : 'bg-red-600/10 text-red-500 border border-red-600/20'}`}>{t.approved ? 'Aprovado' : 'Auditado'}</button>
-                      <button onClick={() => confirmDelete(t.id, deleteTestimonial)} className="text-slate-800 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                      <button onClick={() => confirmDelete(t.id, deleteTestimonial)} className="text-slate-800 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                     </div>
                   </div>
                   <textarea className="w-full bg-slate-900 border border-white/5 p-4 rounded-xl text-slate-400 text-sm italic h-24" defaultValue={editingLang === 'pt' ? t.quote : translationsCache[String(t.id)]?.quote?.[editingLang] || ''} onBlur={e => updateOriginalOrTranslation('testimonials', t.id, 'quote', e.target.value, updateTestimonial)} />
@@ -356,7 +356,10 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <h4 className="text-white font-serif italic text-2xl">{l.name}</h4>
                         <div className="text-blue-500 text-xs font-bold font-mono uppercase tracking-widest">{l.email}</div>
                       </div>
-                      <span className="text-[9px] text-slate-700 font-mono text-right">{new Date(l.created_at).toLocaleString()}</span>
+                      <div className="flex flex-col items-end gap-3">
+                        <span className="text-[9px] text-slate-700 font-mono text-right">{new Date(l.created_at).toLocaleString()}</span>
+                        <button onClick={() => confirmDelete(l.id, deleteContact)} className="text-slate-800 hover:text-red-500 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                      </div>
                    </div>
                    <p className="text-slate-400 text-base font-light italic leading-relaxed">"{l.message}"</p>
                 </div>

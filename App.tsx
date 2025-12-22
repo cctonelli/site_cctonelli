@@ -111,7 +111,6 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     loadAllData();
-    // Inscrição Realtime para todas as tabelas críticas
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'site_content', 'carousel_images', 'content_translations'];
     const subs = tables.map(table => subscribeToChanges(table, () => loadAllData(true)));
     
@@ -187,41 +186,65 @@ const HomePage: React.FC = () => {
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
+        {/* Carousel Background */}
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 opacity-40 dark:opacity-60"><ThreeGlobe /></div>
-          {carouselImages.map((img, idx) => (
-            <div key={img.id} className={`absolute inset-0 transition-opacity duration-[2.5s] ${idx === activeCarouselIndex ? 'opacity-30' : 'opacity-0'}`}>
-              <img src={img.url} className="w-full h-full object-cover scale-110" alt="" />
-              <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/50 to-transparent"></div>
-            </div>
-          ))}
+          <div className="absolute inset-0 opacity-20 md:opacity-40 z-10 pointer-events-none"><ThreeGlobe /></div>
+          {carouselImages.length > 0 ? (
+            carouselImages.map((img, idx) => (
+              <div key={img.id} className={`absolute inset-0 transition-opacity duration-[3s] ease-in-out ${idx === activeCarouselIndex ? 'opacity-40' : 'opacity-0'}`}>
+                <img src={img.url} className="w-full h-full object-cover scale-105" alt="" />
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
+              </div>
+            ))
+          ) : (
+            <div className="absolute inset-0 bg-slate-900 opacity-40"></div>
+          )}
         </div>
 
-        <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2">
-          <div className="space-y-12 animate-in fade-in duration-1000">
+        {/* Hero Content */}
+        <div className="container mx-auto px-6 relative z-20 grid lg:grid-cols-2 h-full items-center">
+          <div className="space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
             <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-bold uppercase tracking-widest">
               {resolveTranslation(carouselImages[activeCarouselIndex]?.id, 'title', carouselImages[activeCarouselIndex]?.title || t.hero_badge)}
             </div>
-            <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 transition-all">
-              {currentTitle}
-            </h1>
-            <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-2 border-blue-500/30 pl-8">
-              {currentSubtitle}
-            </p>
-            <div className="flex gap-6 pt-6">
-              <a href="#contact" className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-2xl shadow-blue-600/30 hover:bg-blue-500 transition-all">
+            
+            <div className="space-y-8">
+              <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 transition-all">
+                {currentTitle}
+              </h1>
+              <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-2 border-blue-500/30 pl-8">
+                {currentSubtitle}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-6 pt-6">
+              <a href="#contact" className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-2xl shadow-blue-600/30 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95">
                 {getL('btn.diagnosis', t.btn_diagnosis)}
               </a>
-              <a href="#insights" className="glass px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] dark:text-white text-slate-900 border border-white/10 hover:bg-white/5 transition-all">
+              <a href="#insights" className="glass px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] dark:text-white text-slate-900 border border-white/10 hover:bg-white/5 transition-all hover:scale-105 active:scale-95">
                 {getL('btn.insights', t.btn_insights)}
               </a>
             </div>
+
+            {/* Slide Indicators */}
+            {carouselImages.length > 1 && (
+              <div className="flex gap-3 pt-12">
+                {carouselImages.map((_, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => setActiveCarouselIndex(idx)}
+                    className={`h-1 rounded-full transition-all duration-500 ${idx === activeCarouselIndex ? 'w-12 bg-blue-500' : 'w-4 bg-slate-700'}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309]">
-        <div className="container mx-auto px-6 text-center">
+      <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] relative transition-colors">
+        <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
+        <div className="container mx-auto px-6 text-center relative z-10">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-20">
             {metrics.map(m => (
               <div key={m.id} className="reveal active">
@@ -235,7 +258,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      <section id="insights" className="py-40 dark:bg-slate-950">
+      <section id="insights" className="py-40 dark:bg-slate-950 transition-colors">
         <div className="container mx-auto px-6">
           <div className="mb-20">
             <h2 className="text-4xl font-serif dark:text-white text-slate-900 italic">{getL('home.insights_title', t.insights_title)}</h2>
@@ -262,7 +285,7 @@ const HomePage: React.FC = () => {
       <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} />
       <ContactForm language={language} />
 
-      <footer className="py-20 border-t border-white/5 text-center">
+      <footer className="py-20 border-t border-white/5 text-center bg-brand-navy">
         <p className="text-[9px] text-slate-700 font-bold uppercase tracking-[0.6em]">{getL('footer.copyright', t.copyright)}</p>
       </footer>
       <ChatBot />

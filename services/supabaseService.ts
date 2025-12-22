@@ -83,12 +83,12 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 
 // --- CONTENT FETCHING ---
 export const fetchCarouselImages = async () => {
-  const { data, error } = await supabase.from('carousel_images').select('*').order('display_order', { ascending: true });
+  const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
   return error ? [] : data || [];
 };
 
 export const fetchInsights = async () => {
-  const { data, error } = await supabase.from('insights').select('*').order('published_at', { ascending: false });
+  const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
   return error ? [] : data || [];
 };
 
@@ -98,7 +98,7 @@ export const fetchInsightById = async (id: string) => {
 };
 
 export const fetchMetrics = async () => {
-  const { data, error } = await supabase.from('metrics').select('*').order('display_order', { ascending: true });
+  const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
   return error ? [] : data || [];
 };
 
@@ -125,6 +125,11 @@ export const fetchAllSiteContent = async () => {
 export const fetchContacts = async () => {
   const { data, error } = await supabase.from('contacts').select('*').order('created_at', { ascending: false });
   return error ? [] : data || [];
+};
+
+export const deleteContact = async (id: string) => {
+  const { error } = await supabase.from('contacts').delete().eq('id', id);
+  return !error;
 };
 
 export const submitContact = async (contact: Contact) => {
