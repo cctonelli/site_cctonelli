@@ -75,11 +75,22 @@ const HomePage: React.FC = () => {
       
       setCarouselImages(activeCarousel);
 
-      // Carregar traduções para o carrossel
+      // Cache central de traduções
       const trans: Record<string, any> = {};
-      for (const item of activeCarousel) {
-        trans[item.id] = await fetchTranslationsForEntity('carousel_images', item.id);
-      }
+      const entitiesToTranslate = [
+        ...activeCarousel.map(c => ({ type: 'carousel_images', id: c.id })),
+        ...i.map(ins => ({ type: 'insights', id: ins.id })),
+        ...p.map(prod => ({ type: 'products', id: prod.id })),
+        ...m.map(met => ({ type: 'metrics', id: met.id }))
+      ];
+
+      await Promise.all(entitiesToTranslate.map(async (ent) => {
+        const data = await fetchTranslationsForEntity(ent.type, ent.id);
+        if (Object.keys(data).length > 0) {
+          trans[String(ent.id)] = data;
+        }
+      }));
+      
       setTranslationsCache(trans);
 
       if (user) {
@@ -107,9 +118,10 @@ const HomePage: React.FC = () => {
     return content[`${key}.${language}`] || content[`${key}.pt`] || defaultVal;
   };
 
-  const resolveTranslation = (entityId: string, field: string, baseValue: string) => {
+  const resolveTranslation = (entityId: any, field: string, baseValue: string) => {
     if (language === 'pt') return baseValue;
-    return translationsCache[entityId]?.[field]?.[language] || baseValue;
+    const cacheKey = String(entityId);
+    return translationsCache[cacheKey]?.[field]?.[language] || baseValue;
   };
 
   const currentTitle = useMemo(() => {
@@ -193,7 +205,7 @@ const HomePage: React.FC = () => {
               <div key={m.id} className="reveal active">
                 <div className="text-6xl font-bold dark:text-white text-slate-900 font-serif mb-4">{m.value}</div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  {language === 'en' ? m.label_en || m.label : language === 'es' ? m.label_es || m.label : m.label}
+                  {resolveTranslation(m.id, 'label', m.label)}
                 </div>
               </div>
             ))}
@@ -201,7 +213,30 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      <ProductsSection products={products} language={language} />
+      <section id="insights" className="py-40 dark:bg-slate-950">
+        <div className="container mx-auto px-6">
+          <div className="mb-20">
+            <h2 className="text-4xl font-serif dark:text-white text-slate-900 italic">{t.insights_title}</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-12">
+            {insights.slice(0, 3).map(insight => (
+              <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group">
+                <div className="aspect-video rounded-3xl overflow-hidden mb-6 bg-slate-900">
+                  <img src={insight.image_url || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={insight.title} />
+                </div>
+                <h3 className="text-xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">
+                  {resolveTranslation(insight.id, 'title', insight.title)}
+                </h3>
+                <p className="text-sm text-slate-500 mt-2 line-clamp-2 italic font-light">
+                  {resolveTranslation(insight.id, 'excerpt', insight.excerpt || '')}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} />
       <TestimonialsSection testimonials={testimonials} language={language} />
       <ContactForm language={language} />
 

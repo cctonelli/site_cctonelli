@@ -7,9 +7,10 @@ import { Language, translations } from '../services/i18nService';
 interface ProductsSectionProps {
   products: Product[];
   language: Language;
+  resolveTranslation: (id: string, field: string, base: string) => string;
 }
 
-const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language }) => {
+const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, resolveTranslation }) => {
   const t = translations[language];
 
   return (
@@ -60,10 +61,10 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language })
                       </div>
                     </div>
                     <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">
-                      {product.name}
+                      {resolveTranslation(product.id, 'name', product.name)}
                     </h3>
                     <p className="text-slate-500 dark:text-slate-400 font-light text-sm leading-relaxed line-clamp-3">
-                      {product.description}
+                      {resolveTranslation(product.id, 'description', product.description || '')}
                     </p>
                   </div>
                   

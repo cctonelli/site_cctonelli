@@ -1,19 +1,29 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { fetchInsightById } from '../services/supabaseService';
+import { useParams, Link, useLocation } from 'react-router-dom';
+import { fetchInsightById, fetchTranslationsForEntity } from '../services/supabaseService';
 import { Insight } from '../types';
+import { Language } from '../services/i18nService';
 
 const ArticlePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const lang = (queryParams.get('lang') as Language) || 'pt';
+
   const [article, setArticle] = useState<Insight | null>(null);
+  const [translations, setTranslations] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (id) {
       setLoading(true);
-      fetchInsightById(id).then(data => {
+      Promise.all([
+        fetchInsightById(id),
+        fetchTranslationsForEntity('insights', id)
+      ]).then(([data, trans]) => {
         setArticle(data);
+        setTranslations(trans);
         setLoading(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }).catch((err) => {
@@ -23,17 +33,22 @@ const ArticlePage: React.FC = () => {
     }
   }, [id]);
 
+  const resolve = (field: string, base: string) => {
+    if (lang === 'pt') return base;
+    return translations[field]?.[lang] || base;
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
       <div className="w-12 h-12 border-t-2 border-blue-500 rounded-full animate-spin"></div>
-      <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Carregando Insight...</span>
+      <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Arquitetando Insight...</span>
     </div>
   );
 
   if (!article) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-6 p-6 text-center">
-      <h1 className="text-4xl font-serif text-white italic">Insight não encontrado</h1>
-      <p className="text-slate-500 max-w-md font-light">O conteúdo que você procura pode ter sido arquivado ou o link expirou.</p>
+      <h1 className="text-4xl font-serif text-white italic">Insight indisponível</h1>
+      <p className="text-slate-500 max-w-md font-light">Este conteúdo estratégico não foi localizado no servidor.</p>
       <Link to="/" className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-2xl shadow-blue-600/20 hover:bg-blue-500 transition-all">Voltar para Home</Link>
     </div>
   );
@@ -47,8 +62,8 @@ const ArticlePage: React.FC = () => {
             <span className="font-bold tracking-tighter dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">Claudio Tonelli</span>
           </Link>
           <div className="flex items-center gap-6">
-             <div className="hidden md:block text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400">{article.category || 'ESTRATÉGIA'}</div>
-             <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors border-b border-transparent hover:border-blue-500 pb-1">Retornar</Link>
+             <div className="hidden md:block text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400">{article.category || 'ADVISORY'}</div>
+             <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors border-b border-transparent hover:border-blue-500 pb-1">Fechar Artigo</Link>
           </div>
         </div>
       </header>
@@ -60,17 +75,17 @@ const ArticlePage: React.FC = () => {
                {article.category || 'ESTRATÉGIA CORPORATIVA'}
             </div>
             <h1 className="text-5xl md:text-8xl font-serif dark:text-white text-slate-900 leading-[1.1] italic">
-              {article.title}
+              {resolve('title', article.title)}
             </h1>
             {article.excerpt && (
               <p className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 font-light italic max-w-3xl mx-auto leading-relaxed border-l-2 border-blue-500/30 pl-8 text-left inline-block">
-                {article.excerpt}
+                {resolve('excerpt', article.excerpt)}
               </p>
             )}
             <div className="flex items-center justify-center gap-6 pt-6">
                <div className="w-12 h-[1px] bg-slate-200 dark:bg-white/10"></div>
                <div className="text-[10px] font-bold uppercase tracking-[0.5em] text-slate-500">
-                 {new Date(article.published_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                 {new Date(article.published_at).toLocaleDateString(lang === 'pt' ? 'pt-BR' : lang === 'en' ? 'en-US' : 'es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
                </div>
                <div className="w-12 h-[1px] bg-slate-200 dark:bg-white/10"></div>
             </div>
@@ -87,7 +102,7 @@ const ArticlePage: React.FC = () => {
             <div 
               className="rich-text dark:prose-invert prose prose-blue prose-2xl max-w-none text-slate-700 dark:text-slate-300 font-light leading-relaxed space-y-10"
               style={{ fontFamily: "'Inter', sans-serif" }}
-              dangerouslySetInnerHTML={{ __html: article.content || '' }}
+              dangerouslySetInnerHTML={{ __html: resolve('content', article.content || '') }}
             />
           </div>
         </article>
@@ -99,10 +114,10 @@ const ArticlePage: React.FC = () => {
             <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl shadow-2xl shadow-blue-600/30">CT</div>
             <div className="space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-[0.6em] text-slate-500">Claudio Tonelli Group &copy; 2025</p>
-              <p className="text-slate-400 font-light text-sm italic">Estratégia inesquecível para negócios globais.</p>
+              <p className="text-slate-400 font-light text-sm italic">Arquitetando o amanhã com rigor e visão.</p>
             </div>
             <Link to="/" className="inline-block bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 px-10 py-4 rounded-2xl text-[10px] uppercase tracking-widest text-blue-500 font-bold hover:bg-blue-600 hover:text-white transition-all shadow-xl">
-              Solicitar Advisory Estratégico
+              Solicitar Advisory Global
             </Link>
          </div>
       </footer>

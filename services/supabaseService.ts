@@ -17,7 +17,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // --- GENERIC TRANSLATIONS (content_translations) ---
-export const upsertTranslation = async (entityType: string, entityId: string, field: string, locale: string, value: string) => {
+// Mudamos entityId para any para aceitar string (UUID) ou number (bigint)
+export const upsertTranslation = async (entityType: string, entityId: any, field: string, locale: string, value: string) => {
   const { error } = await supabase.from('content_translations').upsert({
     entity_type: entityType,
     entity_id: entityId,
@@ -28,17 +29,19 @@ export const upsertTranslation = async (entityType: string, entityId: string, fi
   return !error;
 };
 
-export const fetchTranslationsForEntity = async (entityType: string, entityId: string) => {
+export const fetchTranslationsForEntity = async (entityType: string, entityId: any) => {
   const { data, error } = await supabase
     .from('content_translations')
     .select('field, locale, value')
     .eq('entity_type', entityType)
     .eq('entity_id', entityId);
   
-  if (error) return {};
+  if (error) {
+    console.error("Translation fetch error:", error);
+    return {};
+  }
   
-  // Converte para formato { field: { locale: value } }
-  return data.reduce((acc: any, item) => {
+  return (data || []).reduce((acc: any, item) => {
     if (!acc[item.field]) acc[item.field] = {};
     acc[item.field][item.locale] = item.value;
     return acc;
