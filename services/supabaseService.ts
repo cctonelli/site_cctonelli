@@ -56,10 +56,7 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
     .eq('id', id)
     .single();
     
-  if (error) {
-    console.warn(`[Supabase] Perfil ${id} erro:`, error.message);
-    return null;
-  }
+  if (error) return null;
   return data;
 };
 
@@ -107,10 +104,7 @@ export const submitContact = async (contact: Contact) => {
 // --- ADMIN CMS ---
 export const addInsight = async (insight: any) => {
   const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select().single();
-  if (error) {
-    console.error("[Supabase Admin] Erro ao adicionar insight:", error);
-    throw error;
-  }
+  if (error) throw error;
   return data;
 };
 
@@ -149,6 +143,16 @@ export const deleteProduct = async (id: string) => {
   return !error;
 };
 
+export const addMetric = async (metric: any) => {
+  const { error } = await supabase.from('metrics').insert([metric]);
+  return !error;
+};
+
+export const deleteMetric = async (id: string) => {
+  const { error } = await supabase.from('metrics').delete().eq('id', id);
+  return !error;
+};
+
 export const addCarouselImage = async (image: any) => {
   const { error } = await supabase.from('carousel_images').insert([image]);
   return !error;
@@ -162,10 +166,7 @@ export const deleteCarouselImage = async (id: string) => {
 export const uploadInsightImage = async (file: File): Promise<string | null> => {
   const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
   const { error: uploadError } = await supabase.storage.from('insight-images').upload(`insights/${fileName}`, file);
-  if (uploadError) {
-    console.error("[Supabase Storage] Erro no upload:", uploadError);
-    return null;
-  }
+  if (uploadError) return null;
   const { data } = supabase.storage.from('insight-images').getPublicUrl(`insights/${fileName}`);
   return data.publicUrl;
 };
