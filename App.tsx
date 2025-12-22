@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ThreeGlobe from './components/ThreeGlobe';
 import ChatBot from './components/ChatBot';
@@ -21,24 +21,22 @@ import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from '.
 
 // Fallback Data Premium
 const MOCK_CAROUSEL: CarouselImage[] = [
-  { id: 'f1', title: 'Expertise Global', subtitle: 'Arquitetando o amanhã através de rigor metodológico e inovação digital.', url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80', display_order: 1, is_active: true },
-  { id: 'f2', title: 'Liderança Exponencial', subtitle: 'Transformamos incerteza em vantagem competitiva para o mercado global.', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80', display_order: 2, is_active: true }
+  { id: 'f1', title: 'Expertise Global', subtitle: 'Arquitetando o amanhã através de rigor metodológico e inovação digital.', url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80', link: null, display_order: 1, is_active: true },
+  { id: 'f2', title: 'Liderança Exponencial', subtitle: 'Transformamos incerteza em vantagem competitiva para o mercado global.', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80', link: null, display_order: 2, is_active: true }
 ];
 
 const MOCK_INSIGHTS: Insight[] = [
   { id: '1', title: 'A Era da IA Generativa na Gestão', excerpt: 'Como CEOs estão redefinindo prioridades estratégicas para 2026.', content: '', category: 'ESTRATÉGIA', image_url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80', published_at: new Date().toISOString(), is_active: true, display_order: 1, link: '' },
   { id: '2', title: 'Sustentabilidade como Vantagem', excerpt: 'ESG não é mais opcional, é o motor central da nova economia global.', content: '', category: 'ESG', image_url: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80', published_at: new Date().toISOString(), is_active: true, display_order: 2, link: '' },
-  { id: '3', title: 'Liderança em Tempos de Crise', excerpt: 'Resiliência e visão de longo prazo no mercado de capitais.', content: '', category: 'LIDERANÇA', image_url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80', published_at: new Date().toISOString(), is_active: true, display_order: 3, link: '' },
 ];
 
 const MOCK_METRICS: Metric[] = [
   { id: '1', label: 'EBITDA Médio Adicionado', value: '+24%', icon: null, display_order: 1, is_active: true },
   { id: '2', label: 'Projetos Realizados', value: '150+', icon: null, display_order: 2, is_active: true },
-  { id: '3', label: 'Retenção de Clientes', value: '98%', icon: null, display_order: 3, is_active: true },
-  { id: '4', label: 'Países com Impacto', value: '12', icon: null, display_order: 4, is_active: true },
 ];
 
 const HomePage: React.FC = () => {
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -92,7 +90,7 @@ const HomePage: React.FC = () => {
         setUserProfile(profile);
       }
     } catch (err) {
-      console.warn("Using fallbacks due to connection issue:", err);
+      console.warn("Using fallbacks:", err);
       setMetrics(MOCK_METRICS);
       setInsights(MOCK_INSIGHTS);
       setCarouselImages(MOCK_CAROUSEL);
@@ -109,13 +107,21 @@ const HomePage: React.FC = () => {
     if (carouselImages.length <= 1) return;
     const interval = setInterval(() => {
       setActiveCarouselIndex(prev => (prev + 1) % carouselImages.length);
-    }, 8000); // Rotação a cada 8 segundos para leitura confortável
+    }, 8000);
     return () => clearInterval(interval);
   }, [carouselImages]);
 
+  const handleCarouselClick = (link: string | null) => {
+    if (!link) return;
+    if (link.startsWith('http')) {
+      window.open(link, '_blank');
+    } else {
+      navigate(link);
+    }
+  };
+
   const heroTitle = useMemo(() => content[`home.hero.title.${language}`] || content['home.hero.title.pt'] || t.hero_title, [content, language, t.hero_title]);
   
-  // Se o slide do carrossel tiver um subtítulo, usamos ele, caso contrário usamos o subtítulo padrão do site
   const currentSubtitle = useMemo(() => {
     const slideSubtitle = carouselImages[activeCarouselIndex]?.subtitle;
     if (slideSubtitle) return slideSubtitle;
@@ -165,7 +171,8 @@ const HomePage: React.FC = () => {
           {carouselImages.map((img, idx) => (
             <div 
               key={img.id}
-              className={`absolute inset-0 transition-opacity duration-[2.5s] ease-in-out ${idx === activeCarouselIndex ? 'opacity-30' : 'opacity-0'}`}
+              onClick={() => handleCarouselClick(img.link)}
+              className={`absolute inset-0 transition-opacity duration-[2.5s] ease-in-out ${idx === activeCarouselIndex ? 'opacity-30' : 'opacity-0'} ${img.link ? 'cursor-pointer' : ''}`}
             >
               <img src={img.url} className="w-full h-full object-cover scale-110" alt="" />
               <div className="absolute inset-0 bg-gradient-to-r from-[#010309] via-[#010309]/50 to-transparent"></div>
@@ -174,8 +181,8 @@ const HomePage: React.FC = () => {
           ))}
         </div>
 
-        <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 items-center">
-          <div className="space-y-12 reveal active">
+        <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 items-center pointer-events-none">
+          <div className="space-y-12 reveal active pointer-events-auto">
             <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-bold uppercase tracking-widest">
               <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
               {carouselImages[activeCarouselIndex]?.title || t.hero_badge}
@@ -200,7 +207,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Seção Performance */}
+      {/* Outras seções... */}
       <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] border-y border-white/5 relative overflow-hidden">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.5em] text-slate-500 mb-24">{t.metrics_title}</h2>
@@ -215,7 +222,6 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Seção Insights */}
       <section id="insights" className="py-48 bg-white dark:bg-slate-950">
         <div className="container mx-auto px-6">
           <div className="mb-24 reveal active max-w-4xl">

@@ -4,6 +4,7 @@ export interface CarouselImage {
   url: string;
   title: string | null;
   subtitle: string | null;
+  link: string | null; // Novo campo para redirecionamento
   display_order: number;
   is_active: boolean;
   created_at?: string;
