@@ -16,6 +16,35 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
+// --- GENERIC TRANSLATIONS (content_translations) ---
+export const upsertTranslation = async (entityType: string, entityId: string, field: string, locale: string, value: string) => {
+  const { error } = await supabase.from('content_translations').upsert({
+    entity_type: entityType,
+    entity_id: entityId,
+    field: field,
+    locale: locale,
+    value: value
+  }, { onConflict: 'entity_type,entity_id,field,locale' });
+  return !error;
+};
+
+export const fetchTranslationsForEntity = async (entityType: string, entityId: string) => {
+  const { data, error } = await supabase
+    .from('content_translations')
+    .select('field, locale, value')
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId);
+  
+  if (error) return {};
+  
+  // Converte para formato { field: { locale: value } }
+  return data.reduce((acc: any, item) => {
+    if (!acc[item.field]) acc[item.field] = {};
+    acc[item.field][item.locale] = item.value;
+    return acc;
+  }, {});
+};
+
 // --- AUTH & PROFILE ---
 export const signIn = async (email: string, password?: string) => {
   return password 
@@ -101,6 +130,11 @@ export const fetchAllSiteContent = async () => {
   return error ? [] : data || [];
 };
 
+export const fetchContacts = async () => {
+  const { data, error } = await supabase.from('contacts').select('*').order('created_at', { ascending: false });
+  return error ? [] : data || [];
+};
+
 export const submitContact = async (contact: Contact) => {
   const { error } = await supabase.from('contacts').insert([contact]);
   return !error;
@@ -120,21 +154,6 @@ export const updateInsight = async (id: string, updates: Partial<Insight>) => {
 
 export const deleteInsight = async (id: string) => {
   const { error } = await supabase.from('insights').delete().eq('id', id);
-  return !error;
-};
-
-export const updateInsightLink = async (id: string, link: string) => {
-  const { error } = await supabase.from('insights').update({ link }).eq('id', id);
-  return !error;
-};
-
-export const fetchPendingTestimonials = async () => {
-  const { data, error } = await supabase.from('testimonials').select('*').eq('approved', false);
-  return error ? [] : data || [];
-};
-
-export const approveTestimonial = async (id: string) => {
-  const { error } = await supabase.from('testimonials').update({ approved: true }).eq('id', id);
   return !error;
 };
 
@@ -168,24 +187,14 @@ export const deleteProduct = async (id: string) => {
   return !error;
 };
 
-export const addMetric = async (metric: any) => {
-  const { error } = await supabase.from('metrics').insert([metric]);
-  return !error;
-};
-
 export const updateMetric = async (id: string, updates: Partial<Metric>) => {
   const { error } = await supabase.from('metrics').update(updates).eq('id', id);
   return !error;
 };
 
-export const deleteMetric = async (id: string) => {
-  const { error } = await supabase.from('metrics').delete().eq('id', id);
-  return !error;
-};
-
 export const addCarouselImage = async (image: any) => {
-  const { error } = await supabase.from('carousel_images').insert([image]);
-  return !error;
+  const { data, error } = await supabase.from('carousel_images').insert([image]).select();
+  return error ? null : data[0];
 };
 
 export const updateCarouselImage = async (id: string, updates: Partial<CarouselImage>) => {
@@ -196,12 +205,4 @@ export const updateCarouselImage = async (id: string, updates: Partial<CarouselI
 export const deleteCarouselImage = async (id: string) => {
   const { error } = await supabase.from('carousel_images').delete().eq('id', id);
   return !error;
-};
-
-export const uploadInsightImage = async (file: File): Promise<string | null> => {
-  const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
-  const { error: uploadError } = await supabase.storage.from('insight-images').upload(`insights/${fileName}`, file);
-  if (uploadError) return null;
-  const { data } = supabase.storage.from('insight-images').getPublicUrl(`insights/${fileName}`);
-  return data.publicUrl;
 };
