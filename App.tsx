@@ -42,7 +42,6 @@ const HomePage: React.FC = () => {
 
   const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
   
-  // Refs para controle de ciclo de vida
   const isMounted = useRef(true);
   const initialLoadDone = useRef(false);
 
@@ -61,7 +60,6 @@ const HomePage: React.FC = () => {
     if (!isMounted.current) return;
     
     try {
-      // Só mostra loading na primeira vez
       if (!silent && !initialLoadDone.current) setLoading(true);
       
       const [m, i, p, test, s, car, user] = await Promise.all([
@@ -76,7 +74,6 @@ const HomePage: React.FC = () => {
       
       if (!isMounted.current) return;
 
-      // Helper resiliente: Aceita true, 'true', 1 ou campo nulo (padrão ativo)
       const checkActive = (item: any) => {
         if (item.is_active === undefined || item.is_active === null) return true;
         const val = String(item.is_active).toLowerCase();
@@ -94,7 +91,7 @@ const HomePage: React.FC = () => {
       setTestimonials((test || []).filter(t => t.approved));
       setContent(s || {});
 
-      // Traduções em cache
+      // Carregamento inteligente de traduções
       const entities = [
         ...activeCarousel.map(c => ({ type: 'carousel_images', id: c.id })),
         ...(i || []).filter(checkActive).map(ins => ({ type: 'insights', id: ins.id })),
@@ -134,20 +131,13 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     loadAllData();
-    // Subscrição em tabelas permitidas via RLS
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'site_content', 'carousel_images', 'content_translations'];
     const subs = tables.map(table => subscribeToChanges(table, () => loadAllData(true)));
-    
-    return () => { 
-      subs.forEach(s => s.unsubscribe()); 
-    };
+    return () => { subs.forEach(s => s.unsubscribe()); };
   }, [loadAllData]);
 
-  // Sincronização de índice do carrossel
   useEffect(() => {
-    if (activeCarouselIndex >= carouselImages.length) {
-      setActiveCarouselIndex(0);
-    }
+    if (activeCarouselIndex >= carouselImages.length) setActiveCarouselIndex(0);
   }, [carouselImages.length]);
 
   useEffect(() => {
@@ -165,7 +155,9 @@ const HomePage: React.FC = () => {
   };
 
   const getL = (key: string, defaultVal: string) => {
-    return content[`${key}.${language}`] || content[`${key}.pt`] || defaultVal;
+    const langKey = `${key}.${language}`;
+    const baseKey = `${key}.pt`;
+    return content[langKey] || content[baseKey] || content[key] || defaultVal;
   };
 
   const currentTitle = useMemo(() => {
@@ -190,7 +182,7 @@ const HomePage: React.FC = () => {
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
       <div className="mt-8 text-[11px] font-black uppercase tracking-[0.6em] text-blue-500 animate-pulse">
-        Sincronizando Advisory...
+        Sincronizando Advisory Global...
       </div>
     </div>
   );
@@ -219,7 +211,6 @@ const HomePage: React.FC = () => {
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
       <section id="hero" className="relative h-screen flex items-center overflow-hidden min-h-[600px]">
-        {/* Background Engine */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 opacity-20 md:opacity-40 z-10 pointer-events-none"><ThreeGlobe /></div>
           {carouselImages.length > 0 ? (
@@ -228,21 +219,12 @@ const HomePage: React.FC = () => {
                 key={img.id} 
                 className={`absolute inset-0 transition-all duration-[1500ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-105 z-0'}`}
               >
-                <img 
-                  src={img.url} 
-                  className="w-full h-full object-cover" 
-                  alt={img.title || 'CT Hero'} 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg';
-                  }}
-                />
+                <img src={img.url} className="w-full h-full object-cover" alt="" onError={(e) => { (e.target as HTMLImageElement).src = 'https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg'; }} />
                 <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
               </div>
             ))
           ) : (
-            <div className="absolute inset-0 bg-[#010309]">
-               <img src="https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg" className="w-full h-full object-cover opacity-20" />
-            </div>
+            <div className="absolute inset-0 bg-[#010309]"><img src="https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg" className="w-full h-full object-cover opacity-20" /></div>
           )}
         </div>
 
@@ -251,16 +233,10 @@ const HomePage: React.FC = () => {
             <div className="inline-flex items-center gap-3 px-6 py-3 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] shadow-xl shadow-blue-500/5">
                {carouselImages[activeCarouselIndex] ? resolveTranslation(carouselImages[activeCarouselIndex].id, 'title', carouselImages[activeCarouselIndex].title || t.hero_badge) : t.hero_badge}
             </div>
-            
             <div className="space-y-10">
-              <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 transition-all drop-shadow-2xl">
-                {currentTitle}
-              </h1>
-              <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-4 border-blue-600/40 pl-10 italic">
-                {currentSubtitle}
-              </p>
+              <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 drop-shadow-2xl">{currentTitle}</h1>
+              <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-4 border-blue-600/40 pl-10 italic">{currentSubtitle}</p>
             </div>
-
             <div className="flex flex-wrap gap-8 pt-8">
               <a href="#contact" className="bg-blue-600 text-white px-12 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-blue-600/40 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95 group flex items-center gap-3">
                 {getL('btn.diagnosis', t.btn_diagnosis)}
@@ -270,15 +246,10 @@ const HomePage: React.FC = () => {
                 {getL('btn.insights', t.btn_insights)}
               </a>
             </div>
-
             {carouselImages.length > 1 && (
               <div className="flex gap-4 pt-16">
                 {carouselImages.map((_, idx) => (
-                  <button 
-                    key={idx}
-                    onClick={() => setActiveCarouselIndex(idx)}
-                    className={`h-1.5 rounded-full transition-all duration-700 ${idx === activeCarouselIndex ? 'w-16 bg-blue-600 shadow-lg shadow-blue-600/30' : 'w-6 bg-slate-800 hover:bg-slate-700'}`}
-                  />
+                  <button key={idx} onClick={() => setActiveCarouselIndex(idx)} className={`h-1.5 rounded-full transition-all duration-700 ${idx === activeCarouselIndex ? 'w-16 bg-blue-600 shadow-lg shadow-blue-600/30' : 'w-6 bg-slate-800 hover:bg-slate-700'}`} />
                 ))}
               </div>
             )}
@@ -286,59 +257,46 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Metrics */}
-      <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] relative transition-colors">
+      <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] relative">
         <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
         <div className="container mx-auto px-6 text-center relative z-10">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-20">
-            {metrics.length > 0 ? metrics.map(m => (
+            {metrics.map(m => (
               <div key={m.id} className="reveal active hover:translate-y-[-10px] transition-transform duration-500">
                 <div className="text-7xl font-bold dark:text-white text-slate-900 font-serif mb-6 drop-shadow-2xl">{m.value}</div>
                 <div className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 border-t border-slate-200 dark:border-white/5 pt-6 inline-block">
                   {resolveTranslation(m.id, 'label', m.label)}
                 </div>
               </div>
-            )) : (
-               <div className="col-span-full py-10 border border-dashed border-white/10 rounded-3xl text-slate-600 font-bold uppercase tracking-[0.3em] text-[10px]">
-                 Nenhum indicador ROI carregado.
-               </div>
-            )}
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Insights */}
       <section id="insights" className="py-40 dark:bg-slate-950 transition-colors">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
             <div className="space-y-4">
-              <div className="text-blue-500 font-black uppercase tracking-[0.4em] text-[10px]">Global Knowledge Hub</div>
+              <div className="text-blue-500 font-black uppercase tracking-[0.4em] text-[10px]">Strategic Hub</div>
               <h2 className="text-5xl font-serif dark:text-white text-slate-900 italic max-w-xl leading-tight">
                 {getL('home.insights_title', t.insights_title)}
               </h2>
             </div>
             <Link to="#contact-form" className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-blue-500 transition-colors border-b-2 border-slate-500/20 hover:border-blue-500/50 pb-2">
-              Solicitar Whitepapers
+              Solicitar Advisory
             </Link>
           </div>
-          
           <div className="grid md:grid-cols-3 gap-12">
             {insights.slice(0, 3).map(insight => (
               <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group space-y-8">
                 <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-900 border border-white/5 shadow-2xl relative">
-                  <img src={insight.image_url || ''} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-60 group-hover:opacity-100" alt={insight.title} />
+                  <img src={insight.image_url || ''} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-60 group-hover:opacity-100" alt="" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80"></div>
-                  <div className="absolute bottom-8 left-8 right-8">
-                     <span className="text-[8px] font-black uppercase tracking-[0.5em] text-blue-500 bg-blue-500/10 px-4 py-2 rounded-full border border-blue-500/20">{insight.category || 'ADVISORY'}</span>
-                  </div>
+                  <div className="absolute bottom-8 left-8 right-8"><span className="text-[8px] font-black uppercase tracking-[0.5em] text-blue-500 bg-blue-500/10 px-4 py-2 rounded-full border border-blue-500/20">{insight.category || 'ADVISORY'}</span></div>
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors leading-tight italic">
-                    {resolveTranslation(insight.id, 'title', insight.title)}
-                  </h3>
-                  <p className="text-sm text-slate-500 line-clamp-2 italic font-light leading-relaxed">
-                    {resolveTranslation(insight.id, 'excerpt', insight.excerpt || '')}
-                  </p>
+                  <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors leading-tight italic">{resolveTranslation(insight.id, 'title', insight.title)}</h3>
+                  <p className="text-sm text-slate-500 line-clamp-2 italic font-light leading-relaxed">{resolveTranslation(insight.id, 'excerpt', insight.excerpt || '')}</p>
                 </div>
               </Link>
             ))}
