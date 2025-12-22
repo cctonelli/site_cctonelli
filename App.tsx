@@ -81,10 +81,9 @@ const HomePage: React.FC = () => {
       setMetrics(m.length > 0 ? m : MOCK_METRICS);
       setInsights(i.length > 0 ? i : MOCK_INSIGHTS);
       setProducts(p);
-      setTestimonials(test);
+      setTestimonials((test || []).filter(t => t.approved));
       setContent(s);
       
-      // Filtra ativos e ordena pelo display_order explicitamente
       const activeCarousel = (car || [])
         .filter(img => img.is_active)
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
