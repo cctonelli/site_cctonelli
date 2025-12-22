@@ -24,9 +24,7 @@ export const signIn = async (email: string, password?: string) => {
 };
 
 /**
- * Realiza o cadastro enviando metadados.
- * O Trigger public.handle_new_user no Supabase é responsável por
- * inserir esses dados na tabela profiles automaticamente.
+ * Cadastro completo enviando metadados para o trigger public.handle_new_user
  */
 export const signUp = async (email: string, password?: string, metadata?: Partial<Profile>) => {
   const { data, error } = await supabase.auth.signUp({
@@ -38,7 +36,7 @@ export const signUp = async (email: string, password?: string, metadata?: Partia
         cpf_cnpj: metadata?.cpf_cnpj || '',
         gender: metadata?.gender || '',
         whatsapp: metadata?.whatsapp || '',
-        user_type: 'client'
+        user_type: 'client' // Padrão para novos registros
       } 
     }
   });
@@ -63,15 +61,10 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
     .single();
     
   if (error) {
-    console.warn(`[Profile] Não foi possível carregar o perfil ${id}. Erro: ${error.message}`);
+    console.warn(`[Supabase] Perfil ${id} não acessível ou inexistente.`);
     return null;
   }
   return data;
-};
-
-export const updateProfile = async (id: string, profile: Partial<Profile>) => {
-  const { error } = await supabase.from('profiles').update(profile).eq('id', id);
-  return !error;
 };
 
 // --- DATA FETCHING ---

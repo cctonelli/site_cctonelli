@@ -11,7 +11,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   
   <script>
-    // Polyfill básico para process.env em navegadores
     window.process = { 
       env: { 
         NODE_ENV: 'production',
@@ -39,10 +38,7 @@
     }
   </script>
   <style>
-    :root {
-      --bg-color: #010309;
-      --accent-blue: #2563eb;
-    }
+    :root { --bg-color: #010309; --accent-blue: #2563eb; }
     html.dark { --bg-color: #010309; }
     html:not(.dark) { --bg-color: #ffffff; }
     body {
@@ -54,61 +50,14 @@
       color: #94a3b8;
     }
     .font-serif { font-family: 'Playfair Display', serif; }
-    
-    .bg-grid {
-      background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1.5px, transparent 1.5px);
-      background-size: 60px 60px;
-    }
-
-    .reveal {
-      opacity: 0;
-      transform: translateY(40px);
-      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .reveal.active {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .glass {
-      background: rgba(255, 255, 255, 0.02);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    
-    ::selection {
-      background: #2563eb;
-      color: white;
-    }
-
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #010309;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 10px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #2563eb;
-    }
-
-    /* Tiptap Custom Styles for Admin */
-    .ProseMirror {
-      outline: none;
-      min-height: 400px;
-      padding: 24px;
-    }
-    .ProseMirror p.is-editor-empty:first-child::before {
-      content: attr(data-placeholder);
-      float: left;
-      color: #475569;
-      pointer-events: none;
-      height: 0;
-    }
+    .bg-grid { background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1.5px, transparent 1.5px); background-size: 60px 60px; }
+    .reveal { opacity: 0; transform: translateY(20px); transition: all 1s ease-out; }
+    .reveal.active { opacity: 1; transform: translateY(0); }
+    .glass { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #010309; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2563eb; }
   </style>
 <script type="importmap">
 {
@@ -135,7 +84,7 @@
 }
 </script>
 </head>
-<body class="bg-grid dark:text-slate-300 text-slate-900 selection:bg-blue-600 selection:text-white">
+<body class="bg-grid dark:text-slate-300 text-slate-900">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

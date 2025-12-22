@@ -45,7 +45,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           const isRls = signUpError.message?.toLowerCase().includes('row-level security');
           setError({
             message: isRls 
-              ? 'Erro de Segurança (RLS): O banco impediu a criação automática do seu perfil. Verifique se o Trigger possui SECURITY DEFINER.'
+              ? 'Protocolo de Segurança Ativo: Verifique as permissões do banco (RLS) para criação de perfis.'
               : signUpError.message,
             isRls
           });
@@ -53,22 +53,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           return;
         }
 
-        // Caso o usuário tenha sido criado mas a sessão seja nula (requer confirmação de email)
+        // Se o usuário foi criado mas não há sessão aberta, requer confirmação de e-mail
         if (data.user && !data.session) {
           setNeedsConfirmation(true);
-          setIsLoading(false);
         } else {
           onSuccess();
           onClose();
         }
       }
     } catch (err: any) {
-      console.error("[Auth UI] Exceção capturada:", err);
-      const isRls = err.message?.toLowerCase().includes('row-level security');
+      console.error("[Auth UI] Exceção:", err);
       setError({
-        message: err.message || 'Erro inesperado na autenticação.',
-        isRls
+        message: err.message || 'Falha na comunicação com o servidor de segurança.',
+        isRls: false
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -85,12 +84,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           </div>
           <h2 className="text-3xl font-serif text-white italic">Verifique seu E-mail</h2>
           <p className="text-slate-400 text-sm font-light leading-relaxed">
-            Sua conta foi criada, mas o Supabase exige confirmação. Enviamos um link para <strong>{email}</strong>.
+            Sua conta foi criada. Por favor, valide seu acesso clicando no link enviado para <strong>{email}</strong>.
           </p>
-          <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-[10px] text-slate-500 uppercase tracking-widest leading-relaxed">
-            Dica: Para pular esta etapa em testes, desative o "Confirm Email" nas configurações de Auth do seu painel Supabase.
+          <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-[9px] text-slate-500 uppercase tracking-widest leading-relaxed">
+            Dica: Se você não recebeu o e-mail, verifique a pasta de spam ou desative o "Confirm Email" no painel Supabase se estiver em teste.
           </div>
-          <button onClick={onClose} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px]">Entendido</button>
+          <button onClick={onClose} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all">Fechar</button>
         </motion.div>
       </div>
     );
@@ -116,11 +115,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-3xl shadow-xl shadow-blue-600/20">CT</div>
             <h2 className="text-3xl font-serif text-white italic">
-              {mode === 'login' ? 'Acesso Exclusivo' : 'Crie sua Conta'}
+              {mode === 'login' ? 'Acesso Exclusivo' : 'Nova Conta'}
             </h2>
-            <p className="text-slate-500 text-sm font-light">
-              {mode === 'login' ? 'Identifique-se para acessar o hub de inteligência.' : 'Junte-se à vanguarda da consultoria estratégica.'}
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -164,7 +160,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
                     onChange={e => setGender(e.target.value as Profile['gender'])}
                     className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-slate-300 focus:border-blue-500 outline-none transition-all appearance-none"
                   >
-                    <option value="" disabled>Selecione seu Gênero</option>
+                    <option value="" disabled>Gênero</option>
                     <option value="Masculino">Masculino</option>
                     <option value="Feminino">Feminino</option>
                     <option value="Outro">Outro</option>
@@ -177,7 +173,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             <input 
               required
               type="email" 
-              placeholder="E-mail Corporativo"
+              placeholder="E-mail"
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all placeholder:text-slate-700"
@@ -193,19 +189,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             />
 
             {error && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={`p-5 rounded-[1.5rem] border ${error.isRls ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'}`}
-              >
-                <div className="flex gap-4">
-                   <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold ${error.isRls ? 'bg-amber-500 text-black' : 'bg-red-500 text-white'}`}>!</div>
-                   <div className="space-y-1">
-                     <p className={`text-[11px] font-bold tracking-tight leading-relaxed ${error.isRls ? 'text-amber-500/90' : 'text-red-500'}`}>
-                       {error.message}
-                     </p>
-                   </div>
-                </div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] text-red-500 font-bold uppercase tracking-widest text-center">
+                {error.message}
               </motion.div>
             )}
 
@@ -213,33 +198,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
               disabled={isLoading}
               className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50"
             >
-              {isLoading ? 'Aguardando Resposta...' : (mode === 'login' ? 'Autenticar' : 'Validar Cadastro')}
+              {isLoading ? 'Sincronizando...' : (mode === 'login' ? 'Entrar' : 'Finalizar Registro')}
             </button>
           </form>
 
-          <div className="text-center">
+          <div className="text-center pt-4">
             <button 
-              onClick={() => {
-                setMode(mode === 'login' ? 'register' : 'login');
-                setError(null);
-                setNeedsConfirmation(false);
-              }}
-              className="text-[10px] uppercase tracking-widest text-slate-500 hover:text-white transition-colors font-bold"
+              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }}
+              className="text-[9px] uppercase tracking-widest text-slate-500 hover:text-white transition-colors font-bold"
             >
-              {mode === 'login' ? 'Solicitar Acesso à Rede' : 'Retornar ao Login'}
+              {mode === 'login' ? 'Não tem conta? Registre-se' : 'Já possui conta? Conecte-se'}
             </button>
           </div>
         </div>
-        
-        <div className="bg-slate-950 py-4 text-center border-t border-white/5">
-          <p className="text-[9px] uppercase tracking-[0.5em] text-slate-600 font-bold">Protocolo SSL/TLS Ativado</p>
-        </div>
       </motion.div>
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, 0.2); border-radius: 10px; }
-      `}</style>
     </div>
   );
 };
