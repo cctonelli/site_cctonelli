@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ThreeGlobe from './components/ThreeGlobe';
 import ChatBot from './components/ChatBot';
@@ -21,6 +21,7 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 const HomePage: React.FC = () => {
+  // States
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -40,7 +41,10 @@ const HomePage: React.FC = () => {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
+  
+  // Refs para controle de montagem e evitar loops
   const isMounted = useRef(true);
+  const initialLoadDone = useRef(false);
 
   useEffect(() => {
     isMounted.current = true;
@@ -54,8 +58,10 @@ const HomePage: React.FC = () => {
   }, [theme]);
 
   const loadAllData = useCallback(async (silent = false) => {
+    if (!isMounted.current) return;
+    
     try {
-      if (!silent) setLoading(true);
+      if (!silent && !initialLoadDone.current) setLoading(true);
       
       const [m, i, p, test, s, car, user] = await Promise.all([
         fetchMetrics(),
@@ -69,16 +75,22 @@ const HomePage: React.FC = () => {
       
       if (!isMounted.current) return;
 
-      // Helper resiliente para checar is_active (lida com boolean true ou string 'true')
-      const checkActive = (item: any) => String(item.is_active) === 'true' || item.is_active === true;
+      // Helper ultra-resiliente para campos booleanos vindos do Postgres
+      const checkActive = (item: any) => {
+        if (item.is_active === undefined || item.is_active === null) return true;
+        const val = String(item.is_active).toLowerCase();
+        return val === 'true' || val === '1' || item.is_active === true;
+      };
 
       const activeCarousel = (car || [])
         .filter(checkActive)
         .sort((a, b) => (Number(a.display_order) || 0) - (Number(b.display_order) || 0));
       
-      console.log("Carousel Items found in DB:", car?.length || 0);
-      console.log("Carousel Items ACTIVE:", activeCarousel.length);
-      
+      // Diagnóstico via console para o desenvolvedor
+      if (car && car.length > 0) {
+        console.log(`[CT-CMS] Itens encontrados: ${car.length} | Ativos: ${activeCarousel.length}`);
+      }
+
       setCarouselImages(activeCarousel);
       setMetrics((m || []).filter(checkActive));
       setInsights((i || []).filter(checkActive));
@@ -86,8 +98,8 @@ const HomePage: React.FC = () => {
       setTestimonials((test || []).filter(t => t.approved));
       setContent(s || {});
 
-      // Traduções
-      const entitiesToTranslate = [
+      // Carregamento de traduções em batch
+      const entities = [
         ...activeCarousel.map(c => ({ type: 'carousel_images', id: c.id })),
         ...(i || []).filter(checkActive).map(ins => ({ type: 'insights', id: ins.id })),
         ...(p || []).map(prod => ({ type: 'products', id: prod.id })),
@@ -95,15 +107,15 @@ const HomePage: React.FC = () => {
         ...(test || []).filter(t => t.approved).map(at => ({ type: 'testimonials', id: at.id }))
       ];
 
-      if (entitiesToTranslate.length > 0) {
+      if (entities.length > 0) {
         const trans: Record<string, any> = {};
-        const translationsResults = await Promise.all(
-          entitiesToTranslate.map(async (ent) => {
+        const transResults = await Promise.all(
+          entities.map(async (ent) => {
             const data = await fetchTranslationsForEntity(ent.type, ent.id);
             return { id: String(ent.id), data };
           })
         );
-        translationsResults.forEach(res => {
+        transResults.forEach(res => {
           if (res.data && Object.keys(res.data).length > 0) trans[res.id] = res.data;
         });
         setTranslationsCache(trans);
@@ -113,11 +125,13 @@ const HomePage: React.FC = () => {
         const profile = await getProfile(user.id);
         setUserProfile(profile);
       }
+
+      initialLoadDone.current = true;
     } catch (err) {
-      console.error("Critical Fetch Error [Home]:", err);
+      console.error("Critical Load Error:", err);
     } finally {
       if (isMounted.current && !silent) {
-        setTimeout(() => setLoading(false), 800);
+        setTimeout(() => setLoading(false), 600);
       }
     }
   }, []);
@@ -132,13 +146,18 @@ const HomePage: React.FC = () => {
     };
   }, [loadAllData]);
 
+  // Reset do índice se as imagens mudarem (evita out of bounds)
+  useEffect(() => {
+    setActiveCarouselIndex(0);
+  }, [carouselImages.length]);
+
   useEffect(() => {
     if (carouselImages.length <= 1) return;
     const interval = setInterval(() => {
       setActiveCarouselIndex(prev => (prev + 1) % carouselImages.length);
-    }, 10000);
+    }, 8000);
     return () => clearInterval(interval);
-  }, [carouselImages]);
+  }, [carouselImages.length]);
 
   const resolveTranslation = (entityId: any, field: string, baseValue: string) => {
     if (language === 'pt') return baseValue;
@@ -208,7 +227,7 @@ const HomePage: React.FC = () => {
             carouselImages.map((img, idx) => (
               <div 
                 key={img.id} 
-                className={`absolute inset-0 transition-all duration-[2500ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-105 z-0'}`}
+                className={`absolute inset-0 transition-all duration-[1500ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-105 z-0'}`}
               >
                 <img 
                   src={img.url} 
@@ -222,8 +241,9 @@ const HomePage: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="absolute inset-0 bg-[#010309] opacity-100">
-               <img src="https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg" className="w-full h-full object-cover opacity-30" />
+            <div className="absolute inset-0 bg-[#010309]">
+               <img src="https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg" className="w-full h-full object-cover opacity-20" />
+               <div className="absolute inset-0 bg-brand-navy/80"></div>
             </div>
           )}
         </div>
@@ -301,7 +321,7 @@ const HomePage: React.FC = () => {
                 {getL('home.insights_title', t.insights_title)}
               </h2>
             </div>
-            <Link to="#contact" className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-blue-500 transition-colors border-b-2 border-slate-500/20 hover:border-blue-500/50 pb-2">
+            <Link to="#contact-form" className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-blue-500 transition-colors border-b-2 border-slate-500/20 hover:border-blue-500/50 pb-2">
               Solicitar Whitepapers
             </Link>
           </div>
