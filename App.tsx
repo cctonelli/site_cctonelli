@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ThreeGlobe from './components/ThreeGlobe';
@@ -40,14 +40,17 @@ const HomePage: React.FC = () => {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
+  const isMounted = useRef(true);
 
   useEffect(() => {
+    isMounted.current = true;
     const root = window.document.documentElement;
     if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
+    return () => { isMounted.current = false; };
   }, [theme]);
 
   const loadAllData = useCallback(async (silent = false) => {
@@ -64,61 +67,69 @@ const HomePage: React.FC = () => {
         getCurrentUser()
       ]);
       
-      console.log("Raw Carousel Data from DB:", car);
+      if (!isMounted.current) return;
 
-      // Filtro robusto para is_active (suporta boolean ou string do DB)
+      // Helper resiliente para checar is_active (lida com boolean true ou string 'true')
+      const checkActive = (item: any) => String(item.is_active) === 'true' || item.is_active === true;
+
       const activeCarousel = (car || [])
-        .filter(img => String(img.is_active) === 'true' || img.is_active === true)
+        .filter(checkActive)
         .sort((a, b) => (Number(a.display_order) || 0) - (Number(b.display_order) || 0));
       
+      console.log("Carousel Items found in DB:", car?.length || 0);
+      console.log("Carousel Items ACTIVE:", activeCarousel.length);
+      
       setCarouselImages(activeCarousel);
-      console.log(`Active Slides Processed: ${activeCarousel.length}`);
-
-      setMetrics((m || []).filter(x => String(x.is_active) === 'true' || x.is_active === true));
-      setInsights((i || []).filter(x => String(x.is_active) === 'true' || x.is_active === true));
+      setMetrics((m || []).filter(checkActive));
+      setInsights((i || []).filter(checkActive));
       setProducts(p || []);
       setTestimonials((test || []).filter(t => t.approved));
       setContent(s || {});
 
+      // Traduções
       const entitiesToTranslate = [
         ...activeCarousel.map(c => ({ type: 'carousel_images', id: c.id })),
-        ...insights.map(ins => ({ type: 'insights', id: ins.id })),
-        ...products.map(prod => ({ type: 'products', id: prod.id })),
-        ...metrics.map(met => ({ type: 'metrics', id: met.id })),
+        ...(i || []).filter(checkActive).map(ins => ({ type: 'insights', id: ins.id })),
+        ...(p || []).map(prod => ({ type: 'products', id: prod.id })),
+        ...(m || []).filter(checkActive).map(met => ({ type: 'metrics', id: met.id })),
         ...(test || []).filter(t => t.approved).map(at => ({ type: 'testimonials', id: at.id }))
       ];
 
-      const trans: Record<string, any> = {};
-      const translationsResults = await Promise.all(
-        entitiesToTranslate.map(async (ent) => {
-          const data = await fetchTranslationsForEntity(ent.type, ent.id);
-          return { id: String(ent.id), data };
-        })
-      );
-
-      translationsResults.forEach(res => {
-        if (res.data && Object.keys(res.data).length > 0) trans[res.id] = res.data;
-      });
-      
-      setTranslationsCache(trans);
+      if (entitiesToTranslate.length > 0) {
+        const trans: Record<string, any> = {};
+        const translationsResults = await Promise.all(
+          entitiesToTranslate.map(async (ent) => {
+            const data = await fetchTranslationsForEntity(ent.type, ent.id);
+            return { id: String(ent.id), data };
+          })
+        );
+        translationsResults.forEach(res => {
+          if (res.data && Object.keys(res.data).length > 0) trans[res.id] = res.data;
+        });
+        setTranslationsCache(trans);
+      }
 
       if (user && !silent) {
         const profile = await getProfile(user.id);
         setUserProfile(profile);
       }
     } catch (err) {
-      console.error("Critical Fetch Error in Home:", err);
+      console.error("Critical Fetch Error [Home]:", err);
     } finally {
-      if (!silent) setTimeout(() => setLoading(false), 800);
+      if (isMounted.current && !silent) {
+        setTimeout(() => setLoading(false), 800);
+      }
     }
-  }, [insights, products, metrics]);
+  }, []);
 
   useEffect(() => {
     loadAllData();
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'site_content', 'carousel_images', 'content_translations'];
     const subs = tables.map(table => subscribeToChanges(table, () => loadAllData(true)));
     
-    return () => { subs.forEach(s => s.unsubscribe()); };
+    return () => { 
+      subs.forEach(s => s.unsubscribe()); 
+    };
   }, [loadAllData]);
 
   useEffect(() => {
@@ -161,7 +172,7 @@ const HomePage: React.FC = () => {
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
       <div className="mt-8 text-[11px] font-black uppercase tracking-[0.6em] text-blue-500 animate-pulse">
-        Carregando Advisory Global...
+        Sincronizando Advisory...
       </div>
     </div>
   );
@@ -189,7 +200,7 @@ const HomePage: React.FC = () => {
       {isAdminOpen && userProfile?.user_type === 'admin' && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      <section id="hero" className="relative h-screen flex items-center overflow-hidden">
+      <section id="hero" className="relative h-screen flex items-center overflow-hidden min-h-[700px]">
         {/* Carousel Background Engine */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 opacity-20 md:opacity-40 z-10 pointer-events-none"><ThreeGlobe /></div>
@@ -197,22 +208,23 @@ const HomePage: React.FC = () => {
             carouselImages.map((img, idx) => (
               <div 
                 key={img.id} 
-                className={`absolute inset-0 transition-all duration-[3000ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-80 scale-100 rotate-0' : 'opacity-0 scale-110 rotate-1'}`}
+                className={`absolute inset-0 transition-all duration-[2500ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-105 z-0'}`}
               >
                 <img 
                   src={img.url} 
                   className="w-full h-full object-cover" 
-                  alt={img.title || 'Slide'} 
+                  alt={img.title || 'Hero Background'} 
                   onError={(e) => {
-                    console.error("Image load error for slide:", img.url);
                     (e.target as HTMLImageElement).src = 'https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg';
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/70 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
               </div>
             ))
           ) : (
-            <div className="absolute inset-0 bg-[#010309] opacity-90"></div>
+            <div className="absolute inset-0 bg-[#010309] opacity-100">
+               <img src="https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg" className="w-full h-full object-cover opacity-30" />
+            </div>
           )}
         </div>
 
@@ -224,7 +236,7 @@ const HomePage: React.FC = () => {
             </div>
             
             <div className="space-y-10">
-              <h1 className="text-6xl md:text-8xl font-serif leading-[1] dark:text-white text-slate-900 transition-all">
+              <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 transition-all drop-shadow-xl">
                 {currentTitle}
               </h1>
               <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-4 border-blue-600/40 pl-10 italic">
@@ -258,7 +270,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Metrics Section: Now fully dynamic */}
+      {/* Metrics Section */}
       <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] relative transition-colors">
         <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
         <div className="container mx-auto px-6 text-center relative z-10">
@@ -271,7 +283,7 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
             )) : (
-               <div className="col-span-full py-10 border border-dashed border-white/5 rounded-3xl text-slate-600 font-bold uppercase tracking-[0.3em] text-[10px]">
+               <div className="col-span-full py-10 border border-dashed border-white/10 rounded-3xl text-slate-600 font-bold uppercase tracking-[0.3em] text-[10px]">
                  Nenhuma métrica de performance carregada.
                </div>
             )}

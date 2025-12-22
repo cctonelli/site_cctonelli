@@ -89,11 +89,9 @@ export const fetchCarouselImages = async () => {
     .order('display_order', { ascending: true });
     
   if (error) {
-    console.error("Critical: Error fetching carousel images:", error);
+    console.error("Supabase Error [Carousel]:", error);
     return [];
   }
-  
-  console.log("Supabase Connection Successful. Carousel Rows Found:", data?.length);
   return data || [];
 };
 
