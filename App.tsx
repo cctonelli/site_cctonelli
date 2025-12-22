@@ -83,7 +83,10 @@ const HomePage: React.FC = () => {
       setProducts(p);
       setTestimonials(test);
       setContent(s);
-      setCarouselImages(car.length > 0 ? car : MOCK_CAROUSEL);
+      
+      // Filtra apenas as imagens ativas para o carrossel público
+      const activeCarousel = car.length > 0 ? car.filter(img => img.is_active) : MOCK_CAROUSEL;
+      setCarouselImages(activeCarousel.length > 0 ? activeCarousel : MOCK_CAROUSEL);
 
       if (user) {
         const profile = await getProfile(user.id);
@@ -207,7 +210,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Outras seções... */}
+      {/* Metrics Section */}
       <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] border-y border-white/5 relative overflow-hidden">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.5em] text-slate-500 mb-24">{t.metrics_title}</h2>
@@ -222,6 +225,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* Insights Section */}
       <section id="insights" className="py-48 bg-white dark:bg-slate-950">
         <div className="container mx-auto px-6">
           <div className="mb-24 reveal active max-w-4xl">

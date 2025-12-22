@@ -44,7 +44,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Forms state
-  const [newCarousel, setNewCarousel] = useState({ title: '', subtitle: '', url: '', link: '', display_order: 0 });
+  const [newCarousel, setNewCarousel] = useState({ title: '', subtitle: '', url: '', link: '', display_order: 0, is_active: true });
   const [newMetric, setNewMetric] = useState({ label: '', value: '', display_order: 0, is_active: true });
   const [newInsight, setNewInsight] = useState({ title: '', subtitle: '', excerpt: '', category: 'ESTRATÉGIA', image_url: '', is_active: true, display_order: 0 });
   const [newProduct, setNewProduct] = useState({ name: '', description: '', price: 0, type: 'service' as 'product' | 'service', config: { url: '', image_url: '', action_label: 'Contratar Agora' } });
@@ -116,7 +116,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       }
     } catch (err: any) {
       console.error("Insight Save Error:", err);
-      alert(`Erro Supabase: ${err.message || 'Verifique se as colunas da tabela "insights" batem com o formulário.'}`);
+      alert(`Erro Supabase: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -141,8 +141,9 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const handleAddCarousel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (await addCarouselImage(newCarousel)) {
-      setNewCarousel({ title: '', subtitle: '', url: '', link: '', display_order: 0 });
+      setNewCarousel({ title: '', subtitle: '', url: '', link: '', display_order: 0, is_active: true });
       loadAdminData();
+      alert('Slide adicionado ao carrossel!');
     }
   };
 
@@ -204,66 +205,139 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             )}
 
             {activeTab === 'carousel' && (
-              <div className="space-y-10 animate-in fade-in">
-                <header><h2 className="text-3xl font-serif italic text-white">Carrossel de Fundo</h2></header>
+              <div className="space-y-16 animate-in fade-in">
+                <header>
+                  <h2 className="text-4xl font-serif italic text-white">Gestão do Carrossel Hero</h2>
+                  <p className="text-slate-500 text-sm">Controle as imagens de fundo, badges e links de destino da página inicial.</p>
+                </header>
                 
-                <form onSubmit={handleAddCarousel} className="bg-slate-800/20 border border-white/5 p-8 rounded-3xl space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <input required placeholder="Título (Badge)" value={newCarousel.title || ''} onChange={e => setNewCarousel({...newCarousel, title: e.target.value})} className="bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
-                    <input required placeholder="URL da Imagem" value={newCarousel.url} onChange={e => setNewCarousel({...newCarousel, url: e.target.value})} className="bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
-                  </div>
-                  <input placeholder="Link de Destino (Ex: /insight/1 ou https://google.com)" value={newCarousel.link || ''} onChange={e => setNewCarousel({...newCarousel, link: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
-                  <textarea placeholder="Subtítulo de Impacto..." value={newCarousel.subtitle || ''} onChange={e => setNewCarousel({...newCarousel, subtitle: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none h-24 resize-none" />
-                  <button type="submit" className="bg-blue-600 px-8 py-4 rounded-xl text-[10px] font-bold uppercase text-white shadow-lg shadow-blue-600/20">Adicionar Frame</button>
-                </form>
-
-                <div className="grid gap-6">
-                  <h3 className="text-xl font-serif text-white italic">Frames Ativos</h3>
-                  {carouselImages.map(img => (
-                    <div key={img.id} className="bg-slate-950/50 p-6 rounded-3xl border border-white/5 group space-y-4">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          <img src={img.url} className="w-20 h-12 object-cover rounded-xl border border-white/10" alt="" />
-                          <input 
-                            className="bg-transparent text-white font-bold text-sm outline-none border-b border-transparent focus:border-blue-500 transition-all"
-                            defaultValue={img.title || ''}
-                            onBlur={(e) => handleUpdateCarouselItem(img.id, { title: e.target.value })}
-                          />
-                        </div>
-                        <button onClick={() => deleteCarouselImage(img.id).then(loadAdminData)} className="text-red-500 text-[9px] font-bold uppercase px-3 py-1 bg-red-500/10 rounded-full hover:bg-red-500 hover:text-white transition-all">Excluir</button>
+                {/* Registration Form */}
+                <section className="bg-slate-800/20 border border-white/5 p-8 rounded-3xl space-y-8 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-3xl rounded-full"></div>
+                  <h3 className="text-lg font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    Novo Slide
+                  </h3>
+                  <form onSubmit={handleAddCarousel} className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">Título (Badge)</label>
+                        <input required placeholder="Ex: Expertise Global" value={newCarousel.title || ''} onChange={e => setNewCarousel({...newCarousel, title: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-blue-500 transition-all" />
                       </div>
-                      
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Link de Destino</label>
-                          <input 
-                            className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-2 text-xs text-blue-400 outline-none focus:border-blue-500 transition-all"
-                            defaultValue={img.link || ''}
-                            onBlur={(e) => handleUpdateCarouselItem(img.id, { link: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Subtítulo</label>
-                          <textarea 
-                            className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-400 outline-none focus:border-blue-500 transition-all resize-none"
-                            defaultValue={img.subtitle || ''}
-                            onBlur={(e) => handleUpdateCarouselItem(img.id, { subtitle: e.target.value })}
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">URL da Imagem</label>
+                        <input required placeholder="https://unsplash.com/..." value={newCarousel.url} onChange={e => setNewCarousel({...newCarousel, url: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-blue-500 transition-all" />
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">Link de Destino</label>
+                      <input placeholder="Ex: /insight/id ou https://..." value={newCarousel.link || ''} onChange={e => setNewCarousel({...newCarousel, link: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-blue-500 transition-all" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">Subtítulo de Impacto</label>
+                      <textarea placeholder="Frase persuasiva para o slide..." value={newCarousel.subtitle || ''} onChange={e => setNewCarousel({...newCarousel, subtitle: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none h-24 resize-none focus:border-blue-500 transition-all" />
+                    </div>
+                    <button type="submit" className="w-full md:w-auto bg-blue-600 px-12 py-5 rounded-2xl text-[11px] font-bold uppercase text-white shadow-xl shadow-blue-600/20 hover:bg-blue-500 hover:scale-[1.02] active:scale-95 transition-all">
+                      Adicionar Frame ao Carrossel
+                    </button>
+                  </form>
+                </section>
+
+                {/* Listing Grid */}
+                <section className="space-y-8">
+                  <div className="flex justify-between items-end border-b border-white/5 pb-4">
+                    <h3 className="text-2xl font-serif text-white italic">Acervo do Carrossel</h3>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      {carouselImages.length} Slides Cadastrados
+                    </div>
+                  </div>
+
+                  <div className="grid lg:grid-cols-2 gap-8">
+                    {carouselImages.map((img, idx) => (
+                      <div key={img.id} className={`group relative bg-slate-950/40 border ${img.is_active ? 'border-white/5' : 'border-red-500/20 opacity-70'} rounded-[2.5rem] overflow-hidden transition-all hover:border-blue-500/30 shadow-2xl flex flex-col`}>
+                        {/* Status Badge */}
+                        <div className="absolute top-4 right-4 z-10 flex gap-2">
+                          <button 
+                            onClick={() => handleUpdateCarouselItem(img.id, { is_active: !img.is_active })}
+                            className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest border transition-all ${img.is_active ? 'bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500 hover:text-white' : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white'}`}
+                          >
+                            {img.is_active ? 'Ativo' : 'Desativado'}
+                          </button>
+                        </div>
+
+                        {/* Image Preview */}
+                        <div className="aspect-video relative overflow-hidden bg-slate-900">
+                          <img src={img.url} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-1000" alt={img.title || ''} />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+                          <div className="absolute bottom-4 left-6">
+                            <span className="text-[9px] font-bold text-white/50 uppercase tracking-[0.4em]">Frame #{idx + 1}</span>
+                          </div>
+                        </div>
+
+                        {/* Edit Area (Auto-Save) */}
+                        <div className="p-8 space-y-6 flex-1 flex flex-col justify-between">
+                          <div className="space-y-4">
+                            <div className="space-y-1">
+                              <label className="text-[8px] uppercase tracking-widest text-slate-500 font-black">Badge do Hero</label>
+                              <input 
+                                className="w-full bg-transparent text-white font-serif italic text-xl outline-none border-b border-white/5 focus:border-blue-500 transition-all py-1"
+                                defaultValue={img.title || ''}
+                                onBlur={(e) => handleUpdateCarouselItem(img.id, { title: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[8px] uppercase tracking-widest text-slate-500 font-black">Link de Destino</label>
+                              <input 
+                                className="w-full bg-transparent text-blue-400 text-[10px] outline-none border-b border-white/5 focus:border-blue-500 transition-all py-1"
+                                defaultValue={img.link || ''}
+                                onBlur={(e) => handleUpdateCarouselItem(img.id, { link: e.target.value })}
+                                placeholder="/insight/..."
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[8px] uppercase tracking-widest text-slate-500 font-black">Subtítulo (Impacto)</label>
+                              <textarea 
+                                className="w-full bg-slate-900/30 text-slate-400 text-xs font-light leading-relaxed outline-none border border-white/5 focus:border-blue-500 p-3 rounded-xl transition-all resize-none h-20"
+                                defaultValue={img.subtitle || ''}
+                                onBlur={(e) => handleUpdateCarouselItem(img.id, { subtitle: e.target.value })}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="pt-6 flex justify-between items-center">
+                            <div className="text-[8px] text-slate-600 font-bold uppercase tracking-widest">
+                              ID: {img.id.slice(0, 8)}...
+                            </div>
+                            <button 
+                              onClick={() => { if(confirm('Excluir este slide permanentemente?')) deleteCarouselImage(img.id).then(loadAdminData); }}
+                              className="text-[9px] font-bold uppercase text-red-600 hover:text-red-400 transition-colors border-b border-transparent hover:border-red-600 pb-1"
+                            >
+                              Remover do Banco
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {carouselImages.length === 0 && (
+                      <div className="lg:col-span-2 py-32 text-center border-2 border-dashed border-white/5 rounded-[3rem]">
+                        <p className="text-slate-600 italic font-serif text-lg">Nenhum slide encontrado no Supabase.</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
               </div>
             )}
 
             {activeTab === 'metrics' && (
               <div className="space-y-10 animate-in fade-in">
-                <header><h2 className="text-3xl font-serif italic text-white">Métricas</h2></header>
+                <header><h2 className="text-3xl font-serif italic text-white">Métricas de Performance</h2></header>
                 <form onSubmit={handleAddMetric} className="bg-slate-800/20 border border-white/5 p-8 rounded-3xl space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
-                    <input required placeholder="Rótulo" value={newMetric.label} onChange={e => setNewMetric({...newMetric, label: e.target.value})} className="bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
-                    <input required placeholder="Valor" value={newMetric.value} onChange={e => setNewMetric({...newMetric, value: e.target.value})} className="bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                    <input required placeholder="Rótulo (Ex: Projetos)" value={newMetric.label} onChange={e => setNewMetric({...newMetric, label: e.target.value})} className="bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                    <input required placeholder="Valor (Ex: 150+)" value={newMetric.value} onChange={e => setNewMetric({...newMetric, value: e.target.value})} className="bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
                   </div>
                   <button type="submit" className="bg-blue-600 px-8 py-4 rounded-xl text-[10px] font-bold uppercase text-white">Salvar</button>
                 </form>
@@ -280,10 +354,10 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
             {activeTab === 'insights' && (
               <div className="space-y-10 animate-in fade-in">
-                <header><h2 className="text-3xl font-serif italic text-white">Insights</h2></header>
+                <header><h2 className="text-3xl font-serif italic text-white">Área de Insights</h2></header>
                 <form onSubmit={handleAddInsight} className="bg-slate-800/20 border border-white/5 p-8 rounded-3xl space-y-8">
-                  <input required placeholder="Título Principal" value={newInsight.title} onChange={e => setNewInsight({...newInsight, title: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
-                  <textarea placeholder="Resumo Executivo..." value={newInsight.excerpt || ''} onChange={e => setNewInsight({...newInsight, excerpt: e.target.value})} className="w-full bg-slate-950 p-5 rounded-xl border border-white/10 text-white outline-none h-24 resize-none" />
+                  <input required placeholder="Título do Insight" value={newInsight.title} onChange={e => setNewInsight({...newInsight, title: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
+                  <textarea placeholder="Lead do Insight..." value={newInsight.excerpt || ''} onChange={e => setNewInsight({...newInsight, excerpt: e.target.value})} className="w-full bg-slate-950 p-5 rounded-xl border border-white/10 text-white outline-none h-24 resize-none" />
                   <div className="border border-white/10 rounded-2xl overflow-hidden bg-slate-950"><MenuBar editor={editor} /><EditorContent editor={editor} /></div>
                   <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 py-5 rounded-2xl text-[10px] font-bold uppercase text-white shadow-xl">{isSubmitting ? 'Sincronizando...' : 'Publicar Agora'}</button>
                 </form>
