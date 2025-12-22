@@ -21,7 +21,7 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 const HomePage: React.FC = () => {
-  // States estruturais
+  // Estados de Dados
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -30,6 +30,7 @@ const HomePage: React.FC = () => {
   const [translationsCache, setTranslationsCache] = useState<Record<string, any>>({});
   const [content, setContent] = useState<Record<string, string>>({});
   
+  // Estados de UI
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<Language>('pt');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('dark');
@@ -62,42 +63,46 @@ const HomePage: React.FC = () => {
     try {
       if (!silent && !initialLoadDone.current) setLoading(true);
       
-      const [m, i, p, test, s, car, user] = await Promise.all([
-        fetchMetrics().catch(() => []),
-        fetchInsights().catch(() => []),
-        fetchProducts().catch(() => []),
-        fetchTestimonials().catch(() => []),
-        fetchSiteContent('home').catch(() => ({})),
-        fetchCarouselImages().catch(() => []),
-        getCurrentUser().catch(() => null)
+      // Uso de Settled para evitar que um erro de tabela bloqueie o site todo
+      const results = await Promise.allSettled([
+        fetchMetrics(),
+        fetchInsights(),
+        fetchProducts(),
+        fetchTestimonials(),
+        fetchSiteContent('home'),
+        fetchCarouselImages(),
+        getCurrentUser()
       ]);
       
       if (!isMounted.current) return;
 
+      const [m, i, p, test, s, car, user] = results.map(r => r.status === 'fulfilled' ? r.value : null);
+
       const checkActive = (item: any) => {
+        if (!item) return false;
         if (item.is_active === undefined || item.is_active === null) return true;
         const val = String(item.is_active).toLowerCase();
         return val === 'true' || val === '1' || item.is_active === true;
       };
 
-      const activeCarousel = (car || [])
+      const activeCarousel = (car as CarouselImage[] || [])
         .filter(checkActive)
         .sort((a, b) => (Number(a.display_order) || 0) - (Number(b.display_order) || 0));
       
       setCarouselImages(activeCarousel);
-      setMetrics((m || []).filter(checkActive));
-      setInsights((i || []).filter(checkActive));
-      setProducts(p || []);
-      setTestimonials((test || []).filter(t => t.approved));
-      setContent(s || {});
+      setMetrics(((m as Metric[]) || []).filter(checkActive));
+      setInsights(((i as Insight[]) || []).filter(checkActive));
+      setProducts((p as Product[]) || []);
+      setTestimonials(((test as Testimonial[]) || []).filter(t => t.approved));
+      setContent((s as Record<string, string>) || {});
 
-      // Carregamento inteligente de traduções
+      // Cache de traduções para campos dinâmicos
       const entities = [
         ...activeCarousel.map(c => ({ type: 'carousel_images', id: c.id })),
-        ...(i || []).filter(checkActive).map(ins => ({ type: 'insights', id: ins.id })),
-        ...(p || []).map(prod => ({ type: 'products', id: prod.id })),
-        ...(m || []).filter(checkActive).map(met => ({ type: 'metrics', id: met.id })),
-        ...(test || []).filter(t => t.approved).map(at => ({ type: 'testimonials', id: at.id }))
+        ...((i as Insight[]) || []).filter(checkActive).map(ins => ({ type: 'insights', id: ins.id })),
+        ...((p as Product[]) || []).map(prod => ({ type: 'products', id: prod.id })),
+        ...((m as Metric[]) || []).filter(checkActive).map(met => ({ type: 'metrics', id: met.id })),
+        ...((test as Testimonial[]) || []).filter(t => t.approved).map(at => ({ type: 'testimonials', id: at.id }))
       ];
 
       if (entities.length > 0) {
@@ -115,16 +120,16 @@ const HomePage: React.FC = () => {
       }
 
       if (user && !silent) {
-        const profile = await getProfile(user.id);
+        const profile = await getProfile((user as any).id);
         setUserProfile(profile);
       }
 
       initialLoadDone.current = true;
     } catch (err) {
-      console.error("Critical Load Failure:", err);
+      console.error("Critical Advisory Load Error:", err);
     } finally {
       if (isMounted.current && !silent) {
-        setTimeout(() => setLoading(false), 500);
+        setTimeout(() => setLoading(false), 600);
       }
     }
   }, []);
@@ -144,7 +149,7 @@ const HomePage: React.FC = () => {
     if (carouselImages.length <= 1) return;
     const interval = setInterval(() => {
       setActiveCarouselIndex(prev => (prev + 1) % carouselImages.length);
-    }, 9000);
+    }, 10000); // 10s para leitura confortável
     return () => clearInterval(interval);
   }, [carouselImages.length]);
 
@@ -160,18 +165,6 @@ const HomePage: React.FC = () => {
     return content[langKey] || content[baseKey] || content[key] || defaultVal;
   };
 
-  const currentTitle = useMemo(() => {
-    const slide = carouselImages[activeCarouselIndex];
-    if (!slide) return getL('home.hero.title', t.hero_title);
-    return resolveTranslation(slide.id, 'title', slide.title || t.hero_title);
-  }, [activeCarouselIndex, carouselImages, language, content, t.hero_title, translationsCache]);
-
-  const currentSubtitle = useMemo(() => {
-    const slide = carouselImages[activeCarouselIndex];
-    if (!slide) return getL('home.hero.subtitle', t.hero_subtitle);
-    return resolveTranslation(slide.id, 'subtitle', slide.subtitle || t.hero_subtitle);
-  }, [activeCarouselIndex, carouselImages, language, content, t.hero_subtitle, translationsCache]);
-
   const handleAreaClick = () => {
     if (!userProfile) setIsAuthOpen(true);
     else if (userProfile.user_type === 'admin') setIsAdminOpen(true);
@@ -182,7 +175,7 @@ const HomePage: React.FC = () => {
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
       <div className="mt-8 text-[11px] font-black uppercase tracking-[0.6em] text-blue-500 animate-pulse">
-        Sincronizando Advisory Global...
+        Sincronizando Estratégia Global...
       </div>
     </div>
   );
@@ -211,20 +204,28 @@ const HomePage: React.FC = () => {
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
       <section id="hero" className="relative h-screen flex items-center overflow-hidden min-h-[600px]">
-        <div className="absolute inset-0 z-0">
+        {/* Carousel Engine */}
+        <div className="absolute inset-0 z-0 bg-brand-navy">
           <div className="absolute inset-0 opacity-20 md:opacity-40 z-10 pointer-events-none"><ThreeGlobe /></div>
           {carouselImages.length > 0 ? (
             carouselImages.map((img, idx) => (
               <div 
                 key={img.id} 
-                className={`absolute inset-0 transition-all duration-[1500ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-105 z-0'}`}
+                className={`absolute inset-0 transition-all duration-[2000ms] ease-out ${idx === activeCarouselIndex ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-110 z-0'}`}
               >
-                <img src={img.url} className="w-full h-full object-cover" alt="" onError={(e) => { (e.target as HTMLImageElement).src = 'https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg'; }} />
+                <img 
+                  src={img.url} 
+                  className="w-full h-full object-cover" 
+                  alt="" 
+                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg'; }} 
+                />
                 <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
               </div>
             ))
           ) : (
-            <div className="absolute inset-0 bg-[#010309]"><img src="https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg" className="w-full h-full object-cover opacity-20" /></div>
+            <div className="absolute inset-0">
+               <img src="https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg" className="w-full h-full object-cover opacity-20" alt="Fallback" />
+            </div>
           )}
         </div>
 
@@ -233,10 +234,16 @@ const HomePage: React.FC = () => {
             <div className="inline-flex items-center gap-3 px-6 py-3 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] shadow-xl shadow-blue-500/5">
                {carouselImages[activeCarouselIndex] ? resolveTranslation(carouselImages[activeCarouselIndex].id, 'title', carouselImages[activeCarouselIndex].title || t.hero_badge) : t.hero_badge}
             </div>
+            
             <div className="space-y-10">
-              <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 drop-shadow-2xl">{currentTitle}</h1>
-              <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-4 border-blue-600/40 pl-10 italic">{currentSubtitle}</p>
+              <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 drop-shadow-2xl">
+                {carouselImages[activeCarouselIndex] ? resolveTranslation(carouselImages[activeCarouselIndex].id, 'title', carouselImages[activeCarouselIndex].title || t.hero_title) : t.hero_title}
+              </h1>
+              <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-4 border-blue-600/40 pl-10 italic">
+                {carouselImages[activeCarouselIndex] ? resolveTranslation(carouselImages[activeCarouselIndex].id, 'subtitle', carouselImages[activeCarouselIndex].subtitle || t.hero_subtitle) : t.hero_subtitle}
+              </p>
             </div>
+
             <div className="flex flex-wrap gap-8 pt-8">
               <a href="#contact" className="bg-blue-600 text-white px-12 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-blue-600/40 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95 group flex items-center gap-3">
                 {getL('btn.diagnosis', t.btn_diagnosis)}
@@ -246,10 +253,15 @@ const HomePage: React.FC = () => {
                 {getL('btn.insights', t.btn_insights)}
               </a>
             </div>
+
             {carouselImages.length > 1 && (
               <div className="flex gap-4 pt-16">
                 {carouselImages.map((_, idx) => (
-                  <button key={idx} onClick={() => setActiveCarouselIndex(idx)} className={`h-1.5 rounded-full transition-all duration-700 ${idx === activeCarouselIndex ? 'w-16 bg-blue-600 shadow-lg shadow-blue-600/30' : 'w-6 bg-slate-800 hover:bg-slate-700'}`} />
+                  <button 
+                    key={idx} 
+                    onClick={() => setActiveCarouselIndex(idx)} 
+                    className={`h-1.5 rounded-full transition-all duration-700 ${idx === activeCarouselIndex ? 'w-16 bg-blue-600 shadow-lg shadow-blue-600/30' : 'w-6 bg-slate-800 hover:bg-slate-700'}`} 
+                  />
                 ))}
               </div>
             )}
@@ -257,6 +269,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* Métricas Dinâmicas */}
       <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] relative">
         <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
         <div className="container mx-auto px-6 text-center relative z-10">
@@ -273,17 +286,18 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* Insights Hub */}
       <section id="insights" className="py-40 dark:bg-slate-950 transition-colors">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
             <div className="space-y-4">
-              <div className="text-blue-500 font-black uppercase tracking-[0.4em] text-[10px]">Strategic Hub</div>
+              <div className="text-blue-500 font-black uppercase tracking-[0.4em] text-[10px]">Strategic Advisory Hub</div>
               <h2 className="text-5xl font-serif dark:text-white text-slate-900 italic max-w-xl leading-tight">
                 {getL('home.insights_title', t.insights_title)}
               </h2>
             </div>
             <Link to="#contact-form" className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-blue-500 transition-colors border-b-2 border-slate-500/20 hover:border-blue-500/50 pb-2">
-              Solicitar Advisory
+              {getL('btn.whitepapers', 'Solicitar Advisory Hub')}
             </Link>
           </div>
           <div className="grid md:grid-cols-3 gap-12">
@@ -292,11 +306,19 @@ const HomePage: React.FC = () => {
                 <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-900 border border-white/5 shadow-2xl relative">
                   <img src={insight.image_url || ''} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-60 group-hover:opacity-100" alt="" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80"></div>
-                  <div className="absolute bottom-8 left-8 right-8"><span className="text-[8px] font-black uppercase tracking-[0.5em] text-blue-500 bg-blue-500/10 px-4 py-2 rounded-full border border-blue-500/20">{insight.category || 'ADVISORY'}</span></div>
+                  <div className="absolute bottom-8 left-8 right-8">
+                    <span className="text-[8px] font-black uppercase tracking-[0.5em] text-blue-500 bg-blue-500/10 px-4 py-2 rounded-full border border-blue-500/20">
+                      {insight.category || 'ADVISORY'}
+                    </span>
+                  </div>
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors leading-tight italic">{resolveTranslation(insight.id, 'title', insight.title)}</h3>
-                  <p className="text-sm text-slate-500 line-clamp-2 italic font-light leading-relaxed">{resolveTranslation(insight.id, 'excerpt', insight.excerpt || '')}</p>
+                  <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors leading-tight italic">
+                    {resolveTranslation(insight.id, 'title', insight.title)}
+                  </h3>
+                  <p className="text-sm text-slate-500 line-clamp-2 italic font-light leading-relaxed">
+                    {resolveTranslation(insight.id, 'excerpt', insight.excerpt || '')}
+                  </p>
                 </div>
               </Link>
             ))}
