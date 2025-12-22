@@ -16,9 +16,16 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
+// --- REALTIME HELPERS ---
+export const subscribeToChanges = (table: string, callback: () => void) => {
+  return supabase
+    .channel(`public:${table}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
+    .subscribe();
+};
+
 // --- GENERIC TRANSLATIONS ENGINE ---
 export const upsertTranslation = async (entityType: string, entityId: any, field: string, locale: string, value: string) => {
-  // Converte entityId para string para consistência no banco (especialmente se for BigInt ou UUID)
   const idStr = String(entityId);
   const { error } = await supabase.from('content_translations').upsert({
     entity_type: entityType,
@@ -38,10 +45,7 @@ export const fetchTranslationsForEntity = async (entityType: string, entityId: a
     .eq('entity_type', entityType)
     .eq('entity_id', idStr);
   
-  if (error) {
-    console.error(`Error fetching translations for ${entityType}:${idStr}`, error);
-    return {};
-  }
+  if (error) return {};
   
   return (data || []).reduce((acc: any, item) => {
     if (!acc[item.field]) acc[item.field] = {};

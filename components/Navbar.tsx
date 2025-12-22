@@ -11,6 +11,13 @@ interface NavbarProps {
   setLanguage: (lang: Language) => void;
   theme: 'light' | 'dark' | 'system';
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  labels: {
+    strategy: string;
+    insights: string;
+    performance: string;
+    connection: string;
+    client_area: string;
+  };
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
@@ -20,7 +27,8 @@ const Navbar: React.FC<NavbarProps> = ({
   language, 
   setLanguage,
   theme,
-  setTheme
+  setTheme,
+  labels
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const t = translations[language];
@@ -53,12 +61,12 @@ const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
         
-        {/* Nav Links */}
+        {/* Nav Links - Agora Dinâmicos */}
         <div className="hidden lg:flex items-center space-x-12 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
-          <a href="#hero" className="hover:text-blue-500 transition-colors">{t.nav_strategy}</a>
-          <a href="#insights" className="hover:text-blue-500 transition-colors">{t.nav_insights}</a>
-          <a href="#metrics" className="hover:text-blue-500 transition-colors">{t.nav_performance}</a>
-          <a href="#contact" className="hover:text-blue-500 transition-colors">{t.nav_connection}</a>
+          <a href="#hero" className="hover:text-blue-500 transition-colors">{labels.strategy}</a>
+          <a href="#insights" className="hover:text-blue-500 transition-colors">{labels.insights}</a>
+          <a href="#metrics" className="hover:text-blue-500 transition-colors">{labels.performance}</a>
+          <a href="#contact" className="hover:text-blue-500 transition-colors">{labels.connection}</a>
         </div>
 
         {/* Actions */}
@@ -108,7 +116,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                   <span className="max-w-[80px] truncate">{userProfile.full_name?.split(' ')[0] || 'Member'}</span>
                 </>
-              ) : t.nav_client_area}
+              ) : labels.client_area}
             </button>
 
             {userProfile && (

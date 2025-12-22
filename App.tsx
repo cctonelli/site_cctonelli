@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ThreeGlobe from './components/ThreeGlobe';
@@ -14,7 +14,8 @@ import ArticlePage from './components/ArticlePage';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
-  getCurrentUser, getProfile, signOut, fetchTranslationsForEntity
+  getCurrentUser, getProfile, signOut, fetchTranslationsForEntity,
+  subscribeToChanges
 } from './services/supabaseService';
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
@@ -49,9 +50,9 @@ const HomePage: React.FC = () => {
     }
   }, [theme]);
 
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [m, i, p, test, s, car, user] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
@@ -75,7 +76,6 @@ const HomePage: React.FC = () => {
       
       setCarouselImages(activeCarousel);
 
-      // Cache central de traduções (Integração Total)
       const trans: Record<string, any> = {};
       const entitiesToTranslate = [
         ...activeCarousel.map(c => ({ type: 'carousel_images', id: c.id })),
@@ -85,7 +85,6 @@ const HomePage: React.FC = () => {
         ...approvedTests.map(at => ({ type: 'testimonials', id: at.id }))
       ];
 
-      // Busca traduções em paralelo para eficiência
       const translationsResults = await Promise.all(
         entitiesToTranslate.map(async (ent) => {
           const data = await fetchTranslationsForEntity(ent.type, ent.id);
@@ -94,25 +93,30 @@ const HomePage: React.FC = () => {
       );
 
       translationsResults.forEach(res => {
-        if (res.data && Object.keys(res.data).length > 0) {
-          trans[res.id] = res.data;
-        }
+        if (res.data && Object.keys(res.data).length > 0) trans[res.id] = res.data;
       });
       
       setTranslationsCache(trans);
 
-      if (user) {
+      if (user && !silent) {
         const profile = await getProfile(user.id);
         setUserProfile(profile);
       }
     } catch (err) {
-      console.warn("Critical Load error:", err);
+      console.warn("Realtime Sync Issue:", err);
     } finally {
-      setTimeout(() => setLoading(false), 800);
+      if (!silent) setTimeout(() => setLoading(false), 800);
     }
-  };
+  }, []);
 
-  useEffect(() => { loadAllData(); }, []);
+  useEffect(() => {
+    loadAllData();
+    // Inscrição Realtime para todas as tabelas críticas
+    const tables = ['metrics', 'insights', 'products', 'testimonials', 'site_content', 'carousel_images', 'content_translations'];
+    const subs = tables.map(table => subscribeToChanges(table, () => loadAllData(true)));
+    
+    return () => { subs.forEach(s => s.unsubscribe()); };
+  }, [loadAllData]);
 
   useEffect(() => {
     if (carouselImages.length <= 1) return;
@@ -169,9 +173,16 @@ const HomePage: React.FC = () => {
         setLanguage={setLanguage}
         theme={theme}
         setTheme={setTheme}
+        labels={{
+          strategy: getL('nav.strategy', t.nav_strategy),
+          insights: getL('nav.insights', t.nav_insights),
+          performance: getL('nav.performance', t.nav_performance),
+          connection: getL('nav.connection', t.nav_connection),
+          client_area: getL('nav.client_area', t.nav_client_area)
+        }}
       />
 
-      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={loadAllData} />}
+      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={() => loadAllData(true)} />}
       {isAdminOpen && userProfile?.user_type === 'admin' && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
@@ -199,10 +210,10 @@ const HomePage: React.FC = () => {
             </p>
             <div className="flex gap-6 pt-6">
               <a href="#contact" className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-2xl shadow-blue-600/30 hover:bg-blue-500 transition-all">
-                {t.btn_diagnosis}
+                {getL('btn.diagnosis', t.btn_diagnosis)}
               </a>
               <a href="#insights" className="glass px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] dark:text-white text-slate-900 border border-white/10 hover:bg-white/5 transition-all">
-                {t.btn_insights}
+                {getL('btn.insights', t.btn_insights)}
               </a>
             </div>
           </div>
@@ -227,7 +238,7 @@ const HomePage: React.FC = () => {
       <section id="insights" className="py-40 dark:bg-slate-950">
         <div className="container mx-auto px-6">
           <div className="mb-20">
-            <h2 className="text-4xl font-serif dark:text-white text-slate-900 italic">{t.insights_title}</h2>
+            <h2 className="text-4xl font-serif dark:text-white text-slate-900 italic">{getL('home.insights_title', t.insights_title)}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-12">
             {insights.slice(0, 3).map(insight => (
@@ -252,7 +263,7 @@ const HomePage: React.FC = () => {
       <ContactForm language={language} />
 
       <footer className="py-20 border-t border-white/5 text-center">
-        <p className="text-[9px] text-slate-700 font-bold uppercase tracking-[0.6em]">{t.copyright}</p>
+        <p className="text-[9px] text-slate-700 font-bold uppercase tracking-[0.6em]">{getL('footer.copyright', t.copyright)}</p>
       </footer>
       <ChatBot />
     </div>
