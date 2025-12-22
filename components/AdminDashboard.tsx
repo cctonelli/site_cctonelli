@@ -26,7 +26,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [siteLabels, setSiteLabels] = useState<SiteContent[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
   
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [translationsCache, setTranslationsCache] = useState<Record<string, any>>({});
 
   const loadAdminData = async () => {
@@ -48,20 +47,22 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setLeads(lds);
       setProducts(p);
 
-      // Carregar cache de traduções para os itens carregados
       const trans: Record<string, any> = {};
       const itemsToFetch = [
         ...c.map(x => ({ type: 'carousel_images', id: x.id })),
         ...i.map(x => ({ type: 'insights', id: x.id })),
         ...p.map(x => ({ type: 'products', id: x.id })),
-        ...m.map(x => ({ type: 'metrics', id: x.id }))
+        ...m.map(x => ({ type: 'metrics', id: x.id })),
+        ...t_all.map(x => ({ type: 'testimonials', id: x.id }))
       ];
 
       for (const item of itemsToFetch) {
-        trans[String(item.id)] = await fetchTranslationsForEntity(item.type, item.id);
+        const data = await fetchTranslationsForEntity(item.type, item.id);
+        if (data && Object.keys(data).length > 0) {
+          trans[String(item.id)] = data;
+        }
       }
       setTranslationsCache(trans);
-
     } catch (err) {
       console.error(err);
     }
@@ -79,14 +80,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       }
     }));
   };
-
-  const groupedLabels = siteLabels.reduce((acc, label) => {
-    const baseKey = label.key.replace(/\.(pt|en|es)$/, '');
-    if (!acc[baseKey]) acc[baseKey] = { pt: '', en: '', es: '', page: label.page };
-    const lang = label.key.split('.').pop() as AdminLang;
-    if (['pt', 'en', 'es'].includes(lang)) { acc[baseKey][lang] = label.value; }
-    return acc;
-  }, {} as Record<string, { pt: string, en: string, es: string, page: string }>);
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-950/98 backdrop-blur-2xl flex items-center justify-center p-4 sm:p-6 overflow-hidden">
@@ -138,7 +131,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                </div>
             </header>
 
-            {/* --- CAROUSEL --- */}
             {activeTab === 'carousel' && (
               <div className="grid gap-6">
                 {carouselImages.map(img => (
@@ -164,15 +156,10 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </div>
             )}
 
-            {/* --- INSIGHTS --- */}
             {activeTab === 'insights' && (
               <div className="grid gap-6">
                 {insights.map(ins => (
                   <div key={ins.id} className="bg-slate-950/50 border border-white/5 p-8 rounded-[2rem] space-y-4">
-                     <div className="flex justify-between items-center">
-                       <span className="text-[9px] text-blue-500 font-black uppercase tracking-widest">{ins.category || 'Insight'}</span>
-                       <span className="text-[8px] text-slate-700">ID: {ins.id}</span>
-                     </div>
                      <input 
                        className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-white font-serif italic"
                        placeholder="Título do Insight..."
@@ -190,7 +177,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </div>
             )}
 
-            {/* --- PRODUCTS --- */}
             {activeTab === 'products' && (
               <div className="grid gap-6">
                 {products.map(p => (
@@ -203,7 +189,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                      />
                      <textarea 
                        className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-slate-400 text-xs h-24"
-                       placeholder="Descrição completa..."
+                       placeholder="Descrição..."
                        defaultValue={editingLang === 'pt' ? p.description || '' : translationsCache[String(p.id)]?.description?.[editingLang] || ''}
                        onBlur={e => editingLang === 'pt' ? updateProduct(p.id, { description: e.target.value }) : handleUpdateTranslation('products', p.id, 'description', editingLang, e.target.value)}
                      />
@@ -212,7 +198,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </div>
             )}
 
-            {/* --- METRICS --- */}
             {activeTab === 'metrics' && (
               <div className="grid gap-6">
                 {metrics.map(m => (
@@ -220,7 +205,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <div className="text-3xl font-serif text-white w-24">{m.value}</div>
                     <input 
                        className="flex-1 bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-slate-400 text-[10px] uppercase font-bold tracking-widest"
-                       placeholder="Legenda da Métrica..."
+                       placeholder="Legenda..."
                        defaultValue={editingLang === 'pt' ? m.label : translationsCache[String(m.id)]?.label?.[editingLang] || ''}
                        onBlur={e => editingLang === 'pt' ? updateMetric(m.id, { label: e.target.value }) : handleUpdateTranslation('metrics', m.id, 'label', editingLang, e.target.value)}
                      />
@@ -229,9 +214,50 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               </div>
             )}
 
-            {/* Resto das abas omitidas para brevidade, mantendo lógica anterior */}
+            {activeTab === 'testimonials' && (
+              <div className="grid gap-6">
+                {allTestimonials.map(t => (
+                  <div key={t.id} className="bg-slate-950/50 border border-white/5 p-8 rounded-[2rem] space-y-4">
+                     <div className="flex justify-between items-center">
+                        <span className="text-white font-bold text-xs">{t.name}</span>
+                        <button 
+                          onClick={() => updateTestimonial(t.id, { approved: !t.approved }).then(loadAdminData)}
+                          className={`px-4 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest ${t.approved ? 'bg-green-600/20 text-green-500 border border-green-600/30' : 'bg-red-600/20 text-red-500 border border-red-600/30'}`}
+                        >
+                          {t.approved ? 'Aprovado' : 'Pendente'}
+                        </button>
+                     </div>
+                     <textarea 
+                       className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-slate-400 text-sm italic h-24"
+                       placeholder="Depoimento..."
+                       defaultValue={editingLang === 'pt' ? t.quote : translationsCache[String(t.id)]?.quote?.[editingLang] || ''}
+                       onBlur={e => editingLang === 'pt' ? updateTestimonial(t.id, { quote: e.target.value }) : handleUpdateTranslation('testimonials', t.id, 'quote', editingLang, e.target.value)}
+                     />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'content' && (
+              <div className="grid gap-6">
+                {siteLabels.filter(label => label.key.endsWith('.pt')).map(label => {
+                  const baseKey = label.key.replace('.pt', '');
+                  return (
+                    <div key={label.key} className="bg-slate-950/50 border border-white/5 p-8 rounded-[2rem] space-y-2">
+                       <div className="text-[8px] font-bold uppercase tracking-widest text-slate-600">{baseKey}</div>
+                       <textarea 
+                         className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-white text-xs h-20"
+                         defaultValue={editingLang === 'pt' ? label.value : siteLabels.find(l => l.key === `${baseKey}.${editingLang}`)?.value || ''}
+                         onBlur={e => updateSiteContent(`${baseKey}.${editingLang}`, e.target.value, label.page).then(loadAdminData)}
+                       />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {activeTab === 'leads' && (
-              <div className="space-y-6 animate-in fade-in">
+              <div className="space-y-6">
                 {leads.map((lead, idx) => (
                   <div key={idx} className="bg-slate-950 border border-white/5 p-8 rounded-[2rem] space-y-4">
                     <div className="flex justify-between items-center border-b border-white/5 pb-4">
@@ -244,7 +270,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 ))}
               </div>
             )}
-
           </div>
         </div>
       </div>

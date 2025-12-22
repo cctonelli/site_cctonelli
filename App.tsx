@@ -20,7 +20,6 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 const HomePage: React.FC = () => {
-  const navigate = useNavigate();
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -66,7 +65,8 @@ const HomePage: React.FC = () => {
       setMetrics(m);
       setInsights(i);
       setProducts(p);
-      setTestimonials((test || []).filter(t => t.approved));
+      const approvedTests = (test || []).filter(t => t.approved);
+      setTestimonials(approvedTests);
       setContent(s);
       
       const activeCarousel = (car || [])
@@ -75,13 +75,14 @@ const HomePage: React.FC = () => {
       
       setCarouselImages(activeCarousel);
 
-      // Cache central de traduções
+      // Cache central de traduções (Integração Total)
       const trans: Record<string, any> = {};
       const entitiesToTranslate = [
         ...activeCarousel.map(c => ({ type: 'carousel_images', id: c.id })),
         ...i.map(ins => ({ type: 'insights', id: ins.id })),
         ...p.map(prod => ({ type: 'products', id: prod.id })),
-        ...m.map(met => ({ type: 'metrics', id: met.id }))
+        ...m.map(met => ({ type: 'metrics', id: met.id })),
+        ...approvedTests.map(at => ({ type: 'testimonials', id: at.id }))
       ];
 
       await Promise.all(entitiesToTranslate.map(async (ent) => {
@@ -145,6 +146,9 @@ const HomePage: React.FC = () => {
   if (loading) return (
     <div className="fixed inset-0 bg-[#010309] flex flex-col items-center justify-center">
       <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin"></div>
+      <div className="mt-6 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500 animate-pulse">
+        Sincronizando Advisory Global...
+      </div>
     </div>
   );
 
@@ -237,7 +241,7 @@ const HomePage: React.FC = () => {
       </section>
 
       <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} />
-      <TestimonialsSection testimonials={testimonials} language={language} />
+      <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} />
       <ContactForm language={language} />
 
       <footer className="py-20 border-t border-white/5 text-center">
