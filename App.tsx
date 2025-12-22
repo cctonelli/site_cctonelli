@@ -84,8 +84,11 @@ const HomePage: React.FC = () => {
       setTestimonials(test);
       setContent(s);
       
-      // Filtra apenas as imagens ativas para o carrossel público
-      const activeCarousel = car.length > 0 ? car.filter(img => img.is_active) : MOCK_CAROUSEL;
+      // Filtra ativos e ordena pelo display_order explicitamente
+      const activeCarousel = (car || [])
+        .filter(img => img.is_active)
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+      
       setCarouselImages(activeCarousel.length > 0 ? activeCarousel : MOCK_CAROUSEL);
 
       if (user) {
