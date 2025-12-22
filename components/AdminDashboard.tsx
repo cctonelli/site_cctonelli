@@ -6,7 +6,7 @@ import {
   fetchProducts, addProduct, deleteProduct,
   addInsight, deleteInsight, updateInsightLink,
   uploadInsightImage, fetchCarouselImages,
-  addCarouselImage, deleteCarouselImage,
+  addCarouselImage, deleteCarouselImage, updateCarouselImage,
   addMetric, deleteMetric, fetchAllSiteContent
 } from '../services/supabaseService';
 import { Testimonial, Metric, Insight, Product, CarouselImage, SiteContent } from '../types';
@@ -82,6 +82,11 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const handleUpdateLabel = async (key: string, value: string) => {
     const success = await updateSiteContent(key, value);
+    if (success) loadAdminData();
+  };
+
+  const handleUpdateCarouselItem = async (id: string, updates: Partial<CarouselImage>) => {
+    const success = await updateCarouselImage(id, updates);
     if (success) loadAdminData();
   };
 
@@ -202,6 +207,8 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             {activeTab === 'carousel' && (
               <div className="space-y-10 animate-in fade-in">
                 <header><h2 className="text-3xl font-serif italic text-white">Carrossel de Fundo</h2></header>
+                
+                {/* Add Form */}
                 <form onSubmit={handleAddCarousel} className="bg-slate-800/20 border border-white/5 p-8 rounded-3xl space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <input required placeholder="Título (Badge)" value={newCarousel.title || ''} onChange={e => setNewCarousel({...newCarousel, title: e.target.value})} className="bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none" />
@@ -210,14 +217,35 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   <textarea placeholder="Subtítulo de Impacto..." value={newCarousel.subtitle || ''} onChange={e => setNewCarousel({...newCarousel, subtitle: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-5 py-4 text-white outline-none h-24 resize-none" />
                   <button type="submit" className="bg-blue-600 px-8 py-4 rounded-xl text-[10px] font-bold uppercase text-white shadow-lg shadow-blue-600/20">Adicionar Frame</button>
                 </form>
-                <div className="grid gap-3">
+
+                {/* Listing with Auto-Save */}
+                <div className="grid gap-6">
+                  <h3 className="text-xl font-serif text-white italic">Frames Ativos (Clique nos textos para editar)</h3>
                   {carouselImages.map(img => (
-                    <div key={img.id} className="bg-slate-950/50 p-4 rounded-xl flex justify-between items-center border border-white/5 group">
-                      <div className="flex items-center gap-4">
-                        <img src={img.url} className="w-16 h-10 object-cover rounded-lg" alt="" />
-                        <span className="text-white text-xs">{img.title}</span>
+                    <div key={img.id} className="bg-slate-950/50 p-6 rounded-3xl border border-white/5 group space-y-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <img src={img.url} className="w-20 h-12 object-cover rounded-xl border border-white/10" alt="" />
+                          <div className="flex flex-col">
+                             <input 
+                               className="bg-transparent text-white font-bold text-sm outline-none border-b border-transparent focus:border-blue-500 transition-all"
+                               defaultValue={img.title || ''}
+                               onBlur={(e) => handleUpdateCarouselItem(img.id, { title: e.target.value })}
+                             />
+                             <span className="text-[9px] text-slate-500 uppercase tracking-widest mt-1">Badge de Slide</span>
+                          </div>
+                        </div>
+                        <button onClick={() => deleteCarouselImage(img.id).then(loadAdminData)} className="text-red-500 text-[9px] font-bold uppercase px-3 py-1 bg-red-500/10 rounded-full hover:bg-red-500 hover:text-white transition-all">Excluir</button>
                       </div>
-                      <button onClick={() => deleteCarouselImage(img.id).then(loadAdminData)} className="text-red-500 text-[9px] font-bold uppercase opacity-0 group-hover:opacity-100 transition-all">Remover</button>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Subtítulo de Impacto</label>
+                        <textarea 
+                          className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-xs text-slate-400 outline-none focus:border-blue-500 focus:text-white transition-all resize-none"
+                          defaultValue={img.subtitle || ''}
+                          onBlur={(e) => handleUpdateCarouselItem(img.id, { subtitle: e.target.value })}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

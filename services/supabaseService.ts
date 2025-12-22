@@ -108,7 +108,6 @@ export const submitContact = async (contact: Contact) => {
 
 // --- ADMIN CMS ---
 export const addInsight = async (insight: any) => {
-  // Removido .single() para evitar falhas silenciosas caso o RLS atrase o retorno
   const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select();
   if (error) throw error;
   return data ? data[0] : null;
@@ -161,6 +160,11 @@ export const deleteMetric = async (id: string) => {
 
 export const addCarouselImage = async (image: any) => {
   const { error } = await supabase.from('carousel_images').insert([image]);
+  return !error;
+};
+
+export const updateCarouselImage = async (id: string, updates: Partial<CarouselImage>) => {
+  const { error } = await supabase.from('carousel_images').update(updates).eq('id', id);
   return !error;
 };
 
