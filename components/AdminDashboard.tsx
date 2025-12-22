@@ -18,7 +18,9 @@ type AdminLang = 'pt' | 'en' | 'es';
 const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads'>('carousel');
   const [editingLang, setEditingLang] = useState<AdminLang>('pt');
-  const [tabSearch, setTabSearch] = useState<Record<string, string>>({});
+  const [tabSearch, setTabSearch] = useState<Record<string, string>>({
+    carousel: '', insights: '', products: '', metrics: '', testimonials: '', content: '', leads: ''
+  });
   
   const [allTestimonials, setAllTestimonials] = useState<Testimonial[]>([]);
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -109,7 +111,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   const confirmDelete = async (id: string, deleteFn: (id: string) => Promise<boolean>) => {
-    if (window.confirm('Excluir este registro estratégico permanentemente?')) {
+    if (window.confirm('Excluir este registro permanentemente?')) {
       await deleteFn(id);
       loadAdminData();
     }
@@ -120,12 +122,9 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     loadAdminData();
   };
 
-  // Filtered Lists per tab
-  const getSearch = () => tabSearch[activeTab] || '';
-  const setSearch = (val: string) => setTabSearch(prev => ({ ...prev, [activeTab]: val }));
-
+  // Filtered Lists per tab (Per-section Search)
   const filteredData = useMemo(() => {
-    const s = getSearch().toLowerCase();
+    const s = (tabSearch[activeTab] || '').toLowerCase();
     switch (activeTab) {
       case 'carousel': return carouselImages.filter(x => (x.title || '').toLowerCase().includes(s));
       case 'insights': return insights.filter(x => x.title.toLowerCase().includes(s));
@@ -153,207 +152,247 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   const renderNoData = () => (
-    <div className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[3rem] bg-white/5">
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-700 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-      </svg>
-      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Nenhum registro localizado nesta seção</span>
+    <div className="py-24 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-[4rem] bg-white/[0.02]">
+      <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        </svg>
+      </div>
+      <span className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500">Nenhum dado localizado nesta seção</span>
+      <p className="text-slate-600 text-xs mt-2 font-light">Tente ajustar sua busca ou adicione um novo registro.</p>
     </div>
   );
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#010309]/95 backdrop-blur-2xl flex items-center justify-center p-4">
-      <div className="bg-slate-950 border border-white/10 w-full max-w-7xl h-full lg:h-[90vh] rounded-[4rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl animate-in fade-in zoom-in-95 duration-500">
+    <div className="fixed inset-0 z-[100] bg-brand-navy/95 backdrop-blur-3xl flex items-center justify-center p-4 lg:p-12">
+      <div className="bg-[#02050c] border border-white/10 w-full max-w-7xl h-full rounded-[4rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl animate-in fade-in duration-700">
         
-        {/* Sidebar */}
-        <div className="w-full lg:w-80 bg-slate-900 border-r border-white/5 p-10 flex flex-row lg:flex-col gap-8 overflow-x-auto shrink-0 scrollbar-none">
-          <div className="flex items-center gap-4 mb-0 lg:mb-12 min-w-fit">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-white shadow-xl shadow-blue-600/30 text-xl">CT</div>
+        {/* Unified Sidebar */}
+        <div className="w-full lg:w-80 bg-[#010309] border-r border-white/5 p-12 flex flex-row lg:flex-col gap-10 overflow-x-auto shrink-0 scrollbar-none">
+          <div className="flex items-center gap-5 mb-0 lg:mb-16 min-w-fit">
+            <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl shadow-blue-600/40 text-2xl">CT</div>
             <div className="flex flex-col">
-              <span className="font-black text-[10px] uppercase tracking-[0.5em] text-white">Strategic Panel</span>
-              <span className="text-[8px] uppercase tracking-[0.2em] text-blue-500 font-bold">Advisory v2.5</span>
+              <span className="font-black text-[11px] uppercase tracking-[0.6em] text-white">Advisory Admin</span>
+              <span className="text-[8px] uppercase tracking-[0.3em] text-blue-500 font-bold mt-1">Management v3.0</span>
             </div>
           </div>
-          <nav className="flex flex-row lg:flex-col gap-3 flex-1">
+          <nav className="flex flex-row lg:flex-col gap-4 flex-1">
             {[
-              { id: 'carousel', label: 'Carrossel' },
-              { id: 'insights', label: 'Insights Hub' },
-              { id: 'products', label: 'Portfólio' },
+              { id: 'carousel', label: 'Destaques' },
+              { id: 'insights', label: 'Knowledge' },
+              { id: 'products', label: 'Soluções' },
               { id: 'metrics', label: 'Indicadores' },
-              { id: 'testimonials', label: 'Depoimentos' },
-              { id: 'content', label: 'Textos Globais' },
-              { id: 'leads', label: 'Leads' }
+              { id: 'testimonials', label: 'Feedback' },
+              { id: 'content', label: 'Global Text' },
+              { id: 'leads', label: 'CRM Leads' }
             ].map(tab => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); setIsAdding(false); }} className={`whitespace-nowrap px-6 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all text-left ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}>{tab.label}</button>
+              <button 
+                key={tab.id} 
+                onClick={() => { setActiveTab(tab.id as any); setIsAdding(false); }} 
+                className={`whitespace-nowrap px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left group ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/20' : 'text-slate-600 hover:bg-white/5 hover:text-slate-300'}`}
+              >
+                {tab.label}
+              </button>
             ))}
           </nav>
-          <button onClick={onClose} className="text-slate-600 hover:text-red-500 text-[9px] font-black uppercase tracking-widest mt-auto p-4 border border-white/5 rounded-xl transition-all">Encerrar Painel</button>
+          <button onClick={onClose} className="text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-widest mt-auto p-5 border border-white/5 rounded-2xl transition-all hover:border-red-500/20">Sair do Painel</button>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-10 lg:p-20 bg-grid relative custom-scrollbar">
-          {isLoading && <div className="absolute top-8 right-8 w-2 h-2 bg-blue-500 rounded-full animate-ping z-20"></div>}
+        {/* Dynamic Content Grid */}
+        <div className="flex-1 overflow-y-auto p-12 lg:p-24 bg-grid relative custom-scrollbar">
+          {isLoading && <div className="absolute top-12 right-12 w-3 h-3 bg-blue-500 rounded-full animate-ping z-20"></div>}
 
-          <div className="max-w-4xl mx-auto space-y-12 pb-20">
-            {/* Standard Header per Tab */}
-            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-8 border-b border-white/5 pb-10">
-               <div className="space-y-4">
-                  <h2 className="text-5xl font-serif italic text-white capitalize">{activeTab === 'carousel' ? 'Main Carousel' : activeTab}</h2>
-                  <div className="relative group">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-700 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="max-w-5xl mx-auto space-y-16">
+            
+            {/* Standard Tab Header */}
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10 border-b border-white/5 pb-12">
+               <div className="space-y-6 flex-1 w-full">
+                  <h2 className="text-6xl font-serif italic text-white capitalize tracking-tighter">
+                    {activeTab === 'carousel' ? 'Visual Engine' : activeTab}
+                  </h2>
+                  <div className="relative group max-w-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-5 top-1/2 -translate-y-1/2 text-slate-700 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <input 
                       type="text" 
                       placeholder={`Localizar em ${activeTab}...`} 
-                      value={getSearch()} 
-                      onChange={e => setSearch(e.target.value)} 
-                      className="bg-slate-900 border border-white/5 rounded-2xl pl-12 pr-6 py-3 text-[10px] text-white outline-none focus:border-blue-500/40 w-full sm:w-72 font-medium" 
+                      value={tabSearch[activeTab] || ''} 
+                      onChange={e => setTabSearch(prev => ({ ...prev, [activeTab]: e.target.value }))} 
+                      className="bg-[#050a14] border border-white/5 rounded-2xl pl-14 pr-8 py-4 text-[11px] text-white outline-none focus:border-blue-500/40 w-full font-medium shadow-inner" 
                     />
                   </div>
                </div>
-               <div className="flex items-center gap-4">
+               <div className="flex items-center gap-5 shrink-0">
                  {['carousel', 'insights', 'products', 'metrics'].includes(activeTab) && (
                     <button 
                       onClick={() => setIsAdding(!isAdding)}
-                      className={`px-8 py-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all ${isAdding ? 'bg-slate-800 text-white' : 'bg-blue-600 text-white shadow-2xl shadow-blue-600/20 active:scale-95'}`}
+                      className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center gap-3 ${isAdding ? 'bg-slate-800 text-white' : 'bg-blue-600 text-white shadow-2xl shadow-blue-600/30 active:scale-95'}`}
                     >
-                      {isAdding ? 'Cancelar' : `+ Novo ${activeTab.slice(0, -1)}`}
+                      {isAdding ? 'Fechar Form' : `+ Novo ${activeTab.slice(0, -1)}`}
                     </button>
                  )}
-                 <div className="flex gap-1 bg-slate-900 p-1 rounded-2xl border border-white/5 shadow-inner">
+                 <div className="flex gap-1 bg-[#050a14] p-1.5 rounded-2xl border border-white/5 shadow-inner">
                     {(['pt', 'en', 'es'] as AdminLang[]).map(l => (
-                      <button key={l} onClick={() => setEditingLang(l)} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${editingLang === l ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:text-white'}`}>{l}</button>
+                      <button 
+                        key={l} 
+                        onClick={() => setEditingLang(l)} 
+                        className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${editingLang === l ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-600 hover:text-white'}`}
+                      >
+                        {l}
+                      </button>
                     ))}
                  </div>
                </div>
             </header>
 
-            {/* Form Section (Reserved Space on Top) */}
+            {/* Standard Form Area (Reserved on Top) */}
             <AnimatePresence>
               {isAdding && (
                 <motion.div 
-                  initial={{ opacity: 0, height: 0, y: -20 }} 
-                  animate={{ opacity: 1, height: 'auto', y: 0 }} 
-                  exit={{ opacity: 0, height: 0, y: -20 }}
-                  className="bg-slate-900 border border-white/10 p-10 rounded-[3rem] shadow-2xl overflow-hidden"
+                  initial={{ opacity: 0, y: -30 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  exit={{ opacity: 0, y: -30 }}
+                  className="bg-[#050a14] border border-blue-600/10 p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden"
                 >
-                  <div className="space-y-6">
-                    <h3 className="text-white font-serif italic text-2xl mb-8">Novo Registro: {activeTab}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[100px] pointer-events-none"></div>
+                  <div className="relative z-10 space-y-8">
+                    <h3 className="text-white font-serif italic text-3xl">Inclusão Estratégica</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {activeTab === 'carousel' && (
                         <>
-                          <input placeholder="URL da Imagem" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5 col-span-2" onChange={e => setNewCarousel({...newCarousel, url: e.target.value})} />
-                          <input placeholder="Título (Base PT)" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5" onChange={e => setNewCarousel({...newCarousel, title: e.target.value})} />
-                          <input placeholder="Ordem de exibição" type="number" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5" onChange={e => setNewCarousel({...newCarousel, display_order: parseInt(e.target.value)})} />
+                          <input placeholder="Link da Imagem (URL)" className="bg-[#02050c] p-5 rounded-2xl text-white text-xs border border-white/5 col-span-2 outline-none focus:border-blue-500/40" onChange={e => setNewCarousel({...newCarousel, url: e.target.value})} />
+                          <input placeholder="Título Principal (PT)" className="bg-[#02050c] p-5 rounded-2xl text-white text-xs border border-white/5 outline-none focus:border-blue-500/40" onChange={e => setNewCarousel({...newCarousel, title: e.target.value})} />
+                          <input placeholder="Ordem (Ex: 1)" type="number" className="bg-[#02050c] p-5 rounded-2xl text-white text-xs border border-white/5 outline-none focus:border-blue-500/40" onChange={e => setNewCarousel({...newCarousel, display_order: parseInt(e.target.value)})} />
                         </>
                       )}
                       {activeTab === 'metrics' && (
                         <>
-                          <input placeholder="Valor (Ex: 95%)" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5" onChange={e => setNewMetric({...newMetric, value: e.target.value})} />
-                          <input placeholder="Legenda (PT)" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5" onChange={e => setNewMetric({...newMetric, label: e.target.value})} />
-                        </>
-                      )}
-                      {activeTab === 'products' && (
-                        <>
-                          <input placeholder="Nome do Produto" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5" onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
-                          <input placeholder="Preço" type="number" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5" onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} />
-                          <input placeholder="URL de Imagem" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5" onChange={e => setNewProduct({...newProduct, image_url: e.target.value})} />
-                          <input placeholder="URL de Link/Checkout" className="bg-slate-950 p-4 rounded-xl text-white text-xs border border-white/5" onChange={e => setNewProduct({...newProduct, url: e.target.value})} />
+                          <input placeholder="Valor (Ex: +300)" className="bg-[#02050c] p-5 rounded-2xl text-white text-xs border border-white/5 outline-none focus:border-blue-500/40" onChange={e => setNewMetric({...newMetric, value: e.target.value})} />
+                          <input placeholder="Label (Ex: Projetos)" className="bg-[#02050c] p-5 rounded-2xl text-white text-xs border border-white/5 outline-none focus:border-blue-500/40" onChange={e => setNewMetric({...newMetric, label: e.target.value})} />
                         </>
                       )}
                     </div>
-                    <button onClick={handleCreate} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] mt-8 hover:bg-blue-500 shadow-xl shadow-blue-600/30">Confirmar Inclusão Estratégica</button>
+                    <button onClick={handleCreate} className="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.4em] text-[11px] hover:bg-blue-500 shadow-2xl shadow-blue-600/20 transition-all">Sincronizar com Banco de Dados</button>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Grid Section (Reserved Space below form) */}
+            {/* Main Table/Grid (Reserved Space below form) */}
             <div className="space-y-6">
-              {filteredData.length === 0 ? renderNoData() : filteredData.map((item: any) => (
-                <div key={item.id || item.key} className="bg-slate-900 border border-white/5 p-8 rounded-[2.5rem] group hover:border-blue-500/20 transition-all flex flex-col sm:flex-row gap-8 items-center shadow-lg">
-                  
-                  {/* Item Image / Placeholder */}
-                  {item.url && activeTab === 'carousel' ? (
-                    <div className="w-40 aspect-video rounded-2xl overflow-hidden bg-slate-950 shrink-0 border border-white/5">
-                      <img src={item.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" alt="" />
-                    </div>
-                  ) : item.value && activeTab === 'metrics' ? (
-                    <div className="w-20 h-20 rounded-2xl bg-blue-600/5 flex items-center justify-center text-2xl font-serif text-white shrink-0 border border-white/5">{item.value}</div>
-                  ) : null}
-
-                  {/* Item Content */}
-                  <div className="flex-1 space-y-3 w-full">
-                    <div className="flex justify-between items-start">
-                       <span className="text-[8px] font-black uppercase tracking-[0.3em] text-blue-500 bg-blue-500/5 px-4 py-1.5 rounded-full">ID: {item.id?.slice(0, 8) || item.key}</span>
-                       <div className="flex items-center gap-3">
-                         {item.is_active !== undefined && (
-                           <button 
-                             onClick={() => toggleActive(item.id, item.is_active, activeTab === 'carousel' ? updateCarouselImage : activeTab === 'metrics' ? updateMetric : updateInsight)}
-                             className={`p-2 rounded-xl transition-all ${item.is_active ? 'text-green-500 bg-green-500/5 hover:bg-green-500/10' : 'text-slate-600 bg-white/5 hover:bg-white/10'}`}
-                             title={item.is_active ? 'Inativar' : 'Ativar'}
-                           >
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
-                             </svg>
-                           </button>
-                         )}
-                         <button onClick={() => confirmDelete(item.id || item.key, activeTab === 'carousel' ? deleteCarouselImage : activeTab === 'metrics' ? deleteMetric : activeTab === 'content' ? () => Promise.resolve(false) : deleteContact)} className="p-2 rounded-xl text-red-500/40 hover:text-red-500 hover:bg-red-500/5 transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                         </button>
-                       </div>
-                    </div>
-
-                    {activeTab === 'content' ? (
-                      <div className="flex flex-col sm:flex-row gap-4 items-center">
-                        <span className="w-48 text-[9px] font-black uppercase text-slate-500 truncate">{item.key}</span>
-                        <input 
-                          className="flex-1 w-full bg-slate-950 border border-white/5 p-3 rounded-xl text-white text-xs outline-none focus:border-blue-500/40" 
-                          value={item.value} 
-                          onChange={e => {
-                            const val = e.target.value;
-                            setSiteLabels(prev => prev.map(l => l.key === item.key ? {...l, value: val} : l));
-                          }}
-                          onBlur={e => updateSiteContent(item.key, e.target.value)}
-                        />
+              {filteredData.length === 0 ? renderNoData() : (
+                <div className="space-y-4">
+                   {/* Table Column Headers */}
+                   <div className="px-10 flex text-[9px] font-black uppercase tracking-[0.4em] text-slate-700 pb-4">
+                      <div className="w-16">Status</div>
+                      <div className="flex-1 px-4">Conteúdo Estratégico</div>
+                      <div className="w-40 text-right">Ações</div>
+                   </div>
+                   
+                   {filteredData.map((item: any) => (
+                    <div key={item.id || item.key} className="bg-[#050a14] border border-white/5 p-8 rounded-[2.5rem] group hover:border-blue-500/20 transition-all flex flex-col md:flex-row gap-10 items-center shadow-xl relative overflow-hidden">
+                      
+                      {/* Standard Item Indicator (Status/Image) */}
+                      <div className="shrink-0 flex items-center gap-6">
+                        {item.is_active !== undefined && (
+                          <button 
+                            onClick={() => toggleActive(item.id, item.is_active, activeTab === 'carousel' ? updateCarouselImage : activeTab === 'metrics' ? updateMetric : updateInsight)}
+                            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${item.is_active ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-slate-900 text-slate-700 border border-white/5'}`}
+                          >
+                            <div className={`w-2 h-2 rounded-full ${item.is_active ? 'bg-green-500 animate-pulse' : 'bg-slate-700'}`}></div>
+                          </button>
+                        )}
+                        {item.url && activeTab === 'carousel' && (
+                          <div className="w-24 aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-white/5 shrink-0">
+                            <img src={item.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" alt="" />
+                          </div>
+                        )}
+                        {item.value && activeTab === 'metrics' && (
+                          <div className="w-16 h-16 rounded-2xl bg-blue-600/5 flex items-center justify-center text-xl font-serif text-white shrink-0 border border-white/5">{item.value}</div>
+                        )}
                       </div>
-                    ) : (
-                      <>
-                        <input 
-                          className="w-full bg-slate-950 border border-white/5 p-3 rounded-xl text-white text-[11px] font-bold outline-none focus:border-blue-500/40" 
-                          defaultValue={editingLang === 'pt' ? (item.title || item.label || item.name || '') : (translationsCache[item.id]?.[activeTab === 'carousel' || activeTab === 'insights' ? 'title' : activeTab === 'metrics' ? 'label' : 'name']?.[editingLang] || '')} 
-                          onBlur={e => updateOriginalOrTranslation(activeTab === 'carousel' ? 'carousel_images' : activeTab === 'metrics' ? 'metrics' : activeTab === 'insights' ? 'insights' : 'products', item.id, activeTab === 'carousel' || activeTab === 'insights' ? 'title' : activeTab === 'metrics' ? 'label' : 'name', e.target.value, activeTab === 'carousel' ? updateCarouselImage : activeTab === 'metrics' ? updateMetric : activeTab === 'insights' ? updateInsight : updateProduct)}
-                          placeholder="Título Principal..."
-                        />
-                        <textarea 
-                          className="w-full bg-slate-950 border border-white/5 p-3 rounded-xl text-slate-400 text-[10px] outline-none focus:border-blue-500/40 min-h-[60px]" 
-                          defaultValue={editingLang === 'pt' ? (item.subtitle || item.description || item.quote || '') : (translationsCache[item.id]?.[activeTab === 'carousel' ? 'subtitle' : activeTab === 'products' ? 'description' : 'quote']?.[editingLang] || '')} 
-                          onBlur={e => updateOriginalOrTranslation(activeTab === 'carousel' ? 'carousel_images' : activeTab === 'products' ? 'products' : 'testimonials', item.id, activeTab === 'carousel' ? 'subtitle' : activeTab === 'products' ? 'description' : 'quote', e.target.value, activeTab === 'carousel' ? updateCarouselImage : activeTab === 'products' ? updateProduct : updateTestimonial)}
-                          placeholder="Detalhes ou tradução secundária..."
-                        />
-                      </>
-                    )}
-                  </div>
+
+                      {/* Main Strategic Data */}
+                      <div className="flex-1 space-y-4 w-full">
+                        <div className="flex items-center gap-4">
+                          <span className="text-[8px] font-black uppercase tracking-[0.4em] text-blue-500/50">REF: {item.id?.slice(0, 8) || item.key}</span>
+                          {item.display_order && <span className="text-[8px] font-black uppercase tracking-[0.4em] text-slate-700">Order: {item.display_order}</span>}
+                        </div>
+
+                        {activeTab === 'content' ? (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                            <span className="text-[10px] font-black uppercase text-slate-400 truncate tracking-widest">{item.key}</span>
+                            <input 
+                              className="md:col-span-2 bg-[#02050c] border border-white/5 p-4 rounded-xl text-white text-xs outline-none focus:border-blue-500/40 w-full" 
+                              value={item.value} 
+                              onChange={e => {
+                                const val = e.target.value;
+                                setSiteLabels(prev => prev.map(l => l.key === item.key ? {...l, value: val} : l));
+                              }}
+                              onBlur={e => updateSiteContent(item.key, e.target.value)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <input 
+                              className="w-full bg-[#02050c] border border-white/5 p-4 rounded-xl text-white text-[12px] font-bold outline-none focus:border-blue-500/40" 
+                              defaultValue={editingLang === 'pt' ? (item.title || item.label || item.name || '') : (translationsCache[item.id]?.[activeTab === 'carousel' || activeTab === 'insights' ? 'title' : activeTab === 'metrics' ? 'label' : 'name']?.[editingLang] || '')} 
+                              onBlur={e => updateOriginalOrTranslation(activeTab === 'carousel' ? 'carousel_images' : activeTab === 'metrics' ? 'metrics' : activeTab === 'insights' ? 'insights' : 'products', item.id, activeTab === 'carousel' || activeTab === 'insights' ? 'title' : activeTab === 'metrics' ? 'label' : 'name', e.target.value, activeTab === 'carousel' ? updateCarouselImage : activeTab === 'metrics' ? updateMetric : activeTab === 'insights' ? updateInsight : updateProduct)}
+                              placeholder="Título Principal do Registro..."
+                            />
+                            <textarea 
+                              className="w-full bg-[#02050c] border border-white/5 p-4 rounded-xl text-slate-500 text-[11px] font-light outline-none focus:border-blue-500/40 min-h-[70px] leading-relaxed" 
+                              defaultValue={editingLang === 'pt' ? (item.subtitle || item.description || item.quote || '') : (translationsCache[item.id]?.[activeTab === 'carousel' ? 'subtitle' : activeTab === 'products' ? 'description' : 'quote']?.[editingLang] || '')} 
+                              onBlur={e => updateOriginalOrTranslation(activeTab === 'carousel' ? 'carousel_images' : activeTab === 'products' ? 'products' : 'testimonials', item.id, activeTab === 'carousel' ? 'subtitle' : activeTab === 'products' ? 'description' : 'quote', e.target.value, activeTab === 'carousel' ? updateCarouselImage : activeTab === 'products' ? updateProduct : updateTestimonial)}
+                              placeholder="Descrição detalhada ou subtítulo de apoio..."
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Unified Control Actions */}
+                      <div className="shrink-0 flex items-center gap-4">
+                        <button 
+                          onClick={() => confirmDelete(item.id || item.key, activeTab === 'carousel' ? deleteCarouselImage : activeTab === 'metrics' ? deleteMetric : activeTab === 'insights' ? deleteInsight : activeTab === 'products' ? deleteProduct : deleteContact)} 
+                          className="p-5 rounded-2xl text-red-500/30 hover:text-red-500 hover:bg-red-500/5 transition-all border border-transparent hover:border-red-500/20"
+                          title="Remover Permanentemente"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Standardized Edit Modal (Optional for deeper edits like full HTML content) */}
+      {/* Standard Executive Modal for Deep Content (Tiptap Integration point) */}
       <AnimatePresence>
         {editItem && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-8 bg-[#010309]/90 backdrop-blur-md">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-slate-900 border border-white/10 w-full max-w-2xl rounded-[3rem] p-12 space-y-8 shadow-2xl">
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-8 bg-brand-navy/95 backdrop-blur-xl">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#02050c] border border-white/10 w-full max-w-3xl rounded-[4rem] p-16 space-y-12 shadow-2xl relative overflow-hidden">
+               <div className="absolute top-0 left-0 w-full h-2 bg-blue-600"></div>
                <div className="flex justify-between items-center">
-                  <h3 className="text-3xl font-serif text-white italic">Editor Estratégico</h3>
-                  <button onClick={() => setEditItem(null)} className="text-slate-500 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                  <div className="space-y-2">
+                    <h3 className="text-4xl font-serif text-white italic">Editor Estratégico</h3>
+                    <p className="text-slate-500 text-[10px] uppercase tracking-[0.4em]">Refining Global Content</p>
+                  </div>
+                  <button onClick={() => setEditItem(null)} className="p-4 bg-slate-900 rounded-2xl text-slate-500 hover:text-white transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
                </div>
-               {/* Modal Content logic here */}
+               {/* Reserved for TipTap / Advanced Form Fields */}
+               <div className="min-h-[400px] flex items-center justify-center border border-white/5 rounded-[3rem] bg-white/[0.01]">
+                  <span className="text-slate-700 text-[10px] font-black uppercase tracking-widest">Advanced Editor Interface</span>
+               </div>
+               <button className="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.4em] text-[11px] shadow-2xl shadow-blue-600/30">Finalizar Edição</button>
             </motion.div>
           </div>
         )}
