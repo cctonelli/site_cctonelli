@@ -45,7 +45,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           const isRls = signUpError.message?.toLowerCase().includes('row-level security');
           setError({
             message: isRls 
-              ? 'Erro de Segurança (RLS): O banco impediu a criação do perfil. Verifique a SECURITY DEFINER do Trigger.'
+              ? 'Erro de Segurança (RLS): O banco impediu a criação automática do seu perfil. Verifique se o Trigger possui SECURITY DEFINER.'
               : signUpError.message,
             isRls
           });
@@ -53,7 +53,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           return;
         }
 
-        // Se o usuário foi criado mas não há sessão, ele precisa confirmar o email
+        // Caso o usuário tenha sido criado mas a sessão seja nula (requer confirmação de email)
         if (data.user && !data.session) {
           setNeedsConfirmation(true);
           setIsLoading(false);
@@ -63,7 +63,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         }
       }
     } catch (err: any) {
-      console.error("[Auth UI] Exceção:", err);
+      console.error("[Auth UI] Exceção capturada:", err);
       const isRls = err.message?.toLowerCase().includes('row-level security');
       setError({
         message: err.message || 'Erro inesperado na autenticação.',
@@ -78,19 +78,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" />
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-12 text-center space-y-8 shadow-2xl">
-          <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <h2 className="text-3xl font-serif text-white italic">Confirme seu E-mail</h2>
+          <h2 className="text-3xl font-serif text-white italic">Verifique seu E-mail</h2>
           <p className="text-slate-400 text-sm font-light leading-relaxed">
-            Enviamos um link de ativação para <strong>{email}</strong>. Por favor, valide sua conta para acessar o ecossistema Tonelli.
+            Sua conta foi criada, mas o Supabase exige confirmação. Enviamos um link para <strong>{email}</strong>.
           </p>
           <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-[10px] text-slate-500 uppercase tracking-widest leading-relaxed">
-            Dica: Se você é o administrador, pode desativar o "Confirm Email" nas configurações de Auth do Supabase para pular esta etapa.
+            Dica: Para pular esta etapa em testes, desative o "Confirm Email" nas configurações de Auth do seu painel Supabase.
           </div>
-          <button onClick={onClose} className="w-full py-4 bg-white text-black rounded-2xl font-bold uppercase tracking-widest text-[10px]">Entendido</button>
+          <button onClick={onClose} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px]">Entendido</button>
         </motion.div>
       </div>
     );
@@ -213,7 +213,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
               disabled={isLoading}
               className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50"
             >
-              {isLoading ? 'Estabelecendo Conexão...' : (mode === 'login' ? 'Autenticar' : 'Finalizar Cadastro')}
+              {isLoading ? 'Aguardando Resposta...' : (mode === 'login' ? 'Autenticar' : 'Validar Cadastro')}
             </button>
           </form>
 

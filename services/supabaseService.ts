@@ -23,8 +23,12 @@ export const signIn = async (email: string, password?: string) => {
     : await supabase.auth.signInWithOtp({ email });
 };
 
+/**
+ * Realiza o cadastro enviando metadados.
+ * O Trigger public.handle_new_user no Supabase é responsável por
+ * inserir esses dados na tabela profiles automaticamente.
+ */
 export const signUp = async (email: string, password?: string, metadata?: Partial<Profile>) => {
-  // O Trigger SQL 'handle_new_user' busca estas chaves exatamente como definidas aqui:
   const { data, error } = await supabase.auth.signUp({
     email,
     password: password || 'temp-pass-123',
@@ -59,7 +63,7 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
     .single();
     
   if (error) {
-    console.warn(`[Profile Service] Perfil ${id} não encontrado. Pode haver delay no trigger ou confirmação de email pendente.`);
+    console.warn(`[Profile] Não foi possível carregar o perfil ${id}. Erro: ${error.message}`);
     return null;
   }
   return data;
@@ -70,7 +74,7 @@ export const updateProfile = async (id: string, profile: Partial<Profile>) => {
   return !error;
 };
 
-// --- DATA FETCHING (Mantidos sem alteração para estabilidade) ---
+// --- DATA FETCHING ---
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
   return error ? [] : data || [];
