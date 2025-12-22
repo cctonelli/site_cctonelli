@@ -16,12 +16,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-// --- GENERIC TRANSLATIONS (content_translations) ---
-// Mudamos entityId para any para aceitar string (UUID) ou number (bigint)
+// --- GENERIC TRANSLATIONS ENGINE ---
 export const upsertTranslation = async (entityType: string, entityId: any, field: string, locale: string, value: string) => {
+  // Converte entityId para string para consistência no banco (especialmente se for BigInt ou UUID)
+  const idStr = String(entityId);
   const { error } = await supabase.from('content_translations').upsert({
     entity_type: entityType,
-    entity_id: entityId,
+    entity_id: idStr,
     field: field,
     locale: locale,
     value: value
@@ -30,14 +31,15 @@ export const upsertTranslation = async (entityType: string, entityId: any, field
 };
 
 export const fetchTranslationsForEntity = async (entityType: string, entityId: any) => {
+  const idStr = String(entityId);
   const { data, error } = await supabase
     .from('content_translations')
     .select('field, locale, value')
     .eq('entity_type', entityType)
-    .eq('entity_id', entityId);
+    .eq('entity_id', idStr);
   
   if (error) {
-    console.error("Translation fetch error:", error);
+    console.error(`Error fetching translations for ${entityType}:${idStr}`, error);
     return {};
   }
   
@@ -48,7 +50,7 @@ export const fetchTranslationsForEntity = async (entityType: string, entityId: a
   }, {});
 };
 
-// --- AUTH & PROFILE ---
+// --- AUTH ---
 export const signIn = async (email: string, password?: string) => {
   return password 
     ? await supabase.auth.signInWithPassword({ email, password })
@@ -56,25 +58,14 @@ export const signIn = async (email: string, password?: string) => {
 };
 
 export const signUp = async (email: string, password?: string, metadata?: Partial<Profile>) => {
-  const { data, error } = await supabase.auth.signUp({
+  return await supabase.auth.signUp({
     email,
     password: password || 'temp-pass-123',
-    options: { 
-      data: {
-        full_name: metadata?.full_name || '',
-        cpf_cnpj: metadata?.cpf_cnpj || '',
-        gender: metadata?.gender || '',
-        whatsapp: metadata?.whatsapp || '',
-        user_type: 'client'
-      } 
-    }
+    options: { data: { ...metadata, user_type: 'client' } }
   });
-  return { data, error };
 };
 
-export const signOut = async () => {
-  await supabase.auth.signOut();
-};
+export const signOut = async () => await supabase.auth.signOut();
 
 export const getCurrentUser = async () => {
   const { data: { user } } = await supabase.auth.getUser();
@@ -82,17 +73,11 @@ export const getCurrentUser = async () => {
 };
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', id)
-    .single();
-    
-  if (error) return null;
-  return data;
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
+  return error ? null : data;
 };
 
-// --- DATA FETCHING ---
+// --- CONTENT FETCHING ---
 export const fetchCarouselImages = async () => {
   const { data, error } = await supabase.from('carousel_images').select('*').order('display_order', { ascending: true });
   return error ? [] : data || [];
@@ -146,8 +131,7 @@ export const submitContact = async (contact: Contact) => {
 // --- ADMIN CMS ---
 export const addInsight = async (insight: any) => {
   const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select();
-  if (error) throw error;
-  return data ? data[0] : null;
+  return error ? null : data[0];
 };
 
 export const updateInsight = async (id: string, updates: Partial<Insight>) => {

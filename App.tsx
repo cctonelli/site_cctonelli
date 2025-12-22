@@ -85,12 +85,19 @@ const HomePage: React.FC = () => {
         ...approvedTests.map(at => ({ type: 'testimonials', id: at.id }))
       ];
 
-      await Promise.all(entitiesToTranslate.map(async (ent) => {
-        const data = await fetchTranslationsForEntity(ent.type, ent.id);
-        if (Object.keys(data).length > 0) {
-          trans[String(ent.id)] = data;
+      // Busca traduções em paralelo para eficiência
+      const translationsResults = await Promise.all(
+        entitiesToTranslate.map(async (ent) => {
+          const data = await fetchTranslationsForEntity(ent.type, ent.id);
+          return { id: String(ent.id), data };
+        })
+      );
+
+      translationsResults.forEach(res => {
+        if (res.data && Object.keys(res.data).length > 0) {
+          trans[res.id] = res.data;
         }
-      }));
+      });
       
       setTranslationsCache(trans);
 
@@ -99,7 +106,7 @@ const HomePage: React.FC = () => {
         setUserProfile(profile);
       }
     } catch (err) {
-      console.warn("Load error:", err);
+      console.warn("Critical Load error:", err);
     } finally {
       setTimeout(() => setLoading(false), 800);
     }
@@ -115,14 +122,14 @@ const HomePage: React.FC = () => {
     return () => clearInterval(interval);
   }, [carouselImages]);
 
-  const getL = (key: string, defaultVal: string) => {
-    return content[`${key}.${language}`] || content[`${key}.pt`] || defaultVal;
-  };
-
   const resolveTranslation = (entityId: any, field: string, baseValue: string) => {
     if (language === 'pt') return baseValue;
     const cacheKey = String(entityId);
     return translationsCache[cacheKey]?.[field]?.[language] || baseValue;
+  };
+
+  const getL = (key: string, defaultVal: string) => {
+    return content[`${key}.${language}`] || content[`${key}.pt`] || defaultVal;
   };
 
   const currentTitle = useMemo(() => {
