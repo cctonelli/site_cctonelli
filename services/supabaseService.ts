@@ -113,6 +113,11 @@ export const addInsight = async (insight: any) => {
   return data ? data[0] : null;
 };
 
+export const updateInsight = async (id: string, updates: Partial<Insight>) => {
+  const { error } = await supabase.from('insights').update(updates).eq('id', id);
+  return !error;
+};
+
 export const deleteInsight = async (id: string) => {
   const { error } = await supabase.from('insights').delete().eq('id', id);
   return !error;
@@ -133,6 +138,16 @@ export const approveTestimonial = async (id: string) => {
   return !error;
 };
 
+export const updateTestimonial = async (id: string, updates: Partial<Testimonial>) => {
+  const { error } = await supabase.from('testimonials').update(updates).eq('id', id);
+  return !error;
+};
+
+export const deleteTestimonial = async (id: string) => {
+  const { error } = await supabase.from('testimonials').delete().eq('id', id);
+  return !error;
+};
+
 export const updateSiteContent = async (key: string, value: string, page: string = 'home') => {
   const { error } = await supabase.from('site_content').upsert({ key, value, page }, { onConflict: 'key' });
   return !error;
@@ -143,6 +158,11 @@ export const addProduct = async (product: any) => {
   return !error;
 };
 
+export const updateProduct = async (id: string, updates: Partial<Product>) => {
+  const { error } = await supabase.from('products').update(updates).eq('id', id);
+  return !error;
+};
+
 export const deleteProduct = async (id: string) => {
   const { error } = await supabase.from('products').delete().eq('id', id);
   return !error;
@@ -150,6 +170,11 @@ export const deleteProduct = async (id: string) => {
 
 export const addMetric = async (metric: any) => {
   const { error } = await supabase.from('metrics').insert([metric]);
+  return !error;
+};
+
+export const updateMetric = async (id: string, updates: Partial<Metric>) => {
+  const { error } = await supabase.from('metrics').update(updates).eq('id', id);
   return !error;
 };
 
