@@ -64,29 +64,31 @@ const HomePage: React.FC = () => {
         getCurrentUser()
       ]);
       
-      // Filtramos apenas ativos para o site público
-      setMetrics((m || []).filter(x => x.is_active));
-      setInsights((i || []).filter(x => x.is_active));
+      console.log("Raw Carousel Data from DB:", car);
+
+      // Filtro robusto para is_active (suporta boolean ou string do DB)
+      const activeCarousel = (car || [])
+        .filter(img => String(img.is_active) === 'true' || img.is_active === true)
+        .sort((a, b) => (Number(a.display_order) || 0) - (Number(b.display_order) || 0));
+      
+      setCarouselImages(activeCarousel);
+      console.log(`Active Slides Processed: ${activeCarousel.length}`);
+
+      setMetrics((m || []).filter(x => String(x.is_active) === 'true' || x.is_active === true));
+      setInsights((i || []).filter(x => String(x.is_active) === 'true' || x.is_active === true));
       setProducts(p || []);
       setTestimonials((test || []).filter(t => t.approved));
       setContent(s || {});
-      
-      const activeCarousel = (car || [])
-        .filter(img => img.is_active)
-        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-      
-      setCarouselImages(activeCarousel);
-      console.log(`Loaded ${activeCarousel.length} active slides for Home`);
 
-      const trans: Record<string, any> = {};
       const entitiesToTranslate = [
         ...activeCarousel.map(c => ({ type: 'carousel_images', id: c.id })),
-        ...i.map(ins => ({ type: 'insights', id: ins.id })),
-        ...p.map(prod => ({ type: 'products', id: prod.id })),
-        ...m.map(met => ({ type: 'metrics', id: met.id })),
+        ...insights.map(ins => ({ type: 'insights', id: ins.id })),
+        ...products.map(prod => ({ type: 'products', id: prod.id })),
+        ...metrics.map(met => ({ type: 'metrics', id: met.id })),
         ...(test || []).filter(t => t.approved).map(at => ({ type: 'testimonials', id: at.id }))
       ];
 
+      const trans: Record<string, any> = {};
       const translationsResults = await Promise.all(
         entitiesToTranslate.map(async (ent) => {
           const data = await fetchTranslationsForEntity(ent.type, ent.id);
@@ -109,7 +111,7 @@ const HomePage: React.FC = () => {
     } finally {
       if (!silent) setTimeout(() => setLoading(false), 800);
     }
-  }, []);
+  }, [insights, products, metrics]);
 
   useEffect(() => {
     loadAllData();
@@ -195,14 +197,22 @@ const HomePage: React.FC = () => {
             carouselImages.map((img, idx) => (
               <div 
                 key={img.id} 
-                className={`absolute inset-0 transition-all duration-[3000ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-50 scale-100 rotate-0' : 'opacity-0 scale-110 rotate-1'}`}
+                className={`absolute inset-0 transition-all duration-[3000ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-80 scale-100 rotate-0' : 'opacity-0 scale-110 rotate-1'}`}
               >
-                <img src={img.url} className="w-full h-full object-cover" alt="" />
-                <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
+                <img 
+                  src={img.url} 
+                  className="w-full h-full object-cover" 
+                  alt={img.title || 'Slide'} 
+                  onError={(e) => {
+                    console.error("Image load error for slide:", img.url);
+                    (e.target as HTMLImageElement).src = 'https://nmrk.imgix.net/uploads/fields/hero-image/Global-Strategy-Consulting.jpeg';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/70 to-transparent"></div>
               </div>
             ))
           ) : (
-            <div className="absolute inset-0 bg-[#010309] opacity-80"></div>
+            <div className="absolute inset-0 bg-[#010309] opacity-90"></div>
           )}
         </div>
 

@@ -83,10 +83,18 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 
 // --- CONTENT FETCHING ---
 export const fetchCarouselImages = async () => {
-  // Removido filtro estrito de is_active para garantir que o admin veja tudo e o público veja apenas o necessário via código de renderização
-  const { data, error } = await supabase.from('carousel_images').select('*').order('display_order', { ascending: true });
-  if (error) console.error("Carousel fetch error:", error);
-  return error ? [] : data || [];
+  const { data, error } = await supabase
+    .from('carousel_images')
+    .select('*')
+    .order('display_order', { ascending: true });
+    
+  if (error) {
+    console.error("Critical: Error fetching carousel images:", error);
+    return [];
+  }
+  
+  console.log("Supabase Connection Successful. Carousel Rows Found:", data?.length);
+  return data || [];
 };
 
 export const fetchInsights = async () => {
