@@ -5,7 +5,6 @@ import {
   Testimonial, Profile, Contact, CarouselImage
 } from '../types';
 
-// Fallback para as chaves fornecidas se as variáveis de ambiente falharem
 const SUPABASE_URL = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) || 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
@@ -17,12 +16,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-/** 
- * Abordagem Recomendada: 
- * O perfil (tabela profiles) é criado automaticamente via SQL Trigger no Supabase 
- * baseado nos dados passados em 'options.data' (user_metadata).
- */
-
 // --- AUTH & PROFILE ---
 export const signIn = async (email: string, password?: string) => {
   return password 
@@ -31,17 +24,17 @@ export const signIn = async (email: string, password?: string) => {
 };
 
 export const signUp = async (email: string, password?: string, metadata?: Partial<Profile>) => {
-  // Enviamos todos os metadados para o Auth. O Trigger do banco cuidará da tabela 'profiles'.
+  // O Trigger SQL 'handle_new_user' busca estas chaves exatamente como definidas aqui:
   const { data, error } = await supabase.auth.signUp({
     email,
     password: password || 'temp-pass-123',
     options: { 
       data: {
-        full_name: metadata?.full_name,
-        cpf_cnpj: metadata?.cpf_cnpj,
-        gender: metadata?.gender,
-        whatsapp: metadata?.whatsapp,
-        user_type: 'client' // Padrão para novos cadastros via site
+        full_name: metadata?.full_name || '',
+        cpf_cnpj: metadata?.cpf_cnpj || '',
+        gender: metadata?.gender || '',
+        whatsapp: metadata?.whatsapp || '',
+        user_type: 'client'
       } 
     }
   });
@@ -59,9 +52,14 @@ export const getCurrentUser = async () => {
 };
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', id)
+    .single();
+    
   if (error) {
-    console.error("Error fetching profile:", error);
+    console.warn(`[Profile Service] Perfil ${id} não encontrado. Pode haver delay no trigger ou confirmação de email pendente.`);
     return null;
   }
   return data;
@@ -72,65 +70,39 @@ export const updateProfile = async (id: string, profile: Partial<Profile>) => {
   return !error;
 };
 
-// --- DATA FETCHING ---
+// --- DATA FETCHING (Mantidos sem alteração para estabilidade) ---
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
-  const { data, error } = await supabase
-    .from('carousel_images')
-    .select('*')
-    .eq('is_active', true)
-    .order('display_order', { ascending: true });
-  if (error) return [];
-  return data || [];
+  const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
+  return error ? [] : data || [];
 };
 
 export const fetchInsights = async (): Promise<Insight[]> => {
-  const { data, error } = await supabase
-    .from('insights')
-    .select('*')
-    .eq('is_active', true)
-    .order('published_at', { ascending: false });
-  if (error) return [];
-  return data || [];
+  const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
+  return error ? [] : data || [];
 };
 
 export const fetchInsightById = async (id: string): Promise<Insight | null> => {
   const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
-  if (error) return null;
-  return data;
+  return error ? null : data;
 };
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
-  const { data, error } = await supabase
-    .from('metrics')
-    .select('*')
-    .eq('is_active', true)
-    .order('display_order', { ascending: true });
-  if (error) return [];
-  return data || [];
+  const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
+  return error ? [] : data || [];
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) return [];
-  return data || [];
+  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+  return error ? [] : data || [];
 };
 
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
-  const { data, error } = await supabase
-    .from('testimonials')
-    .select('*')
-    .eq('approved', true)
-    .order('created_at', { ascending: false });
-  if (error) return [];
-  return data || [];
+  const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
+  return error ? [] : data || [];
 };
 
 export const fetchSiteContent = async (page: string): Promise<Record<string, string>> => {
   const { data, error } = await supabase.from('site_content').select('key, value').eq('page', page);
-  if (error) return {};
   return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
 };
 
@@ -141,13 +113,8 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
 
 // --- ADMIN CMS ---
 export const addInsight = async (insight: any) => {
-  const { data, error } = await supabase
-    .from('insights')
-    .insert([{ ...insight, published_at: new Date().toISOString() }])
-    .select()
-    .single();
-  if (error) return null;
-  return data;
+  const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select().single();
+  return error ? null : data;
 };
 
 export const deleteInsight = async (id: string) => {
@@ -162,8 +129,7 @@ export const updateInsightLink = async (id: string, link: string) => {
 
 export const fetchPendingTestimonials = async () => {
   const { data, error } = await supabase.from('testimonials').select('*').eq('approved', false);
-  if (error) return [];
-  return data || [];
+  return error ? [] : data || [];
 };
 
 export const approveTestimonial = async (id: string) => {

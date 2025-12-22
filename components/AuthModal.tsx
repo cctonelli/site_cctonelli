@@ -18,38 +18,83 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
   const [whatsapp, setWhatsapp] = useState('');
   const [gender, setGender] = useState<Profile['gender']>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [error, setError] = useState<{message: string, isRls: boolean} | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setNeedsConfirmation(false);
 
     try {
       if (mode === 'login') {
         const { error: signInError } = await signIn(email, password);
         if (signInError) throw signInError;
+        onSuccess();
+        onClose();
       } else {
-        // Agora o signUp apenas inicia o processo de criação no Auth.
-        // O Trigger no banco de dados cuidará da tabela profiles de forma robusta.
-        const { error: signUpError } = await signUp(email, password, {
+        const { data, error: signUpError } = await signUp(email, password, {
           full_name: fullName,
           cpf_cnpj: taxId,
           whatsapp: whatsapp,
           gender: gender,
         });
         
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+          const isRls = signUpError.message?.toLowerCase().includes('row-level security');
+          setError({
+            message: isRls 
+              ? 'Erro de Segurança (RLS): O banco impediu a criação do perfil. Verifique a SECURITY DEFINER do Trigger.'
+              : signUpError.message,
+            isRls
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // Se o usuário foi criado mas não há sessão, ele precisa confirmar o email
+        if (data.user && !data.session) {
+          setNeedsConfirmation(true);
+          setIsLoading(false);
+        } else {
+          onSuccess();
+          onClose();
+        }
       }
-      onSuccess();
-      onClose();
     } catch (err: any) {
-      console.error("Auth Exception:", err);
-      setError(err.message || 'Erro na autenticação. Verifique os dados e tente novamente.');
-    } finally {
+      console.error("[Auth UI] Exceção:", err);
+      const isRls = err.message?.toLowerCase().includes('row-level security');
+      setError({
+        message: err.message || 'Erro inesperado na autenticação.',
+        isRls
+      });
       setIsLoading(false);
     }
   };
+
+  if (needsConfirmation) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" />
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-12 text-center space-y-8 shadow-2xl">
+          <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-serif text-white italic">Confirme seu E-mail</h2>
+          <p className="text-slate-400 text-sm font-light leading-relaxed">
+            Enviamos um link de ativação para <strong>{email}</strong>. Por favor, valide sua conta para acessar o ecossistema Tonelli.
+          </p>
+          <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-[10px] text-slate-500 uppercase tracking-widest leading-relaxed">
+            Dica: Se você é o administrador, pode desativar o "Confirm Email" nas configurações de Auth do Supabase para pular esta etapa.
+          </div>
+          <button onClick={onClose} className="w-full py-4 bg-white text-black rounded-2xl font-bold uppercase tracking-widest text-[10px]">Entendido</button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
@@ -70,11 +115,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         <div className="p-12 space-y-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-3xl shadow-xl shadow-blue-600/20">CT</div>
-            <h2 className="text-3xl font-serif text-white">
+            <h2 className="text-3xl font-serif text-white italic">
               {mode === 'login' ? 'Acesso Exclusivo' : 'Crie sua Conta'}
             </h2>
             <p className="text-slate-500 text-sm font-light">
-              {mode === 'login' ? 'Entre no ecossistema de alta performance.' : 'Junte-se à vanguarda da consultoria estratégica.'}
+              {mode === 'login' ? 'Identifique-se para acessar o hub de inteligência.' : 'Junte-se à vanguarda da consultoria estratégica.'}
             </p>
           </div>
 
@@ -149,21 +194,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
 
             {error && (
               <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`p-5 rounded-[1.5rem] border ${error.isRls ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'}`}
               >
-                <p className="text-red-500 text-[11px] text-center font-bold tracking-tight leading-relaxed">
-                  {error}
-                </p>
+                <div className="flex gap-4">
+                   <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold ${error.isRls ? 'bg-amber-500 text-black' : 'bg-red-500 text-white'}`}>!</div>
+                   <div className="space-y-1">
+                     <p className={`text-[11px] font-bold tracking-tight leading-relaxed ${error.isRls ? 'text-amber-500/90' : 'text-red-500'}`}>
+                       {error.message}
+                     </p>
+                   </div>
+                </div>
               </motion.div>
             )}
 
             <button 
               disabled={isLoading}
-              className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold uppercase tracking-widest text-[11px] transition-all shadow-xl shadow-blue-600/20 active:scale-95 disabled:opacity-50"
+              className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50"
             >
-              {isLoading ? 'Processando...' : (mode === 'login' ? 'Entrar Agora' : 'Finalizar Cadastro')}
+              {isLoading ? 'Estabelecendo Conexão...' : (mode === 'login' ? 'Autenticar' : 'Finalizar Cadastro')}
             </button>
           </form>
 
@@ -172,16 +222,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
               onClick={() => {
                 setMode(mode === 'login' ? 'register' : 'login');
                 setError(null);
+                setNeedsConfirmation(false);
               }}
-              className="text-xs text-slate-500 hover:text-white transition-colors"
+              className="text-[10px] uppercase tracking-widest text-slate-500 hover:text-white transition-colors font-bold"
             >
-              {mode === 'login' ? 'Não possui conta? Associe-se' : 'Já é um associado? Entre aqui'}
+              {mode === 'login' ? 'Solicitar Acesso à Rede' : 'Retornar ao Login'}
             </button>
           </div>
         </div>
         
         <div className="bg-slate-950 py-4 text-center border-t border-white/5">
-          <p className="text-[9px] uppercase tracking-[0.4em] text-slate-600 font-bold">Protocolo de Segurança Ativo</p>
+          <p className="text-[9px] uppercase tracking-[0.5em] text-slate-600 font-bold">Protocolo SSL/TLS Ativado</p>
         </div>
       </motion.div>
       <style>{`
