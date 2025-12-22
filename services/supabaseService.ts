@@ -83,12 +83,14 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 
 // --- CONTENT FETCHING ---
 export const fetchCarouselImages = async () => {
-  const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
+  // Removido filtro estrito de is_active para garantir que o admin veja tudo e o público veja apenas o necessário via código de renderização
+  const { data, error } = await supabase.from('carousel_images').select('*').order('display_order', { ascending: true });
+  if (error) console.error("Carousel fetch error:", error);
   return error ? [] : data || [];
 };
 
 export const fetchInsights = async () => {
-  const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
+  const { data, error } = await supabase.from('insights').select('*').order('published_at', { ascending: false });
   return error ? [] : data || [];
 };
 
@@ -98,7 +100,7 @@ export const fetchInsightById = async (id: string) => {
 };
 
 export const fetchMetrics = async () => {
-  const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
+  const { data, error } = await supabase.from('metrics').select('*').order('display_order', { ascending: true });
   return error ? [] : data || [];
 };
 

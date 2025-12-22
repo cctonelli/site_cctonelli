@@ -53,6 +53,7 @@ const HomePage: React.FC = () => {
   const loadAllData = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
+      
       const [m, i, p, test, s, car, user] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
@@ -63,18 +64,19 @@ const HomePage: React.FC = () => {
         getCurrentUser()
       ]);
       
-      setMetrics(m);
-      setInsights(i);
-      setProducts(p);
-      const approvedTests = (test || []).filter(t => t.approved);
-      setTestimonials(approvedTests);
-      setContent(s);
+      // Filtramos apenas ativos para o site público
+      setMetrics((m || []).filter(x => x.is_active));
+      setInsights((i || []).filter(x => x.is_active));
+      setProducts(p || []);
+      setTestimonials((test || []).filter(t => t.approved));
+      setContent(s || {});
       
       const activeCarousel = (car || [])
         .filter(img => img.is_active)
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
       
       setCarouselImages(activeCarousel);
+      console.log(`Loaded ${activeCarousel.length} active slides for Home`);
 
       const trans: Record<string, any> = {};
       const entitiesToTranslate = [
@@ -82,7 +84,7 @@ const HomePage: React.FC = () => {
         ...i.map(ins => ({ type: 'insights', id: ins.id })),
         ...p.map(prod => ({ type: 'products', id: prod.id })),
         ...m.map(met => ({ type: 'metrics', id: met.id })),
-        ...approvedTests.map(at => ({ type: 'testimonials', id: at.id }))
+        ...(test || []).filter(t => t.approved).map(at => ({ type: 'testimonials', id: at.id }))
       ];
 
       const translationsResults = await Promise.all(
@@ -103,7 +105,7 @@ const HomePage: React.FC = () => {
         setUserProfile(profile);
       }
     } catch (err) {
-      console.warn("Realtime Sync Issue:", err);
+      console.error("Critical Fetch Error in Home:", err);
     } finally {
       if (!silent) setTimeout(() => setLoading(false), 800);
     }
@@ -121,7 +123,7 @@ const HomePage: React.FC = () => {
     if (carouselImages.length <= 1) return;
     const interval = setInterval(() => {
       setActiveCarouselIndex(prev => (prev + 1) % carouselImages.length);
-    }, 8000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [carouselImages]);
 
@@ -154,16 +156,16 @@ const HomePage: React.FC = () => {
   };
 
   if (loading) return (
-    <div className="fixed inset-0 bg-[#010309] flex flex-col items-center justify-center">
-      <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-6 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500 animate-pulse">
-        Sincronizando Advisory Global...
+    <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
+      <div className="w-16 h-16 border-4 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="mt-8 text-[11px] font-black uppercase tracking-[0.6em] text-blue-500 animate-pulse">
+        Carregando Advisory Global...
       </div>
     </div>
   );
 
   return (
-    <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
+    <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500 overflow-x-hidden">
       <Navbar 
         onAdminClick={handleAreaClick} 
         userProfile={userProfile} 
@@ -186,54 +188,58 @@ const HomePage: React.FC = () => {
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
-        {/* Carousel Background */}
+        {/* Carousel Background Engine */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 opacity-20 md:opacity-40 z-10 pointer-events-none"><ThreeGlobe /></div>
           {carouselImages.length > 0 ? (
             carouselImages.map((img, idx) => (
-              <div key={img.id} className={`absolute inset-0 transition-opacity duration-[3s] ease-in-out ${idx === activeCarouselIndex ? 'opacity-40' : 'opacity-0'}`}>
-                <img src={img.url} className="w-full h-full object-cover scale-105" alt="" />
+              <div 
+                key={img.id} 
+                className={`absolute inset-0 transition-all duration-[3000ms] ease-in-out ${idx === activeCarouselIndex ? 'opacity-50 scale-100 rotate-0' : 'opacity-0 scale-110 rotate-1'}`}
+              >
+                <img src={img.url} className="w-full h-full object-cover" alt="" />
                 <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
               </div>
             ))
           ) : (
-            <div className="absolute inset-0 bg-slate-900 opacity-40"></div>
+            <div className="absolute inset-0 bg-[#010309] opacity-80"></div>
           )}
         </div>
 
-        {/* Hero Content */}
+        {/* Hero Content Wrapper */}
         <div className="container mx-auto px-6 relative z-20 grid lg:grid-cols-2 h-full items-center">
-          <div className="space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
-            <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-bold uppercase tracking-widest">
-              {resolveTranslation(carouselImages[activeCarouselIndex]?.id, 'title', carouselImages[activeCarouselIndex]?.title || t.hero_badge)}
+          <div className="space-y-12 animate-in fade-in slide-in-from-left-12 duration-1000">
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] shadow-xl shadow-blue-500/5">
+               {carouselImages[activeCarouselIndex] ? resolveTranslation(carouselImages[activeCarouselIndex].id, 'title', carouselImages[activeCarouselIndex].title || t.hero_badge) : t.hero_badge}
             </div>
             
-            <div className="space-y-8">
-              <h1 className="text-6xl md:text-8xl font-serif leading-[1.05] dark:text-white text-slate-900 transition-all">
+            <div className="space-y-10">
+              <h1 className="text-6xl md:text-8xl font-serif leading-[1] dark:text-white text-slate-900 transition-all">
                 {currentTitle}
               </h1>
-              <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-2 border-blue-500/30 pl-8">
+              <p className="text-xl text-slate-400 max-w-xl leading-relaxed font-light border-l-4 border-blue-600/40 pl-10 italic">
                 {currentSubtitle}
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-6 pt-6">
-              <a href="#contact" className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] shadow-2xl shadow-blue-600/30 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95">
+            <div className="flex flex-wrap gap-8 pt-8">
+              <a href="#contact" className="bg-blue-600 text-white px-12 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-blue-600/40 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95 group flex items-center gap-3">
                 {getL('btn.diagnosis', t.btn_diagnosis)}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
               </a>
-              <a href="#insights" className="glass px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-[11px] dark:text-white text-slate-900 border border-white/10 hover:bg-white/5 transition-all hover:scale-105 active:scale-95">
+              <a href="#insights" className="glass px-12 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] dark:text-white text-slate-900 border border-white/10 hover:bg-white/5 transition-all hover:scale-105 active:scale-95">
                 {getL('btn.insights', t.btn_insights)}
               </a>
             </div>
 
-            {/* Slide Indicators */}
+            {/* Slide Navigation Bullets */}
             {carouselImages.length > 1 && (
-              <div className="flex gap-3 pt-12">
+              <div className="flex gap-4 pt-16">
                 {carouselImages.map((_, idx) => (
                   <button 
                     key={idx}
                     onClick={() => setActiveCarouselIndex(idx)}
-                    className={`h-1 rounded-full transition-all duration-500 ${idx === activeCarouselIndex ? 'w-12 bg-blue-500' : 'w-4 bg-slate-700'}`}
+                    className={`h-1.5 rounded-full transition-all duration-700 ${idx === activeCarouselIndex ? 'w-16 bg-blue-600 shadow-lg shadow-blue-600/30' : 'w-6 bg-slate-800 hover:bg-slate-700'}`}
                   />
                 ))}
               </div>
@@ -242,39 +248,60 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* Metrics Section: Now fully dynamic */}
       <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] relative transition-colors">
         <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
         <div className="container mx-auto px-6 text-center relative z-10">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-20">
-            {metrics.map(m => (
-              <div key={m.id} className="reveal active">
-                <div className="text-6xl font-bold dark:text-white text-slate-900 font-serif mb-4">{m.value}</div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            {metrics.length > 0 ? metrics.map(m => (
+              <div key={m.id} className="reveal active hover:translate-y-[-10px] transition-transform duration-500">
+                <div className="text-7xl font-bold dark:text-white text-slate-900 font-serif mb-6 drop-shadow-2xl">{m.value}</div>
+                <div className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 border-t border-slate-200 dark:border-white/5 pt-6 inline-block">
                   {resolveTranslation(m.id, 'label', m.label)}
                 </div>
               </div>
-            ))}
+            )) : (
+               <div className="col-span-full py-10 border border-dashed border-white/5 rounded-3xl text-slate-600 font-bold uppercase tracking-[0.3em] text-[10px]">
+                 Nenhuma métrica de performance carregada.
+               </div>
+            )}
           </div>
         </div>
       </section>
 
+      {/* Insights Section */}
       <section id="insights" className="py-40 dark:bg-slate-950 transition-colors">
         <div className="container mx-auto px-6">
-          <div className="mb-20">
-            <h2 className="text-4xl font-serif dark:text-white text-slate-900 italic">{getL('home.insights_title', t.insights_title)}</h2>
+          <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
+            <div className="space-y-4">
+              <div className="text-blue-500 font-black uppercase tracking-[0.4em] text-[10px]">Knowledge Hub</div>
+              <h2 className="text-5xl font-serif dark:text-white text-slate-900 italic max-w-xl leading-tight">
+                {getL('home.insights_title', t.insights_title)}
+              </h2>
+            </div>
+            <Link to="#contact" className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-blue-500 transition-colors border-b-2 border-slate-500/20 hover:border-blue-500/50 pb-2">
+              Solicitar Whitepapers
+            </Link>
           </div>
+          
           <div className="grid md:grid-cols-3 gap-12">
             {insights.slice(0, 3).map(insight => (
-              <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group">
-                <div className="aspect-video rounded-3xl overflow-hidden mb-6 bg-slate-900">
-                  <img src={insight.image_url || ''} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={insight.title} />
+              <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group space-y-8">
+                <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-900 border border-white/5 shadow-2xl relative">
+                  <img src={insight.image_url || ''} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-60 group-hover:opacity-100" alt={insight.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80"></div>
+                  <div className="absolute bottom-8 left-8 right-8">
+                     <span className="text-[8px] font-black uppercase tracking-[0.5em] text-blue-500 bg-blue-500/10 px-4 py-2 rounded-full border border-blue-500/20">{insight.category || 'ADVISORY'}</span>
+                  </div>
                 </div>
-                <h3 className="text-xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">
-                  {resolveTranslation(insight.id, 'title', insight.title)}
-                </h3>
-                <p className="text-sm text-slate-500 mt-2 line-clamp-2 italic font-light">
-                  {resolveTranslation(insight.id, 'excerpt', insight.excerpt || '')}
-                </p>
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors leading-tight italic">
+                    {resolveTranslation(insight.id, 'title', insight.title)}
+                  </h3>
+                  <p className="text-sm text-slate-500 line-clamp-2 italic font-light leading-relaxed">
+                    {resolveTranslation(insight.id, 'excerpt', insight.excerpt || '')}
+                  </p>
+                </div>
               </Link>
             ))}
           </div>
@@ -285,8 +312,14 @@ const HomePage: React.FC = () => {
       <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} />
       <ContactForm language={language} />
 
-      <footer className="py-20 border-t border-white/5 text-center bg-brand-navy">
-        <p className="text-[9px] text-slate-700 font-bold uppercase tracking-[0.6em]">{getL('footer.copyright', t.copyright)}</p>
+      <footer className="py-24 border-t border-white/5 text-center bg-brand-navy relative">
+        <div className="absolute inset-0 bg-grid opacity-5 pointer-events-none"></div>
+        <div className="container mx-auto px-6 space-y-10 relative z-10">
+          <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl shadow-2xl shadow-blue-600/30">CT</div>
+          <p className="text-[10px] text-slate-700 font-black uppercase tracking-[0.6em] max-w-md mx-auto leading-relaxed">
+            {getL('footer.copyright', t.copyright)}
+          </p>
+        </div>
       </footer>
       <ChatBot />
     </div>
