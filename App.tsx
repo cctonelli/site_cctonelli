@@ -41,8 +41,6 @@ const HomePage: React.FC = () => {
 
   const syncSupabaseData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
-    console.log("%c [SUPABASE] %c Iniciando Sincronização Global...", "background:#2563eb;color:#fff;padding:2px 5px;", "color:#2563eb;font-weight:bold;");
-
     try {
       const [m, i, p, test, s, car, user] = await Promise.all([
         fetchMetrics(),
@@ -56,8 +54,13 @@ const HomePage: React.FC = () => {
 
       const checkActive = (item: any) => {
         if (!item) return false;
-        if (item.is_active === undefined && item.approved === undefined) return true;
-        return (item.is_active === true || item.approved === true);
+        // Aceita true booleano ou "true" string
+        const isActive = item.is_active === true || item.is_active === 'true';
+        const isApproved = item.approved === true || item.approved === 'true';
+        
+        if (item.is_active !== undefined) return isActive;
+        if (item.approved !== undefined) return isApproved;
+        return true;
       };
 
       setCarouselImages((car as CarouselImage[] || []).filter(checkActive));
@@ -71,10 +74,8 @@ const HomePage: React.FC = () => {
         const profile = await getProfile((user as any).id);
         setUserProfile(profile);
       }
-
-      console.info(`%c [SYNC SUCCESS] %c Carousel: ${car.length} | Metrics: ${m.length} | Insights: ${i.length}`, "color:green;font-weight:bold;", "color:inherit;");
     } catch (err) {
-      console.error("Erro na Sincronização Supabase:", err);
+      console.error("Sync Error:", err);
     } finally {
       setLoading(false);
     }
@@ -95,14 +96,12 @@ const HomePage: React.FC = () => {
     return () => clearInterval(interval);
   }, [carouselImages.length]);
 
-  const resolveContent = (key: string, localFallback: string) => {
-    return dbContent[key] || localFallback;
-  };
+  const resolveContent = (key: string, localFallback: string) => dbContent[key] || localFallback;
 
   if (loading) return (
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60">Sincronizando Advisory Hub...</div>
+      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60">Arquitetando Experiência...</div>
     </div>
   );
 
@@ -131,7 +130,7 @@ const HomePage: React.FC = () => {
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      {/* Hero Dinâmico */}
+      {/* Hero */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden bg-brand-navy">
         <AnimatePresence mode="wait">
           {carouselImages.length > 0 ? (
@@ -169,7 +168,7 @@ const HomePage: React.FC = () => {
               {currentSlide?.subtitle || resolveContent('hero_subtitle', t.hero_subtitle)}
             </p>
             <div className="flex flex-wrap gap-6 pt-6">
-              <a href="#contact" className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/20">
+              <a href="#contact" className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all shadow-2xl">
                 {resolveContent('btn_diagnosis', t.btn_diagnosis)}
               </a>
               {carouselImages.length > 1 && (
@@ -184,7 +183,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Métricas Dinâmicas */}
+      {/* Métricas */}
       <section id="metrics" className="py-32 bg-[#010309] border-y border-white/5">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
@@ -194,13 +193,13 @@ const HomePage: React.FC = () => {
                 <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{m.label}</div>
               </div>
             )) : (
-              <div className="col-span-4 text-center text-slate-700 text-[10px] uppercase tracking-widest">Aguardando KPIs Estratégicos...</div>
+              <div className="col-span-4 text-center text-slate-700 text-[10px] uppercase tracking-widest"> KPIs em Processamento...</div>
             )}
           </div>
         </div>
       </section>
 
-      {/* Insights Dinâmicos */}
+      {/* Insights */}
       <section id="insights" className="py-40 dark:bg-slate-950">
         <div className="container mx-auto px-6">
           <div className="mb-20">
@@ -210,14 +209,14 @@ const HomePage: React.FC = () => {
             {insights.length > 0 ? insights.map(insight => (
               <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group space-y-6">
                 <div className="aspect-video rounded-[2.5rem] overflow-hidden bg-slate-900 border border-white/5">
-                  <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700" alt="" />
+                  <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all" alt="" />
                 </div>
                 <h3 className="text-2xl font-serif dark:text-white group-hover:text-blue-500 transition-colors italic">{insight.title}</h3>
                 <p className="text-slate-500 text-sm line-clamp-2 italic">{insight.excerpt}</p>
               </Link>
             )) : (
               <div className="col-span-3 py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem] text-slate-700 uppercase tracking-widest text-[10px]">
-                Knowledge Hub em Atualização...
+                Nenhum Insight Publicado.
               </div>
             )}
           </div>

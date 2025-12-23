@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { fetchInsightById, fetchTranslationsForEntity } from '../services/supabaseService';
+import { fetchInsightById } from '../services/supabaseService';
 import { Insight } from '../types';
 import { Language } from '../services/i18nService';
 
@@ -12,18 +12,14 @@ const ArticlePage: React.FC = () => {
   const lang = (queryParams.get('lang') as Language) || 'pt';
 
   const [article, setArticle] = useState<Insight | null>(null);
-  const [translations, setTranslations] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
+  // Fix: Fetched Insight directly and rely on its translation fields (title_en, etc.)
   useEffect(() => {
     if (id) {
       setLoading(true);
-      Promise.all([
-        fetchInsightById(id),
-        fetchTranslationsForEntity('insights', id)
-      ]).then(([data, trans]) => {
+      fetchInsightById(id).then((data) => {
         setArticle(data);
-        setTranslations(trans);
         setLoading(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }).catch((err) => {
@@ -33,9 +29,11 @@ const ArticlePage: React.FC = () => {
     }
   }, [id]);
 
+  // Fix: Updated resolve function to use the Insight object's localized fields
   const resolve = (field: string, base: string) => {
-    if (lang === 'pt') return base;
-    return translations[field]?.[lang] || base;
+    if (!article || lang === 'pt') return base;
+    const translatedValue = (article as any)[`${field}_${lang}`];
+    return translatedValue || base;
   };
 
   if (loading) return (
