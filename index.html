@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR" class="scroll-smooth">
 <head>
@@ -9,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   
-  <!-- Swiper CSS -->
+  <!-- Swiper Bundle CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
   <script>
@@ -55,15 +56,25 @@
     .bg-grid { background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1.5px, transparent 1.5px); background-size: 60px 60px; }
     .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
     
-    /* Swiper Pagination Customization */
-    .swiper-pagination-bullet { background: #fff !important; opacity: 0.3; }
-    .swiper-pagination-bullet-active { background: #2563eb !important; opacity: 1; width: 30px !important; border-radius: 4px !important; }
+    /* Custom Swiper Pagination */
+    .swiper-pagination-bullet { 
+      background: #fff !important; 
+      opacity: 0.3 !important; 
+      transition: all 0.3s ease;
+    }
+    .swiper-pagination-bullet-active { 
+      background: #2563eb !important; 
+      opacity: 1 !important; 
+      width: 32px !important; 
+      border-radius: 4px !important; 
+    }
     
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #010309; }
     ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #2563eb; }
   </style>
+
 <script type="importmap">
 {
   "imports": {
@@ -80,6 +91,7 @@
     "swiper/modules": "https://esm.sh/swiper@11.1.1/modules",
     "swiper/css": "data:text/javascript,export default {}",
     "swiper/css/pagination": "data:text/javascript,export default {}",
+    "swiper/css/effect-fade": "data:text/javascript,export default {}",
     "@tiptap/starter-kit": "https://esm.sh/@tiptap/starter-kit@2.10.3?external=react,react-dom",
     "@tiptap/react": "https://esm.sh/@tiptap/react@2.10.3?external=react,react-dom",
     "@tiptap/pm": "https://esm.sh/@tiptap/pm@2.10.3?external=react,react-dom",
