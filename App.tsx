@@ -39,14 +39,16 @@ const HomePage: React.FC = () => {
 
   const checkActive = (item: any) => {
     if (!item) return false;
-    const active = item.is_active ?? item.approved ?? true;
-    return active === true || active === 'true' || active === 1;
+    // Verifica se is_active existe; se não existir (como em products), assume true.
+    const activeVal = item.is_active !== undefined ? item.is_active : (item.approved !== undefined ? item.approved : true);
+    return activeVal === true || activeVal === 'true' || activeVal === 1;
   };
 
   const syncSupabaseData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
+    console.log("[App] Sincronizando dados públicos do Supabase...");
+    
     try {
-      // Fetch concomitante para performance
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
@@ -61,11 +63,17 @@ const HomePage: React.FC = () => {
       setProducts(p || []);
       setTestimonials((test || []).filter(checkActive));
       setDbContent(s || {});
-      setCarouselImages((car || []).filter(checkActive));
       
-      console.log("[App Sync] Dados carregados:", { slides: car?.length, metrics: m?.length });
+      const activeSlides = (car || []).filter(checkActive);
+      setCarouselImages(activeSlides);
+      
+      console.log("[App] Sincronização concluída:", { 
+        slides: activeSlides.length, 
+        metrics: (m || []).length,
+        insights: (i || []).length
+      });
     } catch (err) {
-      console.error("[App Sync] Erro crítico:", err);
+      console.error("[App] Erro crítico na sincronização:", err);
     } finally {
       if (!isSilent) setLoading(false);
     }
@@ -98,7 +106,7 @@ const HomePage: React.FC = () => {
     // Ativa Realtime Sync em todas as tabelas vitais
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
     const subs = tables.map(table => subscribeToChanges(table, () => {
-      console.log(`[Realtime] Mudança detectada na tabela: ${table}`);
+      console.log(`[Realtime] Atualização detectada em ${table}. Recarregando...`);
       syncSupabaseData(true);
     }));
     return () => subs.forEach(s => s.unsubscribe());
@@ -109,7 +117,7 @@ const HomePage: React.FC = () => {
   if (loading) return (
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Iniciando Advisory Hub...</div>
+      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Sincronizando Advisory Hub...</div>
     </div>
   );
 
@@ -136,7 +144,7 @@ const HomePage: React.FC = () => {
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      {/* Hero Dinâmico: Slides do Supabase ou Globo de Fallback */}
+      {/* Hero Dinâmico: Slides do Supabase ou Fallback se vazio */}
       <HeroCarousel 
         slides={carouselImages} 
         t={t} 
