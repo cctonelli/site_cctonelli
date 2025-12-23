@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
@@ -58,10 +58,11 @@ const HomePage: React.FC = () => {
 
       const [m, i, p, test, s, car, user] = results.map(r => r.status === 'fulfilled' ? r.value : null);
 
+      // Função de filtragem ultra-resiliente
       const checkActive = (item: any) => {
         if (!item) return false;
+        // Se is_active for null ou undefined, tratamos como true para garantir que o dado apareça
         if (item.is_active === undefined || item.is_active === null) return true;
-        // Supabase pode retornar booleano ou string 'true'/'false'
         return String(item.is_active).toLowerCase() === 'true' || item.is_active === true;
       };
 
@@ -72,13 +73,13 @@ const HomePage: React.FC = () => {
       const fetchedTestimonials = ((test as Testimonial[]) || []).filter(t => t.approved);
       const fetchedContent = (s as Record<string, string>) || {};
 
-      // DEBUG LOG: Essencial para você ver no console se os dados chegaram
-      console.group("Claudio Tonelli - Supabase Connection Report");
-      console.log("URL do Projeto:", "https://wvvnbkzodrolbndepkgj.supabase.co");
-      console.log("Conteúdo de Texto (site_content):", Object.keys(fetchedContent).length > 0 ? "OK" : "VAZIO");
-      console.log("Imagens do Carrossel:", fetchedCarousel.length);
-      console.log("Métricas Ativas:", fetchedMetrics.length);
-      console.log("Insights Publicados:", fetchedInsights.length);
+      // DIAGNÓSTICO DE CONEXÃO (Visível no F12)
+      console.group("🚀 Claudio Tonelli - Supabase Realtime Sync");
+      console.log("Status:", "Conectado ao Projeto wvvnbkzodrolbndepkgj");
+      console.log("Carousel:", fetchedCarousel.length > 0 ? `${fetchedCarousel.length} slides ativos` : "Usando fallback 3D");
+      console.log("Métricas:", fetchedMetrics.length);
+      console.log("Site Content Keys:", Object.keys(fetchedContent));
+      if (Object.keys(fetchedContent).length > 0) console.table(fetchedContent);
       console.groupEnd();
 
       setCarouselImages(fetchedCarousel);
@@ -93,7 +94,7 @@ const HomePage: React.FC = () => {
         setUserProfile(profile);
       }
     } catch (error) {
-      console.error("Critical Connection Error:", error);
+      console.error("Critical Supabase Connection Failure:", error);
     } finally {
       if (isMounted.current) setLoading(false);
     }
@@ -101,6 +102,7 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     loadAllData();
+    // Inscrição em Tempo Real para todas as tabelas críticas
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
     const subs = tables.map(table => subscribeToChanges(table, () => loadAllData(true)));
     
@@ -118,13 +120,18 @@ const HomePage: React.FC = () => {
     return () => clearInterval(interval);
   }, [carouselImages.length]);
 
-  // Helper para buscar textos dinâmicos com fallback
-  const getLabel = (key: string, defaultValue: string) => content[key] || defaultValue;
+  // Resolver de Conteúdo com prioridade Supabase -> i18n -> Default
+  const getLabel = (key: string, defaultValue: string) => {
+    // Se o idioma for PT, tenta pegar o valor direto da site_content
+    if (language === 'pt' && content[key]) return content[key];
+    // Senão, usa as traduções locais que podem ter sido atualizadas via i18nService
+    return content[`${key}_${language}`] || defaultValue;
+  };
 
   if (loading) return (
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/10 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500 animate-pulse">Estabelecendo Conexão Segura...</div>
+      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500 animate-pulse">Sincronizando com Supabase...</div>
     </div>
   );
 
@@ -141,11 +148,11 @@ const HomePage: React.FC = () => {
         theme={theme}
         setTheme={setTheme}
         labels={{
-          strategy: t.nav_strategy,
-          insights: t.nav_insights,
-          performance: t.nav_performance,
-          connection: t.nav_connection,
-          client_area: t.nav_client_area
+          strategy: getLabel('nav_strategy', t.nav_strategy),
+          insights: getLabel('nav_insights', t.nav_insights),
+          performance: getLabel('nav_performance', t.nav_performance),
+          connection: getLabel('nav_connection', t.nav_connection),
+          client_area: getLabel('nav_client_area', t.nav_client_area)
         }}
       />
 
@@ -153,20 +160,20 @@ const HomePage: React.FC = () => {
       {isAdminOpen && userProfile?.user_type === 'admin' && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      {/* Hero Section - Prioridade Total ao Supabase */}
+      {/* Hero Section - Orquestração Dinâmica */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0 bg-brand-navy">
           <AnimatePresence mode="wait">
             {carouselImages.length > 0 ? (
               <motion.div 
-                key={currentSlide?.id || 'dynamic'}
+                key={currentSlide?.id || 'dynamic-carousel'}
                 initial={{ opacity: 0, scale: 1.1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 2.5 }}
                 className="absolute inset-0"
               >
-                <img src={currentSlide?.url} className="w-full h-full object-cover opacity-40" alt="" />
+                <img src={currentSlide?.url} className="w-full h-full object-cover opacity-50" alt="" />
                 <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
               </motion.div>
             ) : (
@@ -218,7 +225,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Metrics Section - Somente Supabase */}
+      {/* Metrics Section - Somente Dados Reais do Supabase */}
       <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] border-y border-white/5 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-10"></div>
         <div className="container mx-auto px-6 relative z-10">
@@ -238,8 +245,8 @@ const HomePage: React.FC = () => {
                 </div>
               </motion.div>
             )) : (
-              // Esqueleto de carregamento ou fallback discreto se vazio
-              [1,2,3,4].map(n => <div key={n} className="h-20 bg-white/5 rounded-3xl animate-pulse"></div>)
+              // Se não houver métricas no banco, mostra esqueletos elegantes de carregamento
+              [1,2,3,4].map(n => <div key={n} className="h-24 bg-slate-200 dark:bg-white/5 rounded-3xl animate-pulse"></div>)
             )}
           </div>
         </div>

@@ -5,6 +5,7 @@ import {
   Testimonial, Profile, Contact, CarouselImage
 } from '../types';
 
+// URL e Chave ANON confirmadas pelo usuário
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
@@ -59,7 +60,7 @@ export const fetchCarouselImages = async () => {
     .order('display_order', { ascending: true });
     
   if (error) {
-    console.error("Supabase Error [Carousel Fetch]:", error.message);
+    console.error("Supabase [Carousel] Error:", error.message);
     return [];
   }
   return data || [];
@@ -67,7 +68,7 @@ export const fetchCarouselImages = async () => {
 
 export const fetchInsights = async () => {
   const { data, error } = await supabase.from('insights').select('*').order('published_at', { ascending: false });
-  if (error) console.error("Supabase Error [Insights Fetch]:", error.message);
+  if (error) console.error("Supabase [Insights] Error:", error.message);
   return error ? [] : data || [];
 };
 
@@ -78,25 +79,25 @@ export const fetchInsightById = async (id: string) => {
 
 export const fetchMetrics = async () => {
   const { data, error } = await supabase.from('metrics').select('*').order('display_order', { ascending: true });
-  if (error) console.error("Supabase Error [Metrics Fetch]:", error.message);
+  if (error) console.error("Supabase [Metrics] Error:", error.message);
   return error ? [] : data || [];
 };
 
 export const fetchProducts = async () => {
   const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-  if (error) console.error("Supabase Error [Products Fetch]:", error.message);
+  if (error) console.error("Supabase [Products] Error:", error.message);
   return error ? [] : data || [];
 };
 
 export const fetchTestimonials = async () => {
   const { data, error } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false });
-  if (error) console.error("Supabase Error [Testimonials Fetch]:", error.message);
+  if (error) console.error("Supabase [Testimonials] Error:", error.message);
   return error ? [] : data || [];
 };
 
 export const fetchSiteContent = async (page: string) => {
   const { data, error } = await supabase.from('site_content').select('key, value').eq('page', page);
-  if (error) console.error("Supabase Error [SiteContent Fetch]:", error.message);
+  if (error) console.error("Supabase [SiteContent] Error:", error.message);
   return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
 };
 
@@ -110,18 +111,7 @@ export const fetchContacts = async () => {
   return error ? [] : data || [];
 };
 
-export const deleteContact = async (id: string) => {
-  const { error } = await supabase.from('contacts').delete().eq('id', id);
-  return !error;
-};
-
-export const submitContact = async (contact: Contact) => {
-  const { error } = await supabase.from('contacts').insert([contact]);
-  return !error;
-};
-
-// --- TRANSLATIONS ---
-// Added to fix missing export errors in components/AdminDashboard.tsx and components/ArticlePage.tsx
+// --- TRANSLATIONS (ENTITY-SPECIFIC) ---
 export const fetchTranslationsForEntity = async (entityTable: string, entityId: string) => {
   const { data, error } = await supabase
     .from('translations')
@@ -138,7 +128,6 @@ export const fetchTranslationsForEntity = async (entityTable: string, entityId: 
   }, {});
 };
 
-// Added to fix missing export error in components/AdminDashboard.tsx
 export const upsertTranslation = async (entityTable: string, entityId: string, field: string, language: string, translation: string) => {
   const { error } = await supabase
     .from('translations')
@@ -152,7 +141,7 @@ export const upsertTranslation = async (entityTable: string, entityId: string, f
   return !error;
 };
 
-// --- ADMIN CMS ---
+// --- ADMIN CMS ACTIONS ---
 export const addInsight = async (insight: any) => {
   const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select();
   return error ? null : data[0];
@@ -173,13 +162,38 @@ export const updateTestimonial = async (id: string, updates: Partial<Testimonial
   return !error;
 };
 
-export const deleteTestimonial = async (id: string) => {
-  const { error } = await supabase.from('testimonials').delete().eq('id', id);
+export const updateSiteContent = async (key: string, value: string, page: string = 'home') => {
+  const { error } = await supabase.from('site_content').upsert({ key, value, page }, { onConflict: 'key' });
   return !error;
 };
 
-export const updateSiteContent = async (key: string, value: string, page: string = 'home') => {
-  const { error } = await supabase.from('site_content').upsert({ key, value, page }, { onConflict: 'key' });
+export const addCarouselImage = async (image: any) => {
+  const { data, error } = await supabase.from('carousel_images').insert([image]).select();
+  return error ? null : data[0];
+};
+
+export const updateCarouselImage = async (id: string, updates: Partial<CarouselImage>) => {
+  const { error } = await supabase.from('carousel_images').update(updates).eq('id', id);
+  return !error;
+};
+
+export const deleteCarouselImage = async (id: string) => {
+  const { error } = await supabase.from('carousel_images').delete().eq('id', id);
+  return !error;
+};
+
+export const submitContact = async (contact: Contact) => {
+  const { error } = await supabase.from('contacts').insert([contact]);
+  return !error;
+};
+
+export const deleteContact = async (id: string) => {
+  const { error } = await supabase.from('contacts').delete().eq('id', id);
+  return !error;
+};
+
+export const deleteTestimonial = async (id: string) => {
+  const { error } = await supabase.from('testimonials').delete().eq('id', id);
   return !error;
 };
 
@@ -210,20 +224,5 @@ export const updateMetric = async (id: string, updates: Partial<Metric>) => {
 
 export const deleteMetric = async (id: string) => {
   const { error } = await supabase.from('metrics').delete().eq('id', id);
-  return !error;
-};
-
-export const addCarouselImage = async (image: any) => {
-  const { data, error } = await supabase.from('carousel_images').insert([image]).select();
-  return error ? null : data[0];
-};
-
-export const updateCarouselImage = async (id: string, updates: Partial<CarouselImage>) => {
-  const { error } = await supabase.from('carousel_images').update(updates).eq('id', id);
-  return !error;
-};
-
-export const deleteCarouselImage = async (id: string) => {
-  const { error } = await supabase.from('carousel_images').delete().eq('id', id);
   return !error;
 };
