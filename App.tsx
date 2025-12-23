@@ -15,7 +15,7 @@ import ArticlePage from './components/ArticlePage';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
-  getCurrentUser, getProfile, signOut, subscribeToChanges
+  getProfile, signOut, subscribeToChanges, supabase
 } from './services/supabaseService';
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
@@ -41,51 +41,68 @@ const HomePage: React.FC = () => {
 
   const checkActive = (item: any) => {
     if (!item) return false;
-    // Normalização agressiva de tipos (booleano, string "true", número 1)
     const active = item.is_active ?? item.approved ?? true;
     return active === true || active === 'true' || active === 1;
   };
 
   const syncSupabaseData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
-    console.log("[Supabase Sync] Iniciando sincronização...");
+    console.log("[Data Sync] Fetching global assets...");
 
     try {
-      const [m, i, p, test, s, car, user] = await Promise.allSettled([
+      const results = await Promise.allSettled([
         fetchMetrics(),
         fetchInsights(),
         fetchProducts(),
         fetchTestimonials(),
         fetchSiteContent('home'),
-        fetchCarouselImages(),
-        getCurrentUser()
+        fetchCarouselImages()
       ]);
 
-      if (car.status === 'fulfilled') setCarouselImages((car.value as any[]).filter(checkActive));
-      if (m.status === 'fulfilled') setMetrics((m.value as any[]).filter(checkActive));
-      if (i.status === 'fulfilled') setInsights((i.value as any[]).filter(checkActive));
-      if (p.status === 'fulfilled') setProducts(p.value as any[]);
-      if (test.status === 'fulfilled') setTestimonials((test.value as any[]).filter(checkActive));
-      if (s.status === 'fulfilled') setDbContent(s.value as Record<string, string>);
+      if (results[0].status === 'fulfilled') setMetrics((results[0].value as any[]).filter(checkActive));
+      if (results[1].status === 'fulfilled') setInsights((results[1].value as any[]).filter(checkActive));
+      if (results[2].status === 'fulfilled') setProducts(results[2].value as any[]);
+      if (results[3].status === 'fulfilled') setTestimonials((results[3].value as any[]).filter(checkActive));
+      if (results[4].status === 'fulfilled') setDbContent(results[4].value as Record<string, string>);
+      if (results[5].status === 'fulfilled') setCarouselImages((results[5].value as any[]).filter(checkActive));
+    } catch (err) {
+      console.error("[Data Sync] Error:", err);
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
+  }, []);
 
-      if (user.status === 'fulfilled' && user.value) {
-        const profile = await getProfile((user.value as any).id);
+  // Monitoramento de Sessão e Auth
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const profile = await getProfile(session.user.id);
         setUserProfile(profile);
       }
-    } catch (err) {
-      console.error("[Supabase Sync] Erro crítico:", err);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[Auth Event]", event);
+      if (event === 'SIGNED_IN' && session?.user) {
+        const profile = await getProfile(session.user.id);
+        setUserProfile(profile);
+      } else if (event === 'SIGNED_OUT') {
+        setUserProfile(null);
+        setIsAdminOpen(false);
+        setIsClientPortalOpen(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     syncSupabaseData();
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
-    const subs = tables.map(table => subscribeToChanges(table, () => {
-      console.log(`[Realtime] Alteração detectada em: ${table}`);
-      syncSupabaseData(true);
-    }));
+    const subs = tables.map(table => subscribeToChanges(table, () => syncSupabaseData(true)));
     return () => subs.forEach(s => s.unsubscribe());
   }, [syncSupabaseData]);
 

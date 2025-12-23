@@ -8,7 +8,15 @@ import {
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Configuração robusta para persistência de sessão
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage
+  }
+});
 
 // Helper de Realtime
 export const subscribeToChanges = (table: string, callback: () => void) => {
@@ -33,16 +41,26 @@ export const signUp = async (email: string, password?: string, metadata?: Partia
   });
 };
 
-export const signOut = async () => await supabase.auth.signOut();
+export const signOut = async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) console.error("Logout error:", error);
+  localStorage.removeItem('supabase.auth.token'); // Limpeza forçada
+};
 
 export const getCurrentUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user || null;
 };
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
-  return error ? null : data;
+  try {
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.warn("Profile fetch error:", err);
+    return null;
+  }
 };
 
 // --- GENERIC FETCHERS ---

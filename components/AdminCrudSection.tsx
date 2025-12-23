@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../services/supabaseService';
 
@@ -31,16 +31,16 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+  
+  const mountedRef = useRef(true);
 
   const loadData = useCallback(async () => {
-    if (loading) return;
     setLoading(true);
-    console.log(`[Admin] Carregando tabela: ${tableName}`);
+    console.log(`[Admin] Sincronizando: ${tableName}`);
     
     try {
       let query = supabase.from(tableName).select('*');
       
-      // Ordenação Inteligente Fallback
       if (fields.some(f => f.key === 'display_order')) {
         query = query.order('display_order', { ascending: true });
       } else if (fields.some(f => f.key === 'created_at')) {
@@ -51,20 +51,26 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
       const { data, error } = await query;
       
-      if (error) throw error;
-      setItems(data || []);
-      setFilteredItems(data || []);
+      if (mountedRef.current) {
+        if (error) throw error;
+        setItems(data || []);
+        setFilteredItems(data || []);
+      }
     } catch (err: any) {
-      console.error(`[Admin] Erro na tabela ${tableName}:`, err);
-      setMessage({ text: 'Erro ao carregar banco: ' + (err.message || 'Desconhecido'), type: 'error' });
+      console.error(`[Admin Error] ${tableName}:`, err);
+      if (mountedRef.current) {
+        setMessage({ text: 'Falha na conexão: ' + (err.message || 'Erro RLS/Banco'), type: 'error' });
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [tableName, fields, idColumn]);
 
   useEffect(() => {
+    mountedRef.current = true;
     loadData();
-  }, [tableName]); // Recarrega apenas quando a tabela mudar
+    return () => { mountedRef.current = false; };
+  }, [loadData]);
 
   useEffect(() => {
     const filtered = items.filter(item =>
@@ -107,32 +113,31 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
       if (error) throw error;
 
-      setMessage({ text: 'Sincronizado com sucesso!', type: 'success' });
+      setMessage({ text: 'Publicado com sucesso!', type: 'success' });
       setFormData({});
       setEditingId(null);
       await loadData();
     } catch (e: any) {
       console.error("[Admin Save Error]", e);
-      setMessage({ text: 'Falha ao salvar: ' + (e.message || 'JSON inválido ou erro de banco'), type: 'error' });
+      setMessage({ text: 'Erro ao salvar: ' + (e.message || 'Verifique o formato JSON'), type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: any) => {
-    if (!confirm('Excluir este registro?')) return;
+    if (!confirm('Excluir permanentemente este registro?')) return;
     try {
       const { error } = await supabase.from(tableName).delete().eq(idColumn, id);
       if (error) throw error;
       loadData();
     } catch (e: any) {
-      alert("Erro ao excluir: " + e.message);
+      alert("Erro na exclusão: " + e.message);
     }
   };
 
   const handleToggle = async (id: any, column: string, val: any) => {
     try {
-      // Normalização para o toggle
       const currentBool = val === true || val === 'true' || val === 1;
       const newVal = !currentBool;
       const { error } = await supabase.from(tableName).update({ [column]: newVal }).eq(idColumn, id);
@@ -176,7 +181,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         </div>
         
         {loading && items.length === 0 ? (
-          <div className="py-20 text-center text-slate-600 animate-pulse text-[10px] uppercase font-black tracking-widest">Acessando Supabase...</div>
+          <div className="py-20 text-center text-slate-600 animate-pulse text-[10px] uppercase font-black tracking-widest">Conectando ao Advisory Core...</div>
         ) : filteredItems.length === 0 ? (
           <div className="py-20 text-center text-slate-700 border-2 border-dashed border-white/5 rounded-[3rem] text-[10px] uppercase font-black tracking-widest">Nenhum registro encontrado.</div>
         ) : (
