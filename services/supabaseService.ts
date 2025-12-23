@@ -5,7 +5,6 @@ import {
   Testimonial, Profile, Contact, CarouselImage
 } from '../types';
 
-// URL e Chave ANON confirmadas pelo usuário
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
@@ -14,14 +13,20 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true
+  },
+  global: {
+    headers: { 'x-client-info': 'claudio-tonelli-v5' }
   }
 });
 
-// --- REALTIME HELPERS ---
+// Helper de Realtime
 export const subscribeToChanges = (table: string, callback: () => void) => {
   return supabase
-    .channel(`public:${table}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
+    .channel(`realtime:${table}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+      console.log(`%c Realtime %c Mudança detectada na tabela: ${table}`, "background:#2563eb;color:#fff;padding:2px;border-radius:3px;", "color:#2563eb;");
+      callback();
+    })
     .subscribe();
 };
 
@@ -52,24 +57,21 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
   return error ? null : data;
 };
 
-// --- CONTENT FETCHING ---
+// --- CONTENT FETCHING (COM LOGS DE ERRO MELHORADOS) ---
 export const fetchCarouselImages = async () => {
   const { data, error } = await supabase
     .from('carousel_images')
     .select('*')
     .order('display_order', { ascending: true });
     
-  if (error) {
-    console.error("Supabase [Carousel] Error:", error.message);
-    return [];
-  }
+  if (error) console.error("Supabase Error [Carousel]:", error.message);
   return data || [];
 };
 
 export const fetchInsights = async () => {
   const { data, error } = await supabase.from('insights').select('*').order('published_at', { ascending: false });
-  if (error) console.error("Supabase [Insights] Error:", error.message);
-  return error ? [] : data || [];
+  if (error) console.error("Supabase Error [Insights]:", error.message);
+  return data || [];
 };
 
 export const fetchInsightById = async (id: string) => {
@@ -79,39 +81,38 @@ export const fetchInsightById = async (id: string) => {
 
 export const fetchMetrics = async () => {
   const { data, error } = await supabase.from('metrics').select('*').order('display_order', { ascending: true });
-  if (error) console.error("Supabase [Metrics] Error:", error.message);
-  return error ? [] : data || [];
+  if (error) console.error("Supabase Error [Metrics]:", error.message);
+  return data || [];
 };
 
 export const fetchProducts = async () => {
   const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-  if (error) console.error("Supabase [Products] Error:", error.message);
-  return error ? [] : data || [];
+  if (error) console.error("Supabase Error [Products]:", error.message);
+  return data || [];
 };
 
 export const fetchTestimonials = async () => {
   const { data, error } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false });
-  if (error) console.error("Supabase [Testimonials] Error:", error.message);
-  return error ? [] : data || [];
+  if (error) console.error("Supabase Error [Testimonials]:", error.message);
+  return data || [];
 };
 
 export const fetchSiteContent = async (page: string) => {
   const { data, error } = await supabase.from('site_content').select('key, value').eq('page', page);
-  if (error) console.error("Supabase [SiteContent] Error:", error.message);
+  if (error) console.error("Supabase Error [SiteContent]:", error.message);
   return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
 };
 
 export const fetchAllSiteContent = async () => {
   const { data, error } = await supabase.from('site_content').select('*').order('key', { ascending: true });
-  return error ? [] : data || [];
+  return data || [];
 };
 
 export const fetchContacts = async () => {
   const { data, error } = await supabase.from('contacts').select('*').order('created_at', { ascending: false });
-  return error ? [] : data || [];
+  return data || [];
 };
 
-// --- TRANSLATIONS (ENTITY-SPECIFIC) ---
 export const fetchTranslationsForEntity = async (entityTable: string, entityId: string) => {
   const { data, error } = await supabase
     .from('translations')
@@ -141,7 +142,7 @@ export const upsertTranslation = async (entityTable: string, entityId: string, f
   return !error;
 };
 
-// --- ADMIN CMS ACTIONS ---
+// --- ADMIN ACTIONS ---
 export const addInsight = async (insight: any) => {
   const { data, error } = await supabase.from('insights').insert([{ ...insight, published_at: new Date().toISOString() }]).select();
   return error ? null : data[0];
