@@ -90,10 +90,23 @@ export interface SiteContent {
   key: string;
   value: string;
   page: string;
+  description?: string;
+}
+
+export interface Tool {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string | null;
+  admin_only: boolean;
+  config: any;
+  created_at?: string;
 }
 
 export interface Contact {
+  id?: string;
   name: string;
   email: string;
   message: string;
+  created_at?: string;
 }
