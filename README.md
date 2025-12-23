@@ -1,85 +1,85 @@
+# Claudio Tonelli Consultoria — Advisory Hub v6.5
 
-# Claudio Tonelli Consultoria - Advisory Hub v6.5
+O site institucional da **Claudio Tonelli Consultoria** é uma plataforma digital de alto padrão (estilo McKinsey/BCG), desenvolvida para CEOs e gestores que buscam estratégia de elite, transformação digital e excelência operacional. 
 
-Este é o ecossistema digital premium da **Claudio Tonelli Consultoria**, projetado para oferecer uma experiência imersiva de nível "McKinsey/BCG" para CEOs e gestores. O projeto evoluiu de uma SPA estática para uma plataforma dinâmica, resiliente e movida por Inteligência Artificial.
+Este ecossistema é 100% dinâmico, movido por dados em tempo real e inteligência artificial, oferecendo total autonomia ao administrador através de um CMS (Content Management System) proprietário.
 
-## 🚀 Retrospectiva do Projeto: Do Estático ao Elite
-
-O projeto passou por três grandes fases de transformação:
-1.  **v1.0 - v3.0 (Legacy):** Site em Angular com visual genérico e conteúdo fixo.
-2.  **v4.0 - v5.5 (Transição):** Migração para React 19 + Vite. Implementação inicial do Supabase e Admin Dashboard.
-3.  **v6.0 - v6.5 (Estado Atual):** Ativação do **Realtime Sync**, **Hero Carousel Dinâmico**, **IA Gemini Integrada** e **Persistência de Sessão Robusta**.
+**Link do Projeto:** [Vercel Deployment](https://site-cctonelli.vercel.app)
 
 ---
 
-## 🛠️ Stack Tecnológica
+## 🚀 Retrospectiva: A Evolução para a Excelência
 
-- **Frontend:** React 19 (Esm.sh) + Tailwind CSS.
-- **Backend/Database:** Supabase (PostgreSQL + Realtime).
-- **Autenticação:** Supabase Auth com persistência em `localStorage`.
-- **Inteligência Artificial:** Google Gemini API (Model: `gemini-3-flash-preview`).
-- **Animações & 3D:** Framer Motion + Three.js (Globe Visualization).
-- **Componentes UI:** Swiper (Carousel), Tiptap (Rich Text Editor).
+O projeto passou por uma transformação radical para atingir o estado de maturidade atual:
 
----
-
-## 🔐 Gestão de Sessões e Autenticação
-
-A arquitetura de segurança utiliza o **Supabase Auth** para diferenciar acessos:
-
-### Funções de Sessão
-- **Persistence Logic:** A sessão é salva no `localStorage` e renovada automaticamente via `autoRefreshToken`, evitando logouts indesejados ao recarregar a página.
-- **Role-Based Access (RBAC):**
-    - **Admin (`user_type: 'admin'`):** Acesso total ao `AdminDashboard` para gestão de métricas, produtos e insights.
-    - **Client (`user_type: 'client'`):** Acesso ao `ClientPortal` com recomendações personalizadas por IA.
-- **Sincronização Global:** O estado `userProfile` no `App.tsx` reage instantaneamente a eventos de login/logout através do listener `onAuthStateChange`.
+1.  **Fase 1 (Legacy):** Site estático em Angular com design genérico e conteúdo hard-coded.
+2.  **Fase 2 (Transição):** Migração para **React 19 + Vite**, adoção do **Tailwind CSS** e integração inicial com **Supabase**.
+3.  **Fase 3 (v6.5 - Atual):** Implementação de **Realtime Sync**, **Hero Carousel Dinâmico**, Persistência de Sessão e **Advisory Core via IA Gemini**.
 
 ---
 
-## 📊 Integração de Dados (Supabase)
+## 🛠️ Stack Tecnológica de Ponta
 
-O site é 100% orientado a dados. Abaixo, o mapeamento das sessões:
+*   **Frontend:** React 19 + Vite (performance extrema e renderização ultra-rápida).
+*   **Backend & Realtime:** Supabase (PostgreSQL) com escuta ativa para atualizações instantâneas.
+*   **IA Generativa:** Google Gemini API (`gemini-3-flash-preview`) para insights e recomendações.
+*   **Animações & 3D:** Three.js (Globo Interativo) + Framer Motion.
+*   **UI Components:** Swiper.js (Carousel Premium) + Tiptap (Editor de Texto Rico).
 
-| Tabela | Função no Site | Local de Exibição |
+---
+
+## 🔐 Gestão de Sessões e Segurança
+
+A plataforma utiliza o **Supabase Auth** com uma camada de persistência robusta:
+*   **Persistência:** Sessão mantida via `localStorage` com `autoRefreshToken`, garantindo que o executivo permaneça logado entre navegações.
+*   **RBAC (Role-Based Access Control):** 
+    *   **Admin:** Acesso ao Dashboard de Gestão Total.
+    *   **Client:** Acesso ao Portal do Cliente com recomendações personalizadas por IA.
+*   **RLS (Row Level Security):** Políticas de segurança a nível de banco de dados para proteção de dados sensíveis.
+
+---
+
+## 📊 Integração de Dados (Data-Driven CMS)
+
+O site pulsa de acordo com o banco de dados. Cada seção da Home é mapeada diretamente no Supabase:
+
+| Seção | Tabela Supabase | Funcionalidade |
 | :--- | :--- | :--- |
-| `carousel_images` | Imagens de fundo e textos de impacto. | Hero Section (Topo) |
-| `metrics` | KPIs quantitativos (Ex: +25 anos). | Seção de Performance |
-| `insights` | Artigos técnicos e notícias. | Knowledge Hub / Article Page |
-| `products` | Mentorias, cursos e serviços. | Store / Client Portal |
-| `site_content` | Textos globais, badges e labels. | Global (via `resolveContent`) |
-| `profiles` | Dados de usuários e permissões. | Navegação e Portais |
-| `contacts` | Leads capturados no formulário. | Admin (Leads CRM) |
+| **Hero** | `carousel_images` | Slides dinâmicos com títulos e imagens de alta resolução. |
+| **KPIs** | `metrics` | Números de impacto (Projetos, Experiência, LinkedIn). |
+| **Knowledge** | `insights` | Artigos técnicos com suporte a HTML rico. |
+| **Solutions** | `products` | Loja de serviços, mentorias e produtos digitais. |
+| **Social Proof** | `testimonials` | Depoimentos de clientes aprovados pelo admin. |
+| **Copywriting** | `site_content` | Gestão de textos globais (menus, botões, headers). |
 
 ---
 
 ## 🧠 Inteligência Artificial (Advisory Core)
 
-Utilizamos o SDK `@google/genai` para duas funções críticas:
-1.  **ChatBot Estratégico:** Consultoria em tempo real baseada em instruções sistêmicas de alto nível.
-2.  **Personalized Recommendations:** No Portal do Cliente, a IA analisa o perfil do usuário e sugere o produto/serviço mais adequado do catálogo.
+Integramos o SDK `@google/genai` para oferecer:
+1.  **Consultor Virtual:** Um chat estratégico que utiliza as instruções sistêmicas da Claudio Tonelli para responder dúvidas executivas.
+2.  **Smart Recommendations:** No Portal do Cliente, a IA analisa o perfil do usuário e sugere o serviço/produto do catálogo que melhor se adapta às suas necessidades de ROI.
 
 ---
 
-## 📐 Estrutura de Seções da Home
+## 📐 Estrutura de Navegação (Funil de Autoridade)
 
-1.  **Hero Dinâmico:** Se houver slides ativos em `carousel_images`, exibe o carrossel com efeito *Glassmorphism*. Fallback: `ThreeGlobe`.
-2.  **Performance Metrics:** Grid de 4 colunas exibindo o impacto da consultoria.
-3.  **Knowledge Hub:** Vitrine de Insights filtrados por `is_active`.
-4.  **Solution Store:** Sessão de produtos com integração de link externo para pagamento/contratação.
-5.  **Social Proof:** Depoimentos aprovados pelo administrador.
-6.  **Direct Connection:** Formulário de captura de leads.
+1.  **Hero Carousel:** Impacto visual imediato com Glassmorphism.
+2.  **Metrics Bar:** Validação imediata de autoridade através de números.
+3.  **Insights Hub:** Prova de conceito e autoridade intelectual.
+4.  **Soluções:** Catálogo direto para contratação e aquisição.
+5.  **Formulário Estratégico:** Captura de leads qualificados integrada ao CRM.
 
 ---
 
 ## 📈 Versionamento e Roadmap
 
-- **v6.0:** Correção de Deadlocks no Admin e Mounted Guards nos Effects.
-- **v6.2:** Ativação do Hero Carousel via Swiper.
-- **v6.5 (Current):** Sincronização em tempo real (Realtime) em todas as tabelas públicas.
-- **Próximos Passos (v7.0):** Implementação completa do Seletor de Idiomas (EN/ES) em todas as seções via `content_translations`.
+*   **v6.0:** Estabilidade de conexões e tratamento de concorrência no Admin.
+*   **v6.2:** Ativação do Carrossel dinâmico e suporte a Realtime.
+*   **v6.5 (Atual):** Refinamento estético, persistência de sessão e integração Gemini v3.
+*   **v7.0 (Próximo):** Internacionalização (i18n) completa para Inglês e Espanhol em todas as tabelas.
 
 ---
 
-**Administrador Responsável:** Claudio Tonelli  
-**Desenvolvimento:** Senior Frontend Advisory Engine  
-**Status:** Produção / Estável
+**Claudio Tonelli Consultoria**  
+*Arquitetando o amanhã através de rigor metodológico e inovação digital.*
