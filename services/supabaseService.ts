@@ -8,7 +8,6 @@ import {
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Configuração robusta para persistência de sessão
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
@@ -18,7 +17,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-// Helper de Realtime
 export const subscribeToChanges = (table: string, callback: () => void) => {
   return supabase
     .channel(`public:${table}`)
@@ -26,7 +24,6 @@ export const subscribeToChanges = (table: string, callback: () => void) => {
     .subscribe();
 };
 
-// --- AUTH ---
 export const signIn = async (email: string, password?: string) => {
   return password 
     ? await supabase.auth.signInWithPassword({ email, password })
@@ -42,9 +39,8 @@ export const signUp = async (email: string, password?: string, metadata?: Partia
 };
 
 export const signOut = async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) console.error("Logout error:", error);
-  localStorage.removeItem('supabase.auth.token'); // Limpeza forçada
+  await supabase.auth.signOut();
+  localStorage.removeItem('supabase.auth.token');
 };
 
 export const getCurrentUser = async () => {
@@ -58,12 +54,10 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
     if (error) throw error;
     return data;
   } catch (err) {
-    console.warn("Profile fetch error:", err);
     return null;
   }
 };
 
-// --- GENERIC FETCHERS ---
 export const fetchCarouselImages = async () => {
   const { data } = await supabase.from('carousel_images').select('*').order('display_order', { ascending: true });
   return data || [];
@@ -96,7 +90,7 @@ export const fetchTestimonials = async () => {
 
 export const fetchSiteContent = async (page: string) => {
   const { data } = await supabase.from('site_content').select('key, value').eq('page', page);
-  return (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+  return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item.value }), {});
 };
 
 export const submitContact = async (contact: Contact) => {

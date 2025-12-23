@@ -47,10 +47,8 @@ const HomePage: React.FC = () => {
 
   const syncSupabaseData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
-    console.log("[Data Sync] Fetching global assets...");
-
     try {
-      const results = await Promise.allSettled([
+      const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
         fetchProducts(),
@@ -59,12 +57,12 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
-      if (results[0].status === 'fulfilled') setMetrics((results[0].value as any[]).filter(checkActive));
-      if (results[1].status === 'fulfilled') setInsights((results[1].value as any[]).filter(checkActive));
-      if (results[2].status === 'fulfilled') setProducts(results[2].value as any[]);
-      if (results[3].status === 'fulfilled') setTestimonials((results[3].value as any[]).filter(checkActive));
-      if (results[4].status === 'fulfilled') setDbContent(results[4].value as Record<string, string>);
-      if (results[5].status === 'fulfilled') setCarouselImages((results[5].value as any[]).filter(checkActive));
+      setMetrics(m.filter(checkActive));
+      setInsights(i.filter(checkActive));
+      setProducts(p);
+      setTestimonials(test.filter(checkActive));
+      setDbContent(s);
+      setCarouselImages(car.filter(checkActive));
     } catch (err) {
       console.error("[Data Sync] Error:", err);
     } finally {
@@ -72,27 +70,22 @@ const HomePage: React.FC = () => {
     }
   }, []);
 
-  // Monitoramento de Sessão e Auth
   useEffect(() => {
-    const checkSession = async () => {
+    const initAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const profile = await getProfile(session.user.id);
         setUserProfile(profile);
       }
     };
-
-    checkSession();
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[Auth Event]", event);
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (session?.user) {
         const profile = await getProfile(session.user.id);
         setUserProfile(profile);
-      } else if (event === 'SIGNED_OUT') {
+      } else {
         setUserProfile(null);
-        setIsAdminOpen(false);
-        setIsClientPortalOpen(false);
       }
     });
 
@@ -119,7 +112,7 @@ const HomePage: React.FC = () => {
   if (loading) return (
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Sincronizando Advisory Hub...</div>
+      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Iniciando Hub Estratégico...</div>
     </div>
   );
 
@@ -159,8 +152,8 @@ const HomePage: React.FC = () => {
               transition={{ duration: 1.5 }}
               className="absolute inset-0"
             >
-              <img src={currentSlide.url} className="w-full h-full object-cover opacity-40" alt="" />
-              <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
+              <img src={currentSlide.url} className="w-full h-full object-cover opacity-30" alt="" />
+              <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/50 to-transparent"></div>
             </motion.div>
           ) : (
             <div className="absolute inset-0 opacity-20">
@@ -171,7 +164,8 @@ const HomePage: React.FC = () => {
 
         <div className="container mx-auto px-6 relative z-10">
           <motion.div 
-            initial={{ y: 30, opacity: 0 }}
+            key={activeCarouselIndex}
+            initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             className="max-w-4xl space-y-10"
           >
@@ -191,7 +185,7 @@ const HomePage: React.FC = () => {
               {carouselImages.length > 1 && (
                 <div className="flex items-center gap-2">
                   {carouselImages.map((_, i) => (
-                    <div key={i} className={`h-1 rounded-full transition-all ${i === activeCarouselIndex ? 'w-12 bg-blue-600' : 'w-4 bg-white/10'}`} />
+                    <button key={i} onClick={() => setActiveCarouselIndex(i)} className={`h-1 rounded-full transition-all ${i === activeCarouselIndex ? 'w-12 bg-blue-600' : 'w-4 bg-white/20 hover:bg-white/40'}`} />
                   ))}
                 </div>
               )}
@@ -203,14 +197,12 @@ const HomePage: React.FC = () => {
       <section id="metrics" className="py-32 bg-[#010309] border-y border-white/5">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
-            {metrics.length > 0 ? metrics.map(m => (
+            {metrics.map(m => (
               <div key={m.id} className="text-center space-y-4">
                 <div className="text-6xl font-serif font-bold text-blue-600 tracking-tighter">{m.value}</div>
                 <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{m.label}</div>
               </div>
-            )) : (
-              <div className="col-span-4 text-center text-slate-700 text-[10px] uppercase tracking-widest"> KPIs em Processamento...</div>
-            )}
+            ))}
           </div>
         </div>
       </section>
@@ -221,7 +213,7 @@ const HomePage: React.FC = () => {
             <h2 className="text-5xl font-serif dark:text-white italic">{resolveContent('insights_title', t.insights_title)}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-12">
-            {insights.length > 0 ? insights.map(insight => (
+            {insights.map(insight => (
               <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group space-y-6">
                 <div className="aspect-video rounded-[2.5rem] overflow-hidden bg-slate-900 border border-white/5">
                   <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all" alt="" />
@@ -229,11 +221,7 @@ const HomePage: React.FC = () => {
                 <h3 className="text-2xl font-serif dark:text-white group-hover:text-blue-500 transition-colors italic">{insight.title}</h3>
                 <p className="text-slate-500 text-sm line-clamp-2 italic">{insight.excerpt}</p>
               </Link>
-            )) : (
-              <div className="col-span-3 py-20 text-center border-2 border-dashed border-white/5 rounded-[3rem] text-slate-700 uppercase tracking-widest text-[10px]">
-                Nenhum Insight Publicado.
-              </div>
-            )}
+            ))}
           </div>
         </div>
       </section>
