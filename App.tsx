@@ -1,9 +1,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
-import ThreeGlobe from './components/ThreeGlobe';
 import ChatBot from './components/ChatBot';
 import ProductsSection from './components/ProductsSection';
 import TestimonialsSection from './components/TestimonialsSection';
@@ -12,6 +10,7 @@ import AdminDashboard from './components/AdminDashboard';
 import ClientPortal from './components/ClientPortal';
 import AuthModal from './components/AuthModal';
 import ArticlePage from './components/ArticlePage';
+import HeroCarousel from './components/HeroCarousel';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
@@ -37,7 +36,6 @@ const HomePage: React.FC = () => {
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
-  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
 
   const checkActive = (item: any) => {
     if (!item) return false;
@@ -48,7 +46,7 @@ const HomePage: React.FC = () => {
   const syncSupabaseData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      const [m, i, p, test, s, car] = await Promise.all([
+      const results = await Promise.allSettled([
         fetchMetrics(),
         fetchInsights(),
         fetchProducts(),
@@ -57,12 +55,12 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
-      setMetrics(m.filter(checkActive));
-      setInsights(i.filter(checkActive));
-      setProducts(p);
-      setTestimonials(test.filter(checkActive));
-      setDbContent(s);
-      setCarouselImages(car.filter(checkActive));
+      if (results[0].status === 'fulfilled') setMetrics((results[0].value as any[]).filter(checkActive));
+      if (results[1].status === 'fulfilled') setInsights((results[1].value as any[]).filter(checkActive));
+      if (results[2].status === 'fulfilled') setProducts(results[2].value as any[]);
+      if (results[3].status === 'fulfilled') setTestimonials((results[3].value as any[]).filter(checkActive));
+      if (results[4].status === 'fulfilled') setDbContent(results[4].value as Record<string, string>);
+      if (results[5].status === 'fulfilled') setCarouselImages((results[5].value as any[]).filter(checkActive));
     } catch (err) {
       console.error("[Data Sync] Error:", err);
     } finally {
@@ -99,24 +97,14 @@ const HomePage: React.FC = () => {
     return () => subs.forEach(s => s.unsubscribe());
   }, [syncSupabaseData]);
 
-  useEffect(() => {
-    if (carouselImages.length <= 1) return;
-    const interval = setInterval(() => {
-      setActiveCarouselIndex(prev => (prev + 1) % carouselImages.length);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [carouselImages.length]);
-
   const resolveContent = (key: string, localFallback: string) => dbContent[key] || localFallback;
 
   if (loading) return (
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Iniciando Hub Estratégico...</div>
+      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Sincronizando Advisory Hub...</div>
     </div>
   );
-
-  const currentSlide = carouselImages[activeCarouselIndex];
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
@@ -141,58 +129,11 @@ const HomePage: React.FC = () => {
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      <section id="hero" className="relative h-screen flex items-center overflow-hidden bg-brand-navy">
-        <AnimatePresence mode="wait">
-          {carouselImages.length > 0 ? (
-            <motion.div 
-              key={currentSlide?.id || activeCarouselIndex}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.5 }}
-              className="absolute inset-0"
-            >
-              <img src={currentSlide.url} className="w-full h-full object-cover opacity-30" alt="" />
-              <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/50 to-transparent"></div>
-            </motion.div>
-          ) : (
-            <div className="absolute inset-0 opacity-20">
-              <ThreeGlobe />
-            </div>
-          )}
-        </AnimatePresence>
-
-        <div className="container mx-auto px-6 relative z-10">
-          <motion.div 
-            key={activeCarouselIndex}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="max-w-4xl space-y-10"
-          >
-            <span className="inline-block px-5 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-500 text-[10px] font-black uppercase tracking-[0.4em]">
-              {resolveContent('hero_badge', t.hero_badge)}
-            </span>
-            <h1 className="text-6xl lg:text-9xl font-serif text-white italic leading-[0.9] tracking-tighter">
-              {currentSlide?.title || resolveContent('hero_title', t.hero_title)}
-            </h1>
-            <p className="text-xl lg:text-2xl text-slate-400 font-light italic border-l-4 border-blue-600/30 pl-8 max-w-2xl">
-              {currentSlide?.subtitle || resolveContent('hero_subtitle', t.hero_subtitle)}
-            </p>
-            <div className="flex flex-wrap gap-6 pt-6">
-              <a href="#contact" className="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all shadow-2xl">
-                {resolveContent('btn_diagnosis', t.btn_diagnosis)}
-              </a>
-              {carouselImages.length > 1 && (
-                <div className="flex items-center gap-2">
-                  {carouselImages.map((_, i) => (
-                    <button key={i} onClick={() => setActiveCarouselIndex(i)} className={`h-1 rounded-full transition-all ${i === activeCarouselIndex ? 'w-12 bg-blue-600' : 'w-4 bg-white/20 hover:bg-white/40'}`} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      <HeroCarousel 
+        slides={carouselImages} 
+        t={t} 
+        resolveContent={resolveContent} 
+      />
 
       <section id="metrics" className="py-32 bg-[#010309] border-y border-white/5">
         <div className="container mx-auto px-6">
