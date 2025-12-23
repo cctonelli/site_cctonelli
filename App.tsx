@@ -48,7 +48,7 @@ const HomePage: React.FC = () => {
     try {
       if (!silent) setLoading(true);
       
-      const [m, i, p, test, s, car, user] = await Promise.all([
+      const results = await Promise.allSettled([
         fetchMetrics(),
         fetchInsights(),
         fetchProducts(),
@@ -58,22 +58,24 @@ const HomePage: React.FC = () => {
         getCurrentUser()
       ]);
 
+      const [m, i, p, test, s, car, user] = results.map(r => r.status === 'fulfilled' ? r.value : null);
+
+      // Sanitizador robusto para campos booleanos vindos do Supabase
       const checkActive = (item: any) => {
         if (!item) return false;
         if (item.is_active === undefined || item.is_active === null) return true;
-        // Postgres pode retornar boolean ou string 'true'/'false'
         return String(item.is_active).toLowerCase() === 'true' || item.is_active === true;
       };
 
-      setCarouselImages((car || []).filter(checkActive));
-      setMetrics((m || []).filter(checkActive));
-      setInsights((i || []).filter(checkActive));
-      setProducts(p || []);
-      setTestimonials((test || []).filter(t => t.approved));
-      setContent(s || {});
+      setCarouselImages((car as CarouselImage[] || []).filter(checkActive).sort((a,b) => a.display_order - b.display_order));
+      setMetrics(((m as Metric[]) || []).filter(checkActive).sort((a,b) => a.display_order - b.display_order));
+      setInsights(((i as Insight[]) || []).filter(checkActive).sort((a,b) => a.display_order - b.display_order));
+      setProducts((p as Product[]) || []);
+      setTestimonials(((test as Testimonial[]) || []).filter(t => t.approved));
+      setContent((s as Record<string, string>) || {});
 
       if (user && !silent) {
-        const profile = await getProfile(user.id);
+        const profile = await getProfile((user as any).id);
         setUserProfile(profile);
       }
     } catch (error) {
@@ -85,8 +87,10 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     loadAllData();
-    const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images'];
+    // Subscrição em tempo real para mudanças no banco
+    const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
     const subs = tables.map(table => subscribeToChanges(table, () => loadAllData(true)));
+    
     return () => {
       isMounted.current = false;
       subs.forEach(s => s.unsubscribe());
@@ -97,7 +101,7 @@ const HomePage: React.FC = () => {
     if (carouselImages.length <= 1) return;
     const interval = setInterval(() => {
       setActiveCarouselIndex(prev => (prev + 1) % carouselImages.length);
-    }, 8000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [carouselImages.length]);
 
@@ -108,10 +112,12 @@ const HomePage: React.FC = () => {
 
   if (loading) return (
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
-      <div className="w-16 h-16 border-4 border-blue-600/10 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500 animate-pulse">Claudio Tonelli | Sincronizando Advisory</div>
+      <div className="w-14 h-14 border-4 border-blue-600/10 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500 animate-pulse">Claudio Tonelli | Sincronizando Advisory Global</div>
     </div>
   );
+
+  const currentSlide = carouselImages[activeCarouselIndex];
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
@@ -136,24 +142,24 @@ const HomePage: React.FC = () => {
       {isAdminOpen && userProfile?.user_type === 'admin' && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      {/* Hero Section: Dinâmico se houver carrossel, fallback se não */}
+      {/* Hero Section */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 bg-brand-navy">
           <AnimatePresence mode="wait">
             {carouselImages.length > 0 ? (
               <motion.div 
-                key={carouselImages[activeCarouselIndex].id}
-                initial={{ opacity: 0, scale: 1.1 }}
+                key={currentSlide?.id || 'static'}
+                initial={{ opacity: 0, scale: 1.15 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 2.5, ease: "easeOut" }}
+                transition={{ duration: 3, ease: "easeOut" }}
                 className="absolute inset-0"
               >
-                <img src={carouselImages[activeCarouselIndex].url} className="w-full h-full object-cover opacity-40" alt="" />
+                <img src={currentSlide?.url} className="w-full h-full object-cover opacity-50" alt="" />
                 <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/60 to-transparent"></div>
               </motion.div>
             ) : (
-              <div className="absolute inset-0 bg-brand-navy flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center">
                  <ThreeGlobe />
                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-brand-navy/90"></div>
               </div>
@@ -162,72 +168,82 @@ const HomePage: React.FC = () => {
         </div>
 
         <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 items-center h-full pt-20">
-          <div className="space-y-12">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="inline-flex items-center gap-4 px-6 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-500 text-[10px] font-black uppercase tracking-[0.4em]"
-            >
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            key={currentSlide?.id || 'content-static'}
+            className="space-y-12"
+          >
+            <div className="inline-flex items-center gap-4 px-6 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-500 text-[10px] font-black uppercase tracking-[0.5em]">
               <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-              {carouselImages[activeCarouselIndex]?.title ? 'High Performance Advisory' : t.hero_badge}
-            </motion.div>
+              {currentSlide?.title ? 'Insights de Elite' : t.hero_badge}
+            </div>
             
             <h1 className="text-6xl lg:text-9xl font-serif dark:text-white text-slate-900 leading-[0.9] italic tracking-tighter">
-              {carouselImages[activeCarouselIndex]?.title || t.hero_title}
+              {currentSlide?.title || t.hero_title}
             </h1>
             
             <p className="text-2xl text-slate-400 max-w-xl leading-relaxed font-light italic border-l-4 border-blue-600/30 pl-10">
-              {carouselImages[activeCarouselIndex]?.subtitle || t.hero_subtitle}
+              {currentSlide?.subtitle || t.hero_subtitle}
             </p>
 
             <div className="flex flex-wrap gap-8 pt-8 items-center">
-              <a href="#contact" className="bg-blue-600 text-white px-12 py-6 rounded-2xl font-black uppercase tracking-[0.3em] text-[11px] shadow-2xl shadow-blue-600/30 hover:bg-blue-500 hover:-translate-y-1 transition-all active:scale-95">
+              <a href="#contact" className="bg-blue-600 text-white px-12 py-6 rounded-2xl font-black uppercase tracking-[0.3em] text-[11px] shadow-2xl shadow-blue-600/40 hover:bg-blue-500 hover:-translate-y-1 transition-all active:scale-95">
                 {t.btn_diagnosis}
               </a>
               
               {carouselImages.length > 1 && (
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-5">
                   {carouselImages.map((_, i) => (
                     <button 
                       key={i} 
                       onClick={() => setActiveCarouselIndex(i)}
-                      className={`h-1.5 rounded-full transition-all duration-700 ${i === activeCarouselIndex ? 'w-16 bg-blue-600' : 'w-4 bg-slate-800 hover:bg-slate-600'}`}
+                      className={`h-1.5 rounded-full transition-all duration-700 ${i === activeCarouselIndex ? 'w-16 bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'w-4 bg-slate-800 hover:bg-slate-700'}`}
                     />
                   ))}
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Metrics Section: Dinâmico */}
+      {/* Metrics Section */}
       <section id="metrics" className="py-40 bg-slate-50 dark:bg-[#010309] border-y border-white/5 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-10"></div>
         <div className="container mx-auto px-6 relative z-10">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-16 text-center">
-            {metrics.map((m, idx) => (
+            {metrics.length > 0 ? metrics.map((m, idx) => (
               <motion.div 
                 key={m.id} 
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
+                transition={{ delay: idx * 0.15 }}
+                viewport={{ once: true }}
                 className="space-y-6"
               >
                 <div className="text-7xl font-serif font-bold text-blue-600 tracking-tighter">{m.value}</div>
-                <div className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500 max-w-[150px] mx-auto leading-relaxed">
+                <div className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500 max-w-[160px] mx-auto leading-relaxed">
                   {m.label}
                 </div>
               </motion.div>
-            ))}
+            )) : (
+              // Fallback se não houver métricas
+              [1,2,3,4].map(i => (
+                <div key={i} className="animate-pulse space-y-4 opacity-20">
+                  <div className="h-16 bg-slate-800 rounded-xl w-32 mx-auto"></div>
+                  <div className="h-4 bg-slate-800 rounded-lg w-24 mx-auto"></div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>
 
-      {/* Insights Section: Dinâmico */}
+      {/* Insights Section */}
       <section id="insights" className="py-48 dark:bg-slate-950 transition-colors">
         <div className="container mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-28 gap-8">
             <div className="space-y-6">
                <span className="text-blue-500 font-black uppercase tracking-[0.5em] text-[10px] block">Strategic Knowledge Hub</span>
                <h2 className="text-6xl font-serif dark:text-white text-slate-900 italic tracking-tight">{t.insights_title}</h2>
@@ -238,29 +254,37 @@ const HomePage: React.FC = () => {
           </div>
           
           <div className="grid md:grid-cols-3 gap-16">
-            {insights.length > 0 ? insights.map(insight => (
-              <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group space-y-8">
-                <div className="aspect-[16/10] rounded-[3rem] overflow-hidden bg-slate-900 border border-white/5 shadow-2xl relative">
-                  <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
-                  <div className="absolute bottom-8 left-8">
-                    <span className="px-4 py-1.5 bg-blue-600/20 backdrop-blur-md border border-blue-500/20 rounded-full text-[9px] font-black uppercase tracking-widest text-blue-400">
-                      {insight.category || 'Strategic Advisory'}
-                    </span>
+            {insights.length > 0 ? insights.map((insight, idx) => (
+              <motion.div
+                key={insight.id}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <Link to={`/insight/${insight.id}?lang=${language}`} className="group space-y-8 block">
+                  <div className="aspect-[16/10] rounded-[3rem] overflow-hidden bg-slate-900 border border-white/5 shadow-2xl relative">
+                    <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
+                    <div className="absolute bottom-8 left-8">
+                      <span className="px-5 py-2 bg-blue-600/20 backdrop-blur-md border border-blue-500/20 rounded-full text-[9px] font-black uppercase tracking-[0.3em] text-blue-400">
+                        {insight.category || 'Strategic Advisory'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-4">
-                  <h3 className="text-3xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors leading-tight italic">
-                    {insight.title}
-                  </h3>
-                  <p className="text-slate-500 text-sm font-light leading-relaxed line-clamp-2 italic">
-                    {insight.excerpt}
-                  </p>
-                </div>
-              </Link>
+                  <div className="space-y-4">
+                    <h3 className="text-3xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors leading-tight italic">
+                      {insight.title}
+                    </h3>
+                    <p className="text-slate-500 text-sm font-light leading-relaxed line-clamp-2 italic">
+                      {insight.excerpt}
+                    </p>
+                  </div>
+                </Link>
+              </motion.div>
             )) : (
-              <div className="col-span-3 py-20 text-center border-2 border-dashed border-white/5 rounded-[4rem]">
-                <span className="text-slate-600 text-[10px] font-black uppercase tracking-[0.5em]">Conteúdo Estratégico sendo Arquitetado...</span>
+              <div className="col-span-3 py-32 text-center border-2 border-dashed border-white/5 rounded-[4rem] bg-white/[0.01]">
+                <span className="text-slate-600 text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">Conteúdo Estratégico em Análise...</span>
               </div>
             )}
           </div>
