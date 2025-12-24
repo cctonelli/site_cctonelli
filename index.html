@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&swap" rel="stylesheet">
   
   <!-- Swiper Bundle CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -41,17 +41,27 @@
     }
   </script>
   <style>
-    :root { --bg-color: #010309; --accent-blue: #2563eb; }
-    html.dark { --bg-color: #010309; }
-    html:not(.dark) { --bg-color: #ffffff; }
+    :root { 
+      --bg-color: #ffffff; 
+      --text-color: #0f172a; 
+      --accent-blue: #2563eb; 
+    }
+    
+    html.dark { 
+      --bg-color: #010309; 
+      --text-color: #f8fafc;
+    }
+    
     body {
       font-family: 'Inter', sans-serif;
       background-color: var(--bg-color);
+      color: var(--text-color);
       margin: 0;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
-      color: #94a3b8;
+      transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
+    
     .font-serif { font-family: 'Playfair Display', serif; }
     .bg-grid { background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1.5px, transparent 1.5px); background-size: 60px 60px; }
     .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
@@ -70,7 +80,7 @@
     }
     
     ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #010309; }
+    ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #2563eb; }
   </style>
@@ -107,7 +117,7 @@
 }
 </script>
 </head>
-<body class="bg-grid dark:text-slate-300 text-slate-900">
+<body class="bg-grid">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

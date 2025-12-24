@@ -29,7 +29,7 @@ const HomePage: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<Language>('pt');
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('dark');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const t = translations[language];
   
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -37,18 +37,51 @@ const HomePage: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
+  // --- Lógica de Temas Aprimorada ---
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system';
+    if (savedTheme) setTheme(savedTheme);
+  }, []);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    
+    const applyTheme = () => {
+      let isDark = false;
+      if (theme === 'system') {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } else {
+        isDark = theme === 'dark';
+      }
+      
+      if (isDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      localStorage.setItem('theme', theme);
+    };
+
+    applyTheme();
+
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyTheme();
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [theme]);
+
   const checkActive = (item: any) => {
     if (!item) return false;
-    // Verifica se is_active existe; se não existir (como em products), assume true.
     const activeVal = item.is_active !== undefined ? item.is_active : (item.approved !== undefined ? item.approved : true);
     return activeVal === true || activeVal === 'true' || activeVal === 1;
   };
 
   const syncSupabaseData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
-    console.log("[App] Sincronizando dados públicos do Supabase...");
-    
     try {
+      console.log("[App] Sincronizando dados...");
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
@@ -67,13 +100,9 @@ const HomePage: React.FC = () => {
       const activeSlides = (car || []).filter(checkActive);
       setCarouselImages(activeSlides);
       
-      console.log("[App] Sincronização concluída:", { 
-        slides: activeSlides.length, 
-        metrics: (m || []).length,
-        insights: (i || []).length
-      });
+      console.log("[App] Slides Ativos:", activeSlides.length);
     } catch (err) {
-      console.error("[App] Erro crítico na sincronização:", err);
+      console.error("[App] Erro na sincronização:", err);
     } finally {
       if (!isSilent) setLoading(false);
     }
@@ -103,10 +132,9 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     syncSupabaseData();
-    // Ativa Realtime Sync em todas as tabelas vitais
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
     const subs = tables.map(table => subscribeToChanges(table, () => {
-      console.log(`[Realtime] Atualização detectada em ${table}. Recarregando...`);
+      console.log(`[Realtime] Mudança em ${table}, atualizando...`);
       syncSupabaseData(true);
     }));
     return () => subs.forEach(s => s.unsubscribe());
@@ -117,7 +145,7 @@ const HomePage: React.FC = () => {
   if (loading) return (
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Sincronizando Advisory Hub...</div>
+      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Iniciando Advisory Hub...</div>
     </div>
   );
 
@@ -144,39 +172,34 @@ const HomePage: React.FC = () => {
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      {/* Hero Dinâmico: Slides do Supabase ou Fallback se vazio */}
-      <HeroCarousel 
-        slides={carouselImages} 
-        t={t} 
-        resolveContent={resolveContent} 
-      />
+      <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} />
 
-      <section id="metrics" className="py-32 bg-[#010309] border-y border-white/5">
+      <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 transition-colors">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
             {metrics.map(m => (
               <div key={m.id} className="text-center space-y-4">
                 <div className="text-6xl font-serif font-bold text-blue-600 tracking-tighter">{m.value}</div>
-                <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">{m.label}</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-500">{m.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="insights" className="py-40 dark:bg-slate-950">
+      <section id="insights" className="py-40 bg-white dark:bg-slate-950 transition-colors">
         <div className="container mx-auto px-6">
           <div className="mb-20">
-            <h2 className="text-5xl font-serif dark:text-white italic">{resolveContent('insights_title', t.insights_title)}</h2>
+            <h2 className="text-5xl font-serif text-slate-900 dark:text-white italic">{resolveContent('insights_title', t.insights_title)}</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-12">
             {insights.map(insight => (
               <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group space-y-6">
-                <div className="aspect-video rounded-[2.5rem] overflow-hidden bg-slate-900 border border-white/5">
-                  <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all" alt="" />
+                <div className="aspect-video rounded-[2.5rem] overflow-hidden bg-slate-200 dark:bg-slate-900 border border-slate-200 dark:border-white/5">
+                  <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-80 dark:opacity-60 group-hover:opacity-100 transition-all" alt="" />
                 </div>
-                <h3 className="text-2xl font-serif dark:text-white group-hover:text-blue-500 transition-colors italic">{insight.title}</h3>
-                <p className="text-slate-500 text-sm line-clamp-2 italic">{insight.excerpt}</p>
+                <h3 className="text-2xl font-serif text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors italic">{insight.title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2 italic">{insight.excerpt}</p>
               </Link>
             ))}
           </div>
@@ -187,10 +210,10 @@ const HomePage: React.FC = () => {
       <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={(id, f, b) => b} />
       <ContactForm language={language} />
 
-      <footer className="py-20 border-t border-white/5 bg-brand-navy text-center">
+      <footer className="py-20 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center transition-colors">
         <div className="container mx-auto px-6 space-y-8">
           <div className="w-12 h-12 bg-blue-600 rounded-xl mx-auto flex items-center justify-center font-bold text-xl text-white">CT</div>
-          <p className="text-[9px] text-slate-600 font-black uppercase tracking-[0.6em]">{resolveContent('copyright', t.copyright)}</p>
+          <p className="text-[9px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em]">{resolveContent('copyright', t.copyright)}</p>
         </div>
       </footer>
       <ChatBot />
