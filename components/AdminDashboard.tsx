@@ -8,98 +8,108 @@ type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials'
 const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('carousel');
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
-  const checkRef = useRef(false);
+  const authCheckRef = useRef(false);
 
   useEffect(() => {
-    if (checkRef.current) return;
-    checkRef.current = true;
+    if (authCheckRef.current) return;
+    authCheckRef.current = true;
 
     const checkAdmin = async () => {
+      console.log("[Admin] Verificando privilégios de acesso...");
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
+        console.warn("[Admin] Sessão não encontrada. Redirecionando...");
         setIsAuthorized(false);
-        setTimeout(onClose, 1500);
+        setTimeout(onClose, 1000);
       } else {
-        // Opcional: Verificar se user_type no profile é admin
         setIsAuthorized(true);
       }
     };
+    
     checkAdmin();
   }, [onClose]);
 
   if (isAuthorized === false) {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center p-8">
-        <div className="w-12 h-12 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center mb-6">
-           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-6V9m0-6H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" /></svg>
+      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-300">
+        <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
+           <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-6V9m0-6H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" /></svg>
         </div>
-        <h2 className="text-white font-serif italic text-2xl">Acesso Negado</h2>
-        <p className="text-slate-500 text-[10px] mt-2 uppercase tracking-widest">Sessão inválida. Retornando...</p>
+        <h2 className="text-white font-serif italic text-3xl">Área Restrita</h2>
+        <p className="text-slate-500 text-[10px] mt-4 uppercase tracking-[0.4em] font-black">Por favor, realize o login como administrador.</p>
       </div>
     );
   }
 
-  if (isAuthorized === null) return (
-    <div className="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
+  if (isAuthorized === null) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center animate-pulse">
+        <div className="w-12 h-12 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <span className="mt-6 text-[9px] uppercase tracking-widest text-slate-500 font-bold">Validando Protocolos...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-brand-navy/98 backdrop-blur-3xl flex items-center justify-center p-4 lg:p-12 overflow-hidden">
-      <div className="bg-[#02050c] border border-white/10 w-full max-w-7xl h-full rounded-[4rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl">
+    <div className="fixed inset-0 z-[100] bg-brand-navy/95 backdrop-blur-3xl flex items-center justify-center p-2 lg:p-12 overflow-hidden animate-in zoom-in-95 duration-500">
+      <div className="bg-[#02050c] border border-white/10 w-full max-w-7xl h-full rounded-[3rem] lg:rounded-[4rem] overflow-hidden flex flex-col lg:flex-row shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)]">
         
-        <div className="w-full lg:w-80 bg-[#010309] border-r border-white/5 p-12 flex flex-row lg:flex-col gap-10 shrink-0 overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-5 mb-0 lg:mb-16 min-w-fit cursor-pointer">
-            <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl text-2xl">CT</div>
+        {/* Sidebar */}
+        <div className="w-full lg:w-80 bg-[#010309] border-r border-white/5 p-8 lg:p-12 flex flex-row lg:flex-col gap-6 lg:gap-10 shrink-0 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-4 mb-0 lg:mb-16 min-w-fit">
+            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white shadow-xl text-xl">CT</div>
             <div className="flex flex-col">
-              <span className="font-black text-[11px] uppercase tracking-[0.6em] text-white">Advisory Hub</span>
-              <span className="text-[8px] uppercase tracking-[0.3em] text-blue-500 font-bold mt-1">Management v6.5</span>
+              <span className="font-black text-[10px] uppercase tracking-[0.5em] text-white">Advisory</span>
+              <span className="text-[7px] uppercase tracking-[0.2em] text-blue-500 font-bold mt-1">Management v7.0</span>
             </div>
           </div>
-          <nav className="flex flex-row lg:flex-col gap-4 flex-1">
+          
+          <nav className="flex flex-row lg:flex-col gap-2 flex-1">
             {[
               { id: 'carousel', label: 'Carrossel' },
-              { id: 'insights', label: 'Knowledge Hub' },
-              { id: 'products', label: 'Loja de Soluções' },
-              { id: 'metrics', label: 'KPIs Metrics' },
-              { id: 'testimonials', label: 'Social Proof' },
-              { id: 'content', label: 'Copywriting' },
-              { id: 'leads', label: 'Leads CRM' }
+              { id: 'insights', label: 'Knowledge' },
+              { id: 'products', label: 'Soluções' },
+              { id: 'metrics', label: 'KPIs' },
+              { id: 'testimonials', label: 'Provas' },
+              { id: 'content', label: 'Textos' },
+              { id: 'leads', label: 'Leads' }
             ].map(tab => (
               <button 
                 key={tab.id} 
                 onClick={() => setActiveTab(tab.id as TabType)} 
-                className={`whitespace-nowrap px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-slate-600 hover:bg-white/5 hover:text-slate-300'}`}
+                className={`whitespace-nowrap px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-left border ${activeTab === tab.id ? 'bg-blue-600 text-white border-blue-500 shadow-xl' : 'text-slate-600 border-transparent hover:bg-white/5'}`}
               >
                 {tab.label}
               </button>
             ))}
           </nav>
-          <button onClick={onClose} className="text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-widest mt-auto p-6 border border-white/5 rounded-2xl transition-all">Fechar Painel</button>
+          
+          <button onClick={onClose} className="hidden lg:block text-slate-700 hover:text-red-500 text-[9px] font-black uppercase tracking-widest mt-auto p-4 border border-white/5 rounded-xl transition-all">Encerrar</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 lg:p-20 bg-grid relative custom-scrollbar">
-          <div className="max-w-5xl mx-auto pb-20">
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 lg:p-16 bg-grid relative custom-scrollbar">
+          <div className="max-w-4xl mx-auto pb-20">
             {activeTab === 'carousel' && (
               <AdminCrudSection
                 tableName="carousel_images"
-                title="Slide do Carrossel"
+                title="Slide"
                 fields={[
-                  { key: 'url', label: 'URL da Imagem de Fundo', type: 'image' },
+                  { key: 'url', label: 'URL Imagem', type: 'image' },
                   { key: 'title', label: 'Título' },
                   { key: 'subtitle', label: 'Subtítulo' },
                   { key: 'display_order', label: 'Ordem', type: 'number' },
-                  { key: 'is_active', label: 'Visível', type: 'toggle' },
+                  { key: 'is_active', label: 'Ativo', type: 'toggle' },
                 ]}
-                displayColumns={['url', 'title', 'display_order', 'is_active']}
+                displayColumns={['url', 'title', 'is_active']}
               />
             )}
 
             {activeTab === 'insights' && (
               <AdminCrudSection
                 tableName="insights"
-                title="Artigo / Insight"
+                title="Insight"
                 fields={[
                   { key: 'title', label: 'Título' },
                   { key: 'excerpt', label: 'Resumo', type: 'textarea' },
@@ -114,11 +124,11 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             {activeTab === 'products' && (
               <AdminCrudSection
                 tableName="products"
-                title="Produto/Serviço"
+                title="Produto"
                 fields={[
                   { key: 'name', label: 'Nome' },
                   { key: 'description', label: 'Descrição', type: 'textarea' },
-                  { key: 'price', label: 'Preço', type: 'number' },
+                  { key: 'price', label: 'Preço (R$)', type: 'number' },
                   { key: 'type', label: 'Tipo (product/service)' },
                 ]}
                 displayColumns={['name', 'price', 'type']}
@@ -130,7 +140,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 tableName="metrics"
                 title="KPI"
                 fields={[
-                  { key: 'value', label: 'Valor (Ex: +500)' },
+                  { key: 'value', label: 'Valor' },
                   { key: 'label', label: 'Rótulo' },
                   { key: 'display_order', label: 'Ordem', type: 'number' },
                   { key: 'is_active', label: 'Ativo', type: 'toggle' },
@@ -144,7 +154,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 tableName="testimonials"
                 title="Depoimento"
                 fields={[
-                  { key: 'name', label: 'Cliente' },
+                  { key: 'name', label: 'Autor' },
                   { key: 'company', label: 'Empresa' },
                   { key: 'quote', label: 'Texto', type: 'textarea' },
                   { key: 'approved', label: 'Aprovado', type: 'toggle' },
@@ -156,11 +166,11 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             {activeTab === 'content' && (
               <AdminCrudSection
                 tableName="site_content"
-                title="Copywriting"
+                title="Conteúdo"
                 idColumn="key"
                 fields={[
-                  { key: 'key', label: 'Chave' },
-                  { key: 'value', label: 'Texto', type: 'textarea' },
+                  { key: 'key', label: 'ID Chave' },
+                  { key: 'value', label: 'Texto do Site', type: 'textarea' },
                 ]}
                 displayColumns={['key', 'value']}
               />
@@ -169,13 +179,13 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             {activeTab === 'leads' && (
               <AdminCrudSection
                 tableName="contacts"
-                title="Lead de Contato"
+                title="Lead"
                 fields={[
                   { key: 'name', label: 'Nome' },
                   { key: 'email', label: 'E-mail' },
                   { key: 'message', label: 'Mensagem', type: 'textarea' },
                 ]}
-                displayColumns={['name', 'email', 'message']}
+                displayColumns={['name', 'email', 'created_at']}
               />
             )}
           </div>
