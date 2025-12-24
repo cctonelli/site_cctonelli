@@ -20,6 +20,7 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 const HomePage: React.FC = () => {
+  // Inicializamos com dados "seed" para garantir que o site sempre tenha conteúdo visual
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -37,7 +38,6 @@ const HomePage: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  // --- Lógica de Temas Aprimorada ---
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system';
     if (savedTheme) setTheme(savedTheme);
@@ -45,7 +45,6 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
     const applyTheme = () => {
       let isDark = false;
       if (theme === 'system') {
@@ -53,23 +52,11 @@ const HomePage: React.FC = () => {
       } else {
         isDark = theme === 'dark';
       }
-      
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+      if (isDark) root.classList.add('dark');
+      else root.classList.remove('dark');
       localStorage.setItem('theme', theme);
     };
-
     applyTheme();
-
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = () => applyTheme();
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
   }, [theme]);
 
   const checkActive = (item: any) => {
@@ -81,7 +68,6 @@ const HomePage: React.FC = () => {
   const syncSupabaseData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     try {
-      console.log("[App] Sincronizando dados...");
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
@@ -91,20 +77,17 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
-      setMetrics((m || []).filter(checkActive));
-      setInsights((i || []).filter(checkActive));
-      setProducts(p || []);
-      setTestimonials((test || []).filter(checkActive));
-      setDbContent(s || {});
+      if (m?.length) setMetrics(m.filter(checkActive));
+      if (i?.length) setInsights(i.filter(checkActive));
+      if (p?.length) setProducts(p);
+      if (test?.length) setTestimonials(test.filter(checkActive));
+      if (s) setDbContent(s);
+      if (car?.length) setCarouselImages(car.filter(checkActive));
       
-      const activeSlides = (car || []).filter(checkActive);
-      setCarouselImages(activeSlides);
-      
-      console.log("[App] Slides Ativos:", activeSlides.length);
     } catch (err) {
       console.error("[App] Erro na sincronização:", err);
     } finally {
-      if (!isSilent) setLoading(false);
+      setLoading(false);
     }
   }, []);
 
@@ -117,35 +100,21 @@ const HomePage: React.FC = () => {
       }
     };
     initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const profile = await getProfile(session.user.id);
-        setUserProfile(profile);
-      } else {
-        setUserProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     syncSupabaseData();
+
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
-    const subs = tables.map(table => subscribeToChanges(table, () => {
-      console.log(`[Realtime] Mudança em ${table}, atualizando...`);
-      syncSupabaseData(true);
-    }));
+    const subs = tables.map(table => subscribeToChanges(table, () => syncSupabaseData(true)));
     return () => subs.forEach(s => s.unsubscribe());
   }, [syncSupabaseData]);
 
   const resolveContent = (key: string, localFallback: string) => dbContent[key] || localFallback;
 
-  if (loading) return (
+  if (loading && !metrics.length) return (
     <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
       <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse">Iniciando Advisory Hub...</div>
+      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse text-center">
+        Arquitetando a Grande Rede...<br/>Aguarde a conexão estratégica.
+      </div>
     </div>
   );
 
@@ -174,15 +143,23 @@ const HomePage: React.FC = () => {
 
       <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} />
 
-      <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 transition-colors">
+      <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 transition-colors relative">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
-            {metrics.map(m => (
+            {metrics.length > 0 ? metrics.map(m => (
               <div key={m.id} className="text-center space-y-4">
                 <div className="text-6xl font-serif font-bold text-blue-600 tracking-tighter">{m.value}</div>
                 <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-500">{m.label}</div>
               </div>
-            ))}
+            )) : (
+              // Métricas Seed para não ficar vazio
+              <>
+                <div className="text-center space-y-4 opacity-50"><div className="text-6xl font-serif font-bold text-blue-600">+17k</div><div className="text-[10px] uppercase tracking-[0.4em]">LinkedIn Focus</div></div>
+                <div className="text-center space-y-4 opacity-50"><div className="text-6xl font-serif font-bold text-blue-600">25+</div><div className="text-[10px] uppercase tracking-[0.4em]">Anos de Estratégia</div></div>
+                <div className="text-center space-y-4 opacity-50"><div className="text-6xl font-serif font-bold text-blue-600">500+</div><div className="text-[10px] uppercase tracking-[0.4em]">Executivos Mentorados</div></div>
+                <div className="text-center space-y-4 opacity-50"><div className="text-6xl font-serif font-bold text-blue-600">ROI</div><div className="text-[10px] uppercase tracking-[0.4em]">Excelência Operacional</div></div>
+              </>
+            )}
           </div>
         </div>
       </section>
