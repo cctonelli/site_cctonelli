@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatBot from './components/ChatBot';
@@ -20,7 +20,6 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 const HomePage: React.FC = () => {
-  // Inicializamos com dados "seed" para garantir que o site sempre tenha conteúdo visual
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -38,6 +37,8 @@ const HomePage: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
+  const initialLoadRef = useRef(false);
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system';
     if (savedTheme) setTheme(savedTheme);
@@ -45,28 +46,25 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const applyTheme = () => {
-      let isDark = false;
-      if (theme === 'system') {
-        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      } else {
-        isDark = theme === 'dark';
-      }
-      if (isDark) root.classList.add('dark');
-      else root.classList.remove('dark');
-      localStorage.setItem('theme', theme);
-    };
-    applyTheme();
+    const isDark = theme === 'system' 
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches 
+      : theme === 'dark';
+    
+    if (isDark) root.classList.add('dark');
+    else root.classList.remove('dark');
+    localStorage.setItem('theme', theme);
   }, [theme]);
 
   const checkActive = (item: any) => {
     if (!item) return false;
-    const activeVal = item.is_active !== undefined ? item.is_active : (item.approved !== undefined ? item.approved : true);
-    return activeVal === true || activeVal === 'true' || activeVal === 1;
+    const val = item.is_active !== undefined ? item.is_active : (item.approved !== undefined ? item.approved : true);
+    return val === true || val === 'true' || val === 1;
   };
 
   const syncSupabaseData = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
+    console.log("[Supabase] Iniciando sincronização de dados públicos...");
+    
     try {
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
@@ -77,6 +75,12 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
+      console.log(`[Supabase] Dados recebidos: 
+        Metrics: ${m?.length || 0}
+        Insights: ${i?.length || 0}
+        Products: ${p?.length || 0}
+        Carousel: ${car?.length || 0}`);
+
       if (m?.length) setMetrics(m.filter(checkActive));
       if (i?.length) setInsights(i.filter(checkActive));
       if (p?.length) setProducts(p);
@@ -85,41 +89,48 @@ const HomePage: React.FC = () => {
       if (car?.length) setCarouselImages(car.filter(checkActive));
       
     } catch (err) {
-      console.error("[App] Erro na sincronização:", err);
+      console.error("[Supabase] Erro crítico na leitura de dados:", err);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const initAuth = async () => {
+    if (initialLoadRef.current) return;
+    initialLoadRef.current = true;
+
+    const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const profile = await getProfile(session.user.id);
         setUserProfile(profile);
       }
+      await syncSupabaseData();
     };
-    initAuth();
-    syncSupabaseData();
 
+    init();
+
+    // Inscrição Realtime para atualizações instantâneas sem refresh
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
-    const subs = tables.map(table => subscribeToChanges(table, () => syncSupabaseData(true)));
+    const subs = tables.map(table => subscribeToChanges(table, () => {
+      console.log(`[Realtime] Alteração detectada em: ${table}. Sincronizando...`);
+      syncSupabaseData(true);
+    }));
+
     return () => subs.forEach(s => s.unsubscribe());
   }, [syncSupabaseData]);
 
   const resolveContent = (key: string, localFallback: string) => dbContent[key] || localFallback;
 
-  if (loading && !metrics.length) return (
-    <div className="fixed inset-0 bg-brand-navy flex flex-col items-center justify-center z-[1000]">
-      <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-      <div className="mt-8 text-[10px] font-black uppercase tracking-[0.5em] text-blue-500/60 animate-pulse text-center">
-        Arquitetando a Grande Rede...<br/>Aguarde a conexão estratégica.
-      </div>
-    </div>
-  );
-
   return (
     <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
+      {/* Mini Loader apenas se for o primeiro carregamento e não tivermos dados seed */}
+      {loading && !metrics.length && (
+        <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-blue-600/10 overflow-hidden">
+          <div className="h-full bg-blue-600 animate-[loading_2s_infinite]"></div>
+        </div>
+      )}
+
       <Navbar 
         onAdminClick={() => userProfile ? (userProfile.user_type === 'admin' ? setIsAdminOpen(true) : setIsClientPortalOpen(true)) : setIsAuthOpen(true)} 
         userProfile={userProfile} 
@@ -143,28 +154,26 @@ const HomePage: React.FC = () => {
 
       <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} />
 
-      <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 transition-colors relative">
+      {/* METRICS SECTION COM SEED DATA FALLBACK */}
+      <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 relative">
         <div className="container mx-auto px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
-            {metrics.length > 0 ? metrics.map(m => (
+            {(metrics.length > 0 ? metrics : [
+              { id: '1', value: '+17k', label: 'LinkedIn Focus' },
+              { id: '2', value: '25+', label: 'Anos de Estratégia' },
+              { id: '3', value: '500+', label: 'Executivos Mentorados' },
+              { id: '4', value: 'ROI', label: 'Excelência Operacional' }
+            ]).map(m => (
               <div key={m.id} className="text-center space-y-4">
                 <div className="text-6xl font-serif font-bold text-blue-600 tracking-tighter">{m.value}</div>
                 <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-500">{m.label}</div>
               </div>
-            )) : (
-              // Métricas Seed para não ficar vazio
-              <>
-                <div className="text-center space-y-4 opacity-50"><div className="text-6xl font-serif font-bold text-blue-600">+17k</div><div className="text-[10px] uppercase tracking-[0.4em]">LinkedIn Focus</div></div>
-                <div className="text-center space-y-4 opacity-50"><div className="text-6xl font-serif font-bold text-blue-600">25+</div><div className="text-[10px] uppercase tracking-[0.4em]">Anos de Estratégia</div></div>
-                <div className="text-center space-y-4 opacity-50"><div className="text-6xl font-serif font-bold text-blue-600">500+</div><div className="text-[10px] uppercase tracking-[0.4em]">Executivos Mentorados</div></div>
-                <div className="text-center space-y-4 opacity-50"><div className="text-6xl font-serif font-bold text-blue-600">ROI</div><div className="text-[10px] uppercase tracking-[0.4em]">Excelência Operacional</div></div>
-              </>
-            )}
+            ))}
           </div>
         </div>
       </section>
 
-      <section id="insights" className="py-40 bg-white dark:bg-slate-950 transition-colors">
+      <section id="insights" className="py-40 bg-white dark:bg-slate-950">
         <div className="container mx-auto px-6">
           <div className="mb-20">
             <h2 className="text-5xl font-serif text-slate-900 dark:text-white italic">{resolveContent('insights_title', t.insights_title)}</h2>
@@ -194,6 +203,13 @@ const HomePage: React.FC = () => {
         </div>
       </footer>
       <ChatBot />
+
+      <style>{`
+        @keyframes loading {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
     </div>
   );
 };

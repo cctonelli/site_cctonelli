@@ -14,6 +14,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: window.localStorage
+  },
+  global: {
+    headers: { 'x-application-name': 'ct-consultoria-advisory' }
   }
 });
 
@@ -21,7 +24,9 @@ export const subscribeToChanges = (table: string, callback: () => void) => {
   return supabase
     .channel(`public:${table}`)
     .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
-    .subscribe();
+    .subscribe((status) => {
+      console.log(`[Supabase Realtime] Canal ${table} status:`, status);
+    });
 };
 
 export const signIn = async (email: string, password?: string) => {
@@ -54,42 +59,50 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
     if (error) throw error;
     return data;
   } catch (err) {
+    console.warn("[Supabase] Perfil não encontrado ou erro RLS:", err);
     return null;
   }
 };
 
 export const fetchCarouselImages = async () => {
-  const { data } = await supabase.from('carousel_images').select('*').order('display_order', { ascending: true });
+  const { data, error } = await supabase.from('carousel_images').select('*').order('display_order', { ascending: true });
+  if (error) console.error("[Supabase Fetch] carousel_images:", error);
   return data || [];
 };
 
 export const fetchInsights = async () => {
-  const { data } = await supabase.from('insights').select('*').order('published_at', { ascending: false });
+  const { data, error } = await supabase.from('insights').select('*').order('published_at', { ascending: false });
+  if (error) console.error("[Supabase Fetch] insights:", error);
   return data || [];
 };
 
 export const fetchInsightById = async (id: string) => {
-  const { data } = await supabase.from('insights').select('*').eq('id', id).single();
+  const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
+  if (error) console.error("[Supabase Fetch] insight_by_id:", error);
   return data;
 };
 
 export const fetchMetrics = async () => {
-  const { data } = await supabase.from('metrics').select('*').order('display_order', { ascending: true });
+  const { data, error } = await supabase.from('metrics').select('*').order('display_order', { ascending: true });
+  if (error) console.error("[Supabase Fetch] metrics:", error);
   return data || [];
 };
 
 export const fetchProducts = async () => {
-  const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+  if (error) console.error("[Supabase Fetch] products:", error);
   return data || [];
 };
 
 export const fetchTestimonials = async () => {
-  const { data } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false });
+  if (error) console.error("[Supabase Fetch] testimonials:", error);
   return data || [];
 };
 
 export const fetchSiteContent = async (page: string) => {
-  const { data } = await supabase.from('site_content').select('key, value').eq('page', page);
+  const { data, error } = await supabase.from('site_content').select('key, value').eq('page', page);
+  if (error) console.error("[Supabase Fetch] site_content:", error);
   return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item.value }), {});
 };
 

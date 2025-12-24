@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AdminCrudSection from './AdminCrudSection';
 import { supabase } from '../services/supabaseService';
 
@@ -8,21 +8,23 @@ type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials'
 const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('carousel');
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const checkRef = useRef(false);
 
   useEffect(() => {
-    let mounted = true;
+    if (checkRef.current) return;
+    checkRef.current = true;
+
     const checkAdmin = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!mounted) return;
       if (!session) {
         setIsAuthorized(false);
         setTimeout(onClose, 1500);
       } else {
+        // Opcional: Verificar se user_type no profile é admin
         setIsAuthorized(true);
       }
     };
     checkAdmin();
-    return () => { mounted = false; };
   }, [onClose]);
 
   if (isAuthorized === false) {
@@ -31,8 +33,8 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="w-12 h-12 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center mb-6">
            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-6V9m0-6H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" /></svg>
         </div>
-        <h2 className="text-white font-serif italic text-2xl">Acesso Não Autorizado</h2>
-        <p className="text-slate-500 text-[10px] mt-2 uppercase tracking-widest">Sessão expirada. Retornando...</p>
+        <h2 className="text-white font-serif italic text-2xl">Acesso Negado</h2>
+        <p className="text-slate-500 text-[10px] mt-2 uppercase tracking-widest">Sessão inválida. Retornando...</p>
       </div>
     );
   }
