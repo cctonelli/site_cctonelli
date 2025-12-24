@@ -13,7 +13,7 @@ const ThreeGlobe: React.FC = () => {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.z = 2.8;
+    camera.position.z = 2.5; // Aproximado para preencher mais a tela
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
@@ -22,63 +22,59 @@ const ThreeGlobe: React.FC = () => {
 
     const isDark = document.documentElement.classList.contains('dark');
     const globeColor = new THREE.Color(0x2563eb);
-    const sparkColor = new THREE.Color(0x60a5fa);
+    const sparkColor = new THREE.Color(0x3b82f6);
     const coreColor = isDark ? 0x010309 : 0xffffff;
 
     const mainGroup = new THREE.Group();
     scene.add(mainGroup);
 
     // 1. O GLOBO ESTRUTURAL (Wireframe)
-    const geometry = new THREE.SphereGeometry(1.2, 48, 48);
+    const geometry = new THREE.SphereGeometry(1.2, 50, 50);
     const material = new THREE.MeshPhongMaterial({
       color: globeColor,
       wireframe: true,
       transparent: true,
-      opacity: isDark ? 0.15 : 0.1,
+      opacity: isDark ? 0.2 : 0.1,
     });
     const globe = new THREE.Mesh(geometry, material);
     mainGroup.add(globe);
 
     // 2. NÚCLEO SÓLIDO (Efeito Profundidade)
-    const innerGeometry = new THREE.SphereGeometry(1.19, 48, 48);
+    const innerGeometry = new THREE.SphereGeometry(1.18, 50, 50);
     const innerMaterial = new THREE.MeshPhongMaterial({
       color: coreColor,
       transparent: true,
-      opacity: 0.7,
+      opacity: isDark ? 0.8 : 0.6,
     });
     const innerSphere = new THREE.Mesh(innerGeometry, innerMaterial);
     mainGroup.add(innerSphere);
 
     // 3. A GRANDE REDE DE FAGULHAS (Sparks System)
-    const pointsCount = 4000;
+    const pointsCount = 6000; // Mais fagulhas para visibilidade
     const positions = new Float32Array(pointsCount * 3);
     const sizes = new Float32Array(pointsCount);
-    const randomOffsets = new Float32Array(pointsCount);
 
     for (let i = 0; i < pointsCount; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       
-      // Partículas levemente acima da superfície para parecerem "fagulhas flutuantes"
-      const dist = 1.22 + Math.random() * 0.15;
+      const dist = 1.21 + Math.random() * 0.2;
       
       positions[i * 3] = dist * Math.sin(phi) * Math.cos(theta);
       positions[i * 3 + 1] = dist * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = dist * Math.cos(phi);
       
-      sizes[i] = Math.random() * 0.015;
-      randomOffsets[i] = Math.random() * Math.PI * 2;
+      sizes[i] = Math.random() * 2;
     }
 
     const pointsGeometry = new THREE.BufferGeometry();
     pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    pointsGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
     const pointsMaterial = new THREE.PointsMaterial({
       color: sparkColor,
-      size: 0.012,
+      size: 0.015,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.9,
       sizeAttenuation: true,
       blending: THREE.AdditiveBlending
     });
@@ -87,16 +83,12 @@ const ThreeGlobe: React.FC = () => {
     mainGroup.add(sparks);
 
     // ILUMINAÇÃO
-    const ambientLight = new THREE.AmbientLight(0xffffff, isDark ? 0.4 : 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, isDark ? 0.5 : 1);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0x2563eb, 2);
+    const pointLight = new THREE.PointLight(0x2563eb, 3);
     pointLight.position.set(5, 5, 5);
     scene.add(pointLight);
-
-    const pointLight2 = new THREE.PointLight(0x60a5fa, 1.5);
-    pointLight2.position.set(-5, -5, 2);
-    scene.add(pointLight2);
 
     let animationId: number;
     const clock = new THREE.Clock();
@@ -105,11 +97,11 @@ const ThreeGlobe: React.FC = () => {
       const elapsedTime = clock.getElapsedTime();
       animationId = requestAnimationFrame(animate);
       
-      mainGroup.rotation.y += 0.001;
-      mainGroup.rotation.x += 0.0002;
+      mainGroup.rotation.y += 0.0015; // Rotação ligeiramente mais rápida
+      mainGroup.rotation.x += 0.0003;
 
-      // Efeito de "pulsar" das fagulhas
-      pointsMaterial.opacity = 0.5 + Math.sin(elapsedTime * 2) * 0.3;
+      // Efeito de pulsação nas fagulhas
+      pointsMaterial.opacity = 0.6 + Math.sin(elapsedTime * 1.5) * 0.3;
       
       renderer.render(scene, camera);
     };
@@ -137,9 +129,8 @@ const ThreeGlobe: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
-      <div ref={containerRef} className="w-full h-full min-h-[600px]" />
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-white dark:from-brand-navy via-transparent to-white dark:to-brand-navy opacity-40"></div>
+    <div className="w-full h-full">
+      <div ref={containerRef} className="w-full h-full min-h-screen" />
     </div>
   );
 };
