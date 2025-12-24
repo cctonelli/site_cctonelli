@@ -8,7 +8,10 @@ export interface CarouselImage {
   subtitle: string | null;
   subtitle_en?: string | null;
   subtitle_es?: string | null;
-  link: string | null;
+  link: string | null; // Ex: #products para ir para a loja
+  cta_text?: string | null; // Ex: "Ver Soluções"
+  cta_text_en?: string | null;
+  cta_text_es?: string | null;
   display_order: number;
   is_active: boolean;
   created_at?: string;

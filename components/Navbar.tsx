@@ -74,33 +74,33 @@ const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-[80] transition-all duration-500 ${isScrolled ? 'bg-white/90 dark:bg-slate-950/80 backdrop-blur-xl py-4 border-b border-slate-200 dark:border-white/5 shadow-2xl' : 'bg-transparent py-8'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-[80] transition-all duration-500 ${isScrolled ? 'bg-white/90 dark:bg-slate-950/80 backdrop-blur-2xl py-4 border-b border-slate-200 dark:border-white/5 shadow-2xl' : 'bg-transparent py-10'}`}>
       <div className="container mx-auto px-6 flex justify-between items-center">
-        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl shadow-xl shadow-blue-600/30 group-hover:scale-105 transition-transform">CT</div>
+        <div className="flex items-center gap-4 group cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-2xl text-white shadow-xl shadow-blue-600/30 group-hover:scale-110 transition-transform duration-500">CT</div>
           <div className="flex flex-col">
-            <span className="text-xl font-bold tracking-tighter leading-none dark:text-white text-slate-900 transition-colors">Claudio Tonelli</span>
-            <span className="text-[9px] uppercase tracking-[0.4em] text-slate-500 font-bold mt-1">Consultoria Executive</span>
+            <span className="text-xl font-bold tracking-tighter leading-none dark:text-white text-slate-900 transition-colors uppercase">Claudio Tonelli</span>
+            <span className="text-[9px] uppercase tracking-[0.5em] text-slate-500 font-black mt-2">Executive Advisory</span>
           </div>
         </div>
         
-        <div className="hidden lg:flex items-center space-x-12 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+        <div className="hidden lg:flex items-center space-x-12 text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
           <a href="#hero" className="hover:text-blue-500 transition-colors">{labels.strategy}</a>
           <a href="#insights" className="hover:text-blue-500 transition-colors">{labels.insights}</a>
-          <a href="#metrics" className="hover:text-blue-500 transition-colors">{labels.performance}</a>
+          <a href="#products" className="hover:text-blue-500 transition-colors">{labels.performance}</a>
           <a href="#contact" className="hover:text-blue-500 transition-colors">{labels.connection}</a>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <div className="hidden md:flex items-center bg-slate-100 dark:bg-white/5 rounded-full p-1 border border-slate-200 dark:border-white/5">
             {languages.map(lang => (
               <button 
                 key={lang.code}
                 onClick={() => setLanguage(lang.code)}
-                className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all ${
+                className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${
                   language === lang.code 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                    ? 'bg-blue-600 text-white shadow-xl' 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 {lang.label}
@@ -110,39 +110,35 @@ const Navbar: React.FC<NavbarProps> = ({
 
           <button 
             onClick={cycleTheme}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-blue-500 transition-all group relative"
-            title={`Tema: ${theme === 'system' ? 'Sistema' : theme === 'dark' ? 'Escuro' : 'Claro'}`}
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-blue-500 transition-all hover:scale-110"
           >
             <ThemeIcon />
-            <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest">
-              {theme}
-            </span>
           </button>
 
           <div className="relative group/user">
             <button 
               onClick={onAdminClick}
-              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95 flex items-center gap-3"
+              className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/30 active:scale-95 flex items-center gap-3"
             >
               {userProfile ? (
                 <>
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  <span className="max-w-[80px] truncate">{userProfile.full_name?.split(' ')[0] || 'Member'}</span>
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,1)]"></span>
+                  <span className="max-w-[90px] truncate">{userProfile.full_name?.split(' ')[0] || 'Executive'}</span>
                 </>
               ) : labels.client_area}
             </button>
 
             {userProfile && (
-              <div className="absolute top-full right-0 mt-4 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden opacity-0 invisible group-hover/user:opacity-100 group-hover/user:visible transition-all">
+              <div className="absolute top-full right-0 mt-6 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden opacity-0 invisible group-hover/user:opacity-100 group-hover/user:visible transition-all duration-500 translate-y-2 group-hover/user:translate-y-0">
                 <button 
                   onClick={onAdminClick}
-                  className="w-full text-left px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+                  className="w-full text-left px-8 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
                 >
                   {userProfile.user_type === 'admin' ? t.nav_admin : t.nav_portal}
                 </button>
                 <button 
                   onClick={onLogout}
-                  className="w-full text-left px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-500/10 transition-all border-t border-slate-200 dark:border-white/5"
+                  className="w-full text-left px-8 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-red-500 hover:bg-red-500/10 transition-all border-t border-slate-200 dark:border-white/5"
                 >
                   {t.nav_logout}
                 </button>
