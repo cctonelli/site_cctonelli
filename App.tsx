@@ -34,7 +34,7 @@ const HomePage: React.FC = () => {
   const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
   const [dbContent, setDbContent] = useState<Record<string, string>>({});
   
-  const [loading, setLoading] = useState(false);
+  const [isLive, setIsLive] = useState(false);
   const [language, setLanguage] = useState<Language>('pt');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const t = translations[language];
@@ -44,11 +44,7 @@ const HomePage: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  const initialLoadRef = useRef(false);
-
-  const syncSupabaseData = useCallback(async (silent = false) => {
-    if (!silent) console.log("[AdvisorySync] Iniciando captura de inteligência pública...");
-    
+  const syncData = useCallback(async () => {
     try {
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
@@ -59,56 +55,56 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
-      const filterActive = (list: any[]) => list?.filter(item => {
-        const val = item.is_active !== undefined ? item.is_active : (item.approved !== undefined ? item.approved : true);
-        return val === true || val === 'true' || val === 1;
-      }) || [];
-
-      if (m?.length) setMetrics(filterActive(m));
-      if (i?.length) setInsights(filterActive(i));
+      if (m?.length) setMetrics(m);
+      if (i?.length) setInsights(i);
       if (p?.length) setProducts(p);
-      if (test?.length) setTestimonials(filterActive(test));
+      if (test?.length) setTestimonials(test);
       if (s) setDbContent(s);
-      if (car?.length) setCarouselImages(filterActive(car));
+      if (car?.length) setCarouselImages(car);
       
-      if (!silent) console.log("[AdvisorySync] Ecossistema sincronizado.");
+      setIsLive(true);
     } catch (err) {
-      console.warn("[AdvisorySync] Falha na rede de dados. Operando em modo seguro (Cache/Seed).", err);
+      console.error("[Supabase Sync Error]", err);
+      setIsLive(false);
     }
   }, []);
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    const isDark = theme === 'system' ? window.matchMedia('(prefers-color-scheme: dark)').matches : theme === 'dark';
-    if (isDark) root.classList.add('dark'); else root.classList.remove('dark');
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    if (initialLoadRef.current) return;
-    initialLoadRef.current = true;
-
-    const startup = async () => {
+    const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const profile = await getProfile(session.user.id);
         setUserProfile(profile);
       }
-      await syncSupabaseData();
+      await syncData();
     };
 
-    startup();
+    init();
 
+    // Inscrição em Tempo Real para todas as tabelas
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
-    const subs = tables.map(table => subscribeToChanges(table, () => syncSupabaseData(true)));
+    const subs = tables.map(table => subscribeToChanges(table, syncData));
+    
     return () => subs.forEach(s => s.unsubscribe());
-  }, [syncSupabaseData]);
+  }, [syncData]);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const isDark = theme === 'system' ? window.matchMedia('(prefers-color-scheme: dark)').matches : theme === 'dark';
+    if (isDark) root.classList.add('dark'); else root.classList.remove('dark');
+  }, [theme]);
 
   const resolveContent = (key: string, localFallback: string) => dbContent[key] || localFallback;
 
   return (
-    <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500 selection:bg-blue-600 selection:text-white">
+    <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
       
+      {/* Indicador de Status Realtime */}
+      <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Database Connected</span>
+      </div>
+
       <Navbar 
         onAdminClick={() => userProfile ? (userProfile.user_type === 'admin' ? setIsAdminOpen(true) : setIsClientPortalOpen(true)) : setIsAuthOpen(true)} 
         userProfile={userProfile} 
@@ -126,60 +122,43 @@ const HomePage: React.FC = () => {
         }}
       />
 
-      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={syncSupabaseData} />}
+      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={syncData} />}
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
-      <main className="animate-in fade-in duration-1000">
+      <main>
         <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} />
 
-        <section id="metrics" className="py-32 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-600/20 to-transparent"></div>
+        <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
               {metrics.map(m => (
-                <div key={m.id} className="text-center space-y-4 hover:scale-105 transition-transform duration-500">
-                  <div className="text-6xl font-serif font-bold text-blue-600 tracking-tighter drop-shadow-2xl">{m.value}</div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-500">{m.label}</div>
+                <div key={m.id} className="text-center">
+                  <div className="text-5xl font-serif font-bold text-blue-600 mb-2">{m.value}</div>
+                  <div className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">{m.label}</div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="insights" className="py-40 bg-white dark:bg-slate-950 transition-colors">
+        <section id="insights" className="py-32 bg-white dark:bg-slate-950">
           <div className="container mx-auto px-6">
-            <div className="mb-24 flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-              <div className="max-w-2xl">
-                <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[10px] mb-4">Strategic Intelligence</div>
-                <h2 className="text-6xl font-serif text-slate-900 dark:text-white italic leading-tight">
-                  {resolveContent('insights_title', t.insights_title)}
-                </h2>
-              </div>
-              <Link to="/#insights" className="text-blue-600 font-black uppercase tracking-widest text-[10px] border-b-2 border-blue-600/20 pb-2 hover:border-blue-600 transition-all">
-                {t.insights_all}
-              </Link>
+            <div className="flex justify-between items-end mb-16">
+              <h2 className="text-4xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', t.insights_title)}</h2>
+              <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b border-blue-600/20 pb-1">{t.insights_all}</Link>
             </div>
-            <div className="grid md:grid-cols-3 gap-16">
-              {insights.length > 0 ? insights.map(insight => (
-                <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group space-y-8 block">
-                  <div className="aspect-[4/5] rounded-[3rem] overflow-hidden bg-slate-200 dark:bg-slate-900 border border-slate-200 dark:border-white/5 shadow-xl relative">
-                    <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-80 dark:opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
-                    <div className="absolute bottom-10 left-10 right-10">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-blue-400 bg-blue-400/10 px-3 py-1 rounded-full border border-blue-400/20">{insight.category || 'Executive'}</span>
-                    </div>
+            <div className="grid md:grid-cols-3 gap-12">
+              {insights.map(insight => (
+                <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-6">
+                  <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 relative">
+                    <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700" alt="" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                   </div>
-                  <div className="space-y-4">
-                    <h3 className="text-3xl font-serif text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors italic leading-tight">{insight.title}</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-base font-light italic leading-relaxed line-clamp-3">{insight.excerpt}</p>
-                  </div>
+                  <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors">{insight.title}</h3>
+                  <p className="text-slate-500 text-sm line-clamp-3 italic">{insight.excerpt}</p>
                 </Link>
-              )) : (
-                <div className="col-span-full py-40 text-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[4rem]">
-                  <span className="text-[11px] font-black uppercase tracking-[0.8em] text-slate-400 animate-pulse">Sincronizando Insights Estratégicos...</span>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         </section>
@@ -189,16 +168,10 @@ const HomePage: React.FC = () => {
         <ContactForm language={language} />
       </main>
 
-      <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
-        <div className="container mx-auto px-6 space-y-12 relative z-10">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white shadow-2xl shadow-blue-600/30">CT</div>
-          <div className="space-y-4">
-            <h4 className="text-2xl font-serif dark:text-white italic">Claudio Tonelli Consultoria</h4>
-            <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.8em] max-w-xl mx-auto leading-loose">
-              {resolveContent('copyright', t.copyright)}
-            </p>
-          </div>
+      <footer className="py-20 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center">
+        <div className="container mx-auto px-6 space-y-8">
+          <div className="w-12 h-12 bg-blue-600 rounded-xl mx-auto flex items-center justify-center font-bold text-xl text-white shadow-2xl">CT</div>
+          <p className="text-[9px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em]">{resolveContent('copyright', t.copyright)}</p>
         </div>
       </footer>
       <ChatBot />

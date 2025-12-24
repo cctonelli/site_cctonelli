@@ -61,7 +61,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl text-2xl">CT</div>
             <div className="flex flex-col">
               <span className="font-black text-[11px] uppercase tracking-[0.6em] text-white">Management</span>
-              <span className="text-[7px] uppercase tracking-[0.2em] text-blue-500 font-bold mt-1">Version 7.5.Nexus</span>
+              <span className="text-[7px] uppercase tracking-[0.2em] text-blue-500 font-bold mt-1">Version 10.0.Core</span>
             </div>
           </div>
           
@@ -69,7 +69,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             {[
               { id: 'carousel', label: 'Carrossel / Hero' },
               { id: 'insights', label: 'Knowledge Hub' },
-              { id: 'products', label: 'Loja Soluções' },
+              { id: 'products', label: 'Soluções / Loja' },
               { id: 'metrics', label: 'Impact KPIs' },
               { id: 'testimonials', label: 'Social Proof' },
               { id: 'content', label: 'Copywriting' },
@@ -127,7 +127,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'title', label: 'Título do Artigo' },
                   { key: 'excerpt', label: 'Resumo / Lead', type: 'textarea' },
                   { key: 'image_url', label: 'Imagem de Capa (URL)', type: 'image' },
-                  { key: 'content', label: 'Conteúdo (HTML/Tiptap)', type: 'textarea' },
+                  { key: 'content', label: 'Conteúdo (HTML)', type: 'textarea' },
                   { key: 'is_active', label: 'Visível no Site', type: 'toggle' },
                 ]}
                 displayColumns={['image_url', 'title', 'is_active']}
@@ -143,6 +143,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'description', label: 'Descrição Detalhada', type: 'textarea' },
                   { key: 'price', label: 'Valor Investimento (R$)', type: 'number' },
                   { key: 'type', label: 'Categoria (product/service)' },
+                  { key: 'config', label: 'Configuração Avançada (JSON: image_url, url)', type: 'json' },
                 ]}
                 displayColumns={['name', 'price', 'type']}
               />
