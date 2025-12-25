@@ -108,9 +108,15 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 title="Slide do Carrossel"
                 fields={[
                   { key: 'url', label: 'URL da Imagem de Fundo', type: 'image' },
-                  { key: 'title', label: 'Título Principal' },
-                  { key: 'subtitle', label: 'Subtítulo Visionário', type: 'textarea' },
-                  { key: 'cta_text', label: 'Texto do Botão (Ex: Ver Soluções)' },
+                  { key: 'title', label: 'Título PT' },
+                  { key: 'title_en', label: 'Título EN' },
+                  { key: 'title_es', label: 'Título ES' },
+                  { key: 'subtitle', label: 'Subtítulo PT', type: 'textarea' },
+                  { key: 'subtitle_en', label: 'Subtítulo EN', type: 'textarea' },
+                  { key: 'subtitle_es', label: 'Subtítulo ES', type: 'textarea' },
+                  { key: 'cta_text', label: 'Texto Botão PT' },
+                  { key: 'cta_text_en', label: 'Texto Botão EN' },
+                  { key: 'cta_text_es', label: 'Texto Botão ES' },
                   { key: 'link', label: 'Link de Destino (Ex: #products)' },
                   { key: 'display_order', label: 'Ordem de Exibição', type: 'number' },
                   { key: 'is_active', label: 'Publicado', type: 'toggle' },
@@ -124,10 +130,16 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 tableName="insights"
                 title="Insight Estratégico"
                 fields={[
-                  { key: 'title', label: 'Título do Artigo' },
-                  { key: 'excerpt', label: 'Resumo / Lead', type: 'textarea' },
+                  { key: 'title', label: 'Título PT' },
+                  { key: 'title_en', label: 'Título EN' },
+                  { key: 'title_es', label: 'Título ES' },
+                  { key: 'excerpt', label: 'Resumo PT', type: 'textarea' },
+                  { key: 'excerpt_en', label: 'Resumo EN', type: 'textarea' },
+                  { key: 'excerpt_es', label: 'Resumo ES', type: 'textarea' },
                   { key: 'image_url', label: 'Imagem de Capa (URL)', type: 'image' },
-                  { key: 'content', label: 'Conteúdo (HTML)', type: 'textarea' },
+                  { key: 'content', label: 'Conteúdo PT (HTML)', type: 'textarea' },
+                  { key: 'content_en', label: 'Conteúdo EN (HTML)', type: 'textarea' },
+                  { key: 'content_es', label: 'Conteúdo ES (HTML)', type: 'textarea' },
                   { key: 'is_active', label: 'Visível no Site', type: 'toggle' },
                 ]}
                 displayColumns={['image_url', 'title', 'is_active']}
@@ -139,11 +151,15 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 tableName="products"
                 title="Solução / Produto"
                 fields={[
-                  { key: 'name', label: 'Nome do Serviço' },
-                  { key: 'description', label: 'Descrição Detalhada', type: 'textarea' },
+                  { key: 'name', label: 'Nome PT' },
+                  { key: 'name_en', label: 'Nome EN' },
+                  { key: 'name_es', label: 'Nome ES' },
+                  { key: 'description', label: 'Descrição PT', type: 'textarea' },
+                  { key: 'description_en', label: 'Descrição EN', type: 'textarea' },
+                  { key: 'description_es', label: 'Descrição ES', type: 'textarea' },
                   { key: 'price', label: 'Valor Investimento (R$)', type: 'number' },
                   { key: 'type', label: 'Categoria (product/service)' },
-                  { key: 'config', label: 'Configuração Avançada (JSON: image_url, url)', type: 'json' },
+                  { key: 'config', label: 'Configuração Avançada (JSON)', type: 'json' },
                 ]}
                 displayColumns={['name', 'price', 'type']}
               />
@@ -154,8 +170,10 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 tableName="metrics"
                 title="KPI de Impacto"
                 fields={[
-                  { key: 'value', label: 'Valor Exibido (Ex: +17k)' },
-                  { key: 'label', label: 'Rótulo da Métrica' },
+                  { key: 'value', label: 'Valor (Ex: +17k)' },
+                  { key: 'label', label: 'Rótulo PT' },
+                  { key: 'label_en', label: 'Rótulo EN' },
+                  { key: 'label_es', label: 'Rótulo ES' },
                   { key: 'display_order', label: 'Ordem', type: 'number' },
                   { key: 'is_active', label: 'Ativo', type: 'toggle' },
                 ]}
@@ -170,7 +188,9 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 fields={[
                   { key: 'name', label: 'Nome do Líder' },
                   { key: 'company', label: 'Corporação' },
-                  { key: 'quote', label: 'Depoimento', type: 'textarea' },
+                  { key: 'quote', label: 'Depoimento PT', type: 'textarea' },
+                  { key: 'quote_en', label: 'Depoimento EN', type: 'textarea' },
+                  { key: 'quote_es', label: 'Depoimento ES', type: 'textarea' },
                   { key: 'approved', label: 'Aprovado para Exibição', type: 'toggle' },
                 ]}
                 displayColumns={['name', 'company', 'approved']}
@@ -183,8 +203,10 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 title="Arquitetura de Copywriting"
                 idColumn="key"
                 fields={[
-                  { key: 'key', label: 'ID Chave do Componente' },
-                  { key: 'value', label: 'Texto do Componente', type: 'textarea' },
+                  { key: 'key', label: 'ID Chave (Não Alterar)' },
+                  { key: 'value', label: 'Texto PT', type: 'textarea' },
+                  { key: 'value_en', label: 'Texto EN', type: 'textarea' },
+                  { key: 'value_es', label: 'Texto ES', type: 'textarea' },
                 ]}
                 displayColumns={['key', 'value']}
               />

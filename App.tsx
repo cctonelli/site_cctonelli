@@ -29,7 +29,7 @@ const HomePage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
-  const [dbContent, setDbContent] = useState<Record<string, string>>({});
+  const [dbContent, setDbContent] = useState<Record<string, any>>({});
   
   const [isLive, setIsLive] = useState(false);
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'pt');
@@ -53,7 +53,6 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
-      // Atualização forçada dos estados (limpa seed data mesmo se o retorno for vazio, mas válido)
       setMetrics(m || []);
       setInsights(i || []);
       setProducts(p || []);
@@ -71,6 +70,13 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('lang', language);
+    // Dinamic Page Title based on language
+    const titles = {
+      pt: 'Claudio Tonelli Consultoria | Estratégia de Elite',
+      en: 'Claudio Tonelli Consulting | Elite Strategy',
+      es: 'Claudio Tonelli Consultoría | Estrategia de Élite'
+    };
+    document.title = titles[language];
   }, [language]);
 
   useEffect(() => {
@@ -84,7 +90,6 @@ const HomePage: React.FC = () => {
     };
     init();
 
-    // Inscrição em Realtime para todas as tabelas vitais
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
     const subs = tables.map(table => subscribeToChanges(table, syncData));
     
@@ -106,7 +111,10 @@ const HomePage: React.FC = () => {
   };
 
   const resolveContent = (key: string, localFallback: string) => {
-    return dbContent[key] || localFallback;
+    const item = dbContent[key];
+    if (!item) return localFallback;
+    if (language === 'pt') return item.value || localFallback;
+    return item[`value_${language}`] || item.value || localFallback;
   };
 
   return (

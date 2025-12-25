@@ -33,7 +33,6 @@ export const signIn = async (email: string, password?: string) => {
     : await supabase.auth.signInWithOtp({ email });
 };
 
-// Fixed: Added missing signUp function export for registration flow
 export const signUp = async (email: string, password: string, metadata: any) => {
   return await supabase.auth.signUp({
     email,
@@ -89,9 +88,10 @@ export const fetchTestimonials = async () => {
 };
 
 export const fetchSiteContent = async (page: string) => {
-  const { data, error } = await supabase.from('site_content').select('key, value').eq('page', page);
+  const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
   if (error) return {};
-  return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item.value }), {});
+  // Mapeia o objeto inteiro para permitir traduções de campos como value_en, value_es
+  return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item }), {});
 };
 
 export const submitContact = async (contact: Contact) => {
