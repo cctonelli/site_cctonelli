@@ -8,11 +8,8 @@ import {
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Inicialização "Nuclear" para resolver PGRST205
+// Inicialização simplificada: removido db.schema para evitar conflito de prefixo 'public.public'
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  db: {
-    schema: 'public' // Força o schema public para evitar ambiguidades no PostgREST
-  },
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -40,11 +37,11 @@ export const logSupabaseError = (context: string, error: any) => {
   return { isError: false };
 };
 
-// Funções de Fetch atualizadas para usar nomes limpos e seleção específica de colunas
+// Tabelas limpas sem prefixo 'public.'
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase
-      .from('carousel_images') // Apenas o nome da tabela
+      .from('carousel_images') 
       .select('id, url, title, subtitle, cta_text, cta_url, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
@@ -121,15 +118,21 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
 };
 
 export const subscribeToChanges = (table: string, callback: () => void) => {
+  // Higieniza o nome da tabela para o canal também
+  const cleanTable = table.replace('public.', '');
   return supabase
-    .channel(`realtime:${table}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
+    .channel(`realtime:${cleanTable}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: cleanTable }, callback)
     .subscribe();
 };
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
   try {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, cpf_cnpj, gender, whatsapp, user_type')
+      .eq('id', id)
+      .single();
     if (logSupabaseError('getProfile', error).isError) return null;
     return data;
   } catch { return null; }

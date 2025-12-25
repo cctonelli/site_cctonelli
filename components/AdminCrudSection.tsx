@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, logSupabaseError } from '../services/supabaseService';
 
 interface Field {
@@ -17,12 +17,15 @@ interface AdminCrudSectionProps {
 }
 
 const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({ 
-  tableName, 
+  tableName: rawTableName, 
   title, 
   fields, 
   displayColumns,
   idColumn = 'id' 
 }) => {
+  // Garante que o nome da tabela nunca tenha prefixo 'public.'
+  const tableName = useMemo(() => rawTableName.replace('public.', ''), [rawTableName]);
+
   const [items, setItems] = useState<any[]>([]); 
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<string | number | null>(null);
@@ -50,7 +53,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         });
         setStatus({ 
           text: errorInfo.isMissingTable 
-            ? `Erro de Cache: A tabela '${tableName}' não foi encontrada pela API.` 
+            ? `Erro de Cache: A tabela '${tableName}' não foi mapeada corretamente.` 
             : `Erro: ${errorInfo.code}`, 
           type: errorInfo.isMissingTable ? 'warning' : 'error' 
         });
@@ -59,7 +62,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         setItems(Array.isArray(data) ? data : []);
       }
     } catch (e: any) {
-      console.error("[Admin Crud] Sync Error:", e);
+      console.error("[Admin Crud] Critical komunikace fail:", e);
       setStatus({ text: "Falha na comunicação com o banco de dados.", type: 'error' });
       setItems([]);
     } finally {
@@ -158,7 +161,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
           
           <div className="space-y-4">
             <p className="text-slate-400 text-sm leading-relaxed">
-              Os dados existem no banco, mas a API precisa ser notificada da mudança. Execute o comando abaixo no <strong>SQL Editor</strong> do seu painel Supabase:
+              Execute o comando abaixo no <strong>SQL Editor</strong> do painel Supabase para forçar o reconhecimento das tabelas:
             </p>
             <div className="relative group">
               <pre className="bg-black/50 p-6 rounded-2xl border border-white/5 text-[11px] font-mono text-amber-300 overflow-x-auto">
@@ -272,7 +275,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
             </div>
           )) : !loading && (
             <div className="text-center p-16 text-slate-700 text-[10px] uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
-              {errorDetails?.isMissing ? `Aguardando correção do cache para '${tableName}'...` : 'Não foram encontrados registros.'}
+              {errorDetails?.isMissing ? `Aguardando sincronização de '${tableName}'...` : 'Não foram encontrados registros.'}
             </div>
           )}
         </div>
