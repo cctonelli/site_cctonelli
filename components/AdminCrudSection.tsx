@@ -35,11 +35,10 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
     setStatus(null);
     setErrorDetails(null);
     try {
-      // Garantimos que tableName não tenha prefixos manuais aqui
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
-        .order(idColumn, { ascending: idColumn === 'display_order' });
+        .order(idColumn, { ascending: true });
 
       const errorInfo = logSupabaseError(`Admin - ${tableName}`, error);
       
@@ -49,12 +48,12 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
           isMissing: errorInfo.isMissingTable,
           sql: errorInfo.suggestedSql
         });
-        
-        if (errorInfo.isMissingTable) {
-          setStatus({ text: `Tabela '${tableName}' não resolvida no cache do Supabase.`, type: 'warning' });
-        } else {
-          setStatus({ text: `Erro Supabase: ${errorInfo.code}`, type: 'error' });
-        }
+        setStatus({ 
+          text: errorInfo.isMissingTable 
+            ? `Erro de Cache: A tabela '${tableName}' não foi encontrada pela API.` 
+            : `Erro: ${errorInfo.code}`, 
+          type: errorInfo.isMissingTable ? 'warning' : 'error' 
+        });
         setItems([]);
       } else {
         setItems(Array.isArray(data) ? data : []);
@@ -137,45 +136,41 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const copySql = () => {
     if (errorDetails?.sql) {
       navigator.clipboard.writeText(errorDetails.sql);
-      alert('SQL copiado! Cole no SQL Editor do Supabase.');
+      alert('Comando SQL copiado! Cole no SQL Editor do Supabase e clique em RUN.');
     }
   };
 
   return (
     <div className="space-y-10">
       {errorDetails?.isMissing && (
-        <div className="bg-blue-600/10 border border-blue-500/20 p-8 rounded-[2.5rem] space-y-6 animate-in fade-in slide-in-from-top-4">
-          <div className="flex items-center gap-4 text-blue-500">
-            <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center">
+        <div className="bg-amber-600/10 border border-amber-500/20 p-8 rounded-[2.5rem] space-y-6 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-4 text-amber-500">
+            <div className="w-12 h-12 bg-amber-500/20 rounded-2xl flex items-center justify-center">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
             <div>
-              <h4 className="font-serif italic text-xl text-white">Configuração ou Cache Necessário</h4>
-              <p className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">Erro de resolução para '{tableName}'</p>
+              <h4 className="font-serif italic text-xl text-white">Cache de Schema Obsoleto (PGRST205)</h4>
+              <p className="text-[10px] uppercase tracking-widest text-amber-400 font-bold">A API não está vendo a tabela '{tableName}'</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <p className="text-slate-400 text-sm leading-relaxed">
-              O Supabase não localizou a tabela ou o cache está obsoleto. Execute o comando abaixo no <strong>SQL Editor</strong> para corrigir o cache:
+              Os dados existem no banco, mas a API precisa ser notificada da mudança. Execute o comando abaixo no <strong>SQL Editor</strong> do seu painel Supabase:
             </p>
             <div className="relative group">
-              <pre className="bg-black/50 p-6 rounded-2xl border border-white/5 text-[11px] font-mono text-blue-300 overflow-x-auto">
+              <pre className="bg-black/50 p-6 rounded-2xl border border-white/5 text-[11px] font-mono text-amber-300 overflow-x-auto">
                 {errorDetails.sql || `NOTIFY pgrst, 'reload schema';`}
               </pre>
               <button 
                 onClick={copySql}
-                className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-blue-500 transition-all opacity-0 group-hover:opacity-100"
+                className="absolute top-4 right-4 bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-amber-500 transition-all opacity-0 group-hover:opacity-100"
               >
                 Copiar SQL
               </button>
             </div>
-            <p className="text-[9px] text-slate-500 uppercase tracking-widest flex items-center gap-2 italic">
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-              Isso resolverá erros PGRST205 e atualizará as rotas da API.
-            </p>
           </div>
         </div>
       )}
@@ -238,7 +233,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         {status && (
           <div className={`p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center animate-in fade-in slide-in-from-top-2 ${
             status.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 
-            status.type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' :
+            status.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
             'bg-red-500/10 border-red-500/20 text-red-500'
           }`}>
             {status.text}
@@ -262,7 +257,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
                   <div className="text-[9px] text-slate-600 uppercase tracking-widest flex items-center gap-2">
                     ID: {item[idColumn] || '---'}
                     {item.is_active === false && <span className="bg-red-500/20 text-red-500 px-2 py-0.5 rounded text-[8px]">INATIVO</span>}
-                    {item.approved === false && <span className="bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded text-[8px]">PENDENTE</span>}
+                    {item.approved === false && <span className="bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded text-[8px]">PENDENTE</span>}
                   </div>
                 </div>
               </div>
@@ -277,11 +272,8 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
             </div>
           )) : !loading && (
             <div className="text-center p-16 text-slate-700 text-[10px] uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
-              {errorDetails?.isMissing ? `Aguardando criação ou limpeza de cache para '${tableName}'...` : 'Não foram encontrados registros.'}
+              {errorDetails?.isMissing ? `Aguardando correção do cache para '${tableName}'...` : 'Não foram encontrados registros.'}
             </div>
-          )}
-          {loading && !items.length && (
-             <div className="text-center p-10 animate-pulse text-[10px] text-blue-500 uppercase tracking-widest">Sincronizando com Terminal Supabase...</div>
           )}
         </div>
       </div>
