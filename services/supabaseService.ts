@@ -9,7 +9,7 @@ const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
 // Minimalist initialization to prevent schema conflicts.
-// Do NOT add db: { schema: 'public' } as it can cause redundancy in some PostgREST versions.
+// We do NOT prefix tables with 'public.' in our code as Supabase handles this.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
@@ -23,6 +23,7 @@ export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
+    // PGRST205: Table not found in cache. 42P01: Relation does not exist.
     const isMissingTable = code === 'PGRST205' || code === '42P01' || message.includes('schema cache') || message.includes('not found');
     const isMissingColumn = code === '42703';
     
@@ -40,12 +41,14 @@ export const logSupabaseError = (context: string, error: any) => {
   return { isError: false };
 };
 
-// CLEAN QUERIES: Strictly no 'public.' prefix and selecting only verified columns.
+// CLEAN QUERIES: No 'public.' prefix. 
+// We only select columns verified in the provided database schema.
+
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase
       .from('carousel_images') 
-      .select('id, url, title, subtitle, display_order, is_active')
+      .select('id, url, title, subtitle, display_order, is_active, cta_text, cta_url')
       .eq('is_active', true)
       .order('display_order');
     
@@ -74,8 +77,9 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase
       .from('insights')
-      // Removed 'subtitle' and 'content' as they were reported as non-existent (42703).
-      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
+      // Removing 'subtitle' temporarily as it's reported as missing (42703) despite schema.
+      // This is often due to stale cache on the server side.
+      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order, content')
       .eq('is_active', true)
       .order('display_order');
     
@@ -86,10 +90,10 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Ensuring 'products' is called without any prefix to avoid PGRST205 schema cache conflicts.
+    // Ensuring 'products' is called without 'public.' prefix to fix PGRST205.
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id, name, description, price, type, config, created_at')
       .order('created_at', { ascending: false });
     
     if (logSupabaseError('fetchProducts', error).isError) return [];
@@ -114,7 +118,7 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
   try {
     const { data, error } = await supabase
       .from('site_content')
-      .select('id, key, value, page')
+      .select('id, key, value, page, description')
       .eq('page', page);
     
     if (logSupabaseError('fetchSiteContent', error).isError) return {};
@@ -123,6 +127,7 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
 };
 
 export const subscribeToChanges = (table: string, callback: () => void) => {
+  // Ensure we never use the prefix in the channel name or table filter
   const cleanTable = table.replace('public.', '');
   return supabase
     .channel(`realtime:${cleanTable}`)
@@ -170,7 +175,7 @@ export const fetchInsightById = async (id: string | number): Promise<Insight | n
   try {
     const { data, error } = await supabase
       .from('insights')
-      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
+      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order, content')
       .eq('id', id)
       .single();
     

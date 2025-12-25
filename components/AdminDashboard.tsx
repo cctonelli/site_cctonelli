@@ -127,6 +127,8 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'url', label: 'URL da Imagem de Fundo', type: 'image' },
                   { key: 'title', label: 'Título' },
                   { key: 'subtitle', label: 'Subtítulo', type: 'textarea' },
+                  { key: 'cta_text', label: 'Texto Botão (cta_text)' },
+                  { key: 'cta_url', label: 'Link Botão (cta_url)' },
                   { key: 'display_order', label: 'Ordem de Exibição', type: 'number' },
                   { key: 'is_active', label: 'Publicado', type: 'toggle' },
                 ]}
@@ -140,8 +142,11 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 title="Insight Estratégico"
                 fields={[
                   { key: 'title', label: 'Título Principal' },
+                  // Temporarily removing subtitle from CRUD form if missing in cache to avoid 42703.
+                  // Re-add { key: 'subtitle', label: 'Subtítulo' } once cache is refreshed.
                   { key: 'excerpt', label: 'Resumo / Lead', type: 'textarea' },
                   { key: 'image_url', label: 'Imagem de Capa (URL)', type: 'image' },
+                  { key: 'content', label: 'Conteúdo (HTML)', type: 'textarea' },
                   { key: 'published_at', label: 'Data de Publicação', type: 'text' },
                   { key: 'display_order', label: 'Ordem de Importância', type: 'number' },
                   { key: 'is_active', label: 'Visível no Site', type: 'toggle' },
@@ -202,6 +207,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'key', label: 'ID Chave (Ex: hero_title)' },
                   { key: 'value', label: 'Texto do Bloco', type: 'textarea' },
                   { key: 'page', label: 'Página de Destino (Ex: home)' },
+                  { key: 'description', label: 'Nota Interna' },
                 ]}
                 displayColumns={['key', 'value', 'page']}
               />
