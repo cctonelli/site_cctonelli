@@ -20,10 +20,7 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 const SEED_METRICS: Metric[] = [
-  { id: '1', value: '+17k', label: 'LinkedIn Connections', icon: null, display_order: 1, is_active: true },
-  { id: '2', value: '25+', label: 'Anos de Estratégia', icon: null, display_order: 2, is_active: true },
-  { id: '3', value: '300+', label: 'Executive Projects', icon: null, display_order: 3, is_active: true },
-  { id: '4', value: 'ROI', label: 'Operational Excellence', icon: null, display_order: 4, is_active: true }
+  { id: '1', value: '...', label: 'Sincronizando...', icon: null, display_order: 1, is_active: true }
 ];
 
 const HomePage: React.FC = () => {
@@ -45,6 +42,7 @@ const HomePage: React.FC = () => {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const syncData = useCallback(async () => {
+    console.debug("[Sync] Iniciando captura de dados globais...");
     try {
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
@@ -55,18 +53,18 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
-      // Atualiza os estados apenas se os dados retornados não forem vazios
-      if (m && m.length > 0) setMetrics(m);
-      if (i && i.length > 0) setInsights(i);
-      if (p && p.length > 0) setProducts(p);
-      if (test && test.length > 0) setTestimonials(test);
-      if (s && Object.keys(s).length > 0) setDbContent(s);
-      if (car && car.length > 0) setCarouselImages(car);
+      // Atualização forçada dos estados (limpa seed data mesmo se o retorno for vazio, mas válido)
+      setMetrics(m || []);
+      setInsights(i || []);
+      setProducts(p || []);
+      setTestimonials(test || []);
+      setDbContent(s || {});
+      setCarouselImages(car || []);
       
       setIsLive(true);
-      console.debug("[Sync] Dados integrados com sucesso do Supabase.");
+      console.debug("[Sync] Supabase Cloud sincronizado com o Front-end.");
     } catch (err) {
-      console.error("[Sync Error]", err);
+      console.error("[Sync Error] Falha na comunicação com Supabase:", err);
       setIsLive(false);
     }
   }, []);
@@ -86,8 +84,10 @@ const HomePage: React.FC = () => {
     };
     init();
 
+    // Inscrição em Realtime para todas as tabelas vitais
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
     const subs = tables.map(table => subscribeToChanges(table, syncData));
+    
     return () => subs.forEach(s => s.unsubscribe());
   }, [syncData]);
 
@@ -110,12 +110,13 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
-      {/* Realtime Status Indicator */}
-      <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all ${isLive ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-2'}`}>
-        <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+    <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500 selection:bg-blue-600 selection:text-white">
+      
+      {/* Realtime Link Status */}
+      <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-2'}`}>
+        <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`}></div>
         <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
-          {isLive ? 'Live Core Connected' : 'Syncing Hub...'}
+          {isLive ? 'Advisory Hub: Live' : 'Sincronizando...'}
         </span>
       </div>
 
@@ -148,12 +149,19 @@ const HomePage: React.FC = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
               {metrics.map(m => (
                 <div key={m.id} className="text-center group">
-                  <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-500">{m.value}</div>
+                  <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-500">
+                    {m.value}
+                  </div>
                   <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">
                     {resolveTranslation(m, 'label', m.label)}
                   </div>
                 </div>
               ))}
+              {metrics.length === 0 && (
+                 <div className="col-span-full py-10 text-center text-[10px] text-slate-400 uppercase tracking-widest animate-pulse">
+                    Aguardando métricas do painel executivo...
+                 </div>
+              )}
             </div>
           </div>
         </section>

@@ -58,7 +58,7 @@ const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-[80] transition-all duration-700 ${isScrolled ? 'bg-white/95 dark:bg-slate-950/80 backdrop-blur-2xl py-4 border-b border-slate-200 dark:border-white/5 shadow-2xl' : 'bg-transparent py-10'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-[80] transition-all duration-700 ${isScrolled ? 'bg-white/95 dark:bg-slate-950/90 backdrop-blur-2xl py-4 border-b border-slate-200 dark:border-white/5 shadow-2xl' : 'bg-transparent py-10'}`}>
       <div className="container mx-auto px-6 flex justify-between items-center">
         <div className="flex items-center gap-4 cursor-pointer group" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
           <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-2xl text-white shadow-xl shadow-blue-600/30 group-hover:scale-105 transition-transform duration-500">CT</div>
@@ -76,8 +76,8 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="flex items-center gap-4 lg:gap-8">
-          {/* Active Language Switcher */}
-          <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full p-1 border border-slate-200 dark:border-white/5 shadow-inner">
+          {/* Active Language Switcher - Pill Style */}
+          <div className="flex items-center bg-slate-100 dark:bg-white/5 rounded-full p-1 border border-slate-200 dark:border-white/10 shadow-inner">
             {languages.map(lang => (
               <button 
                 key={lang.code}
@@ -93,7 +93,7 @@ const Navbar: React.FC<NavbarProps> = ({
             ))}
           </div>
 
-          <button onClick={cycleTheme} className="w-10 h-10 lg:w-11 lg:h-11 flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-blue-500 transition-all active:scale-95 shadow-sm">
+          <button onClick={cycleTheme} className="w-10 h-10 lg:w-11 lg:h-11 flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 hover:text-blue-500 transition-all active:scale-95 shadow-sm">
             <ThemeIcon />
           </button>
 

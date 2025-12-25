@@ -67,13 +67,13 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
 
   return (
     <section id="hero" className="relative h-screen bg-white dark:bg-brand-navy overflow-hidden">
-      {/* Background Interactive Layer */}
-      <div className="absolute inset-0 z-0 transform scale-125 lg:scale-110">
+      {/* 3D Global Visualization Background */}
+      <div className="absolute inset-0 z-0 transform scale-125 lg:scale-110 pointer-events-none">
         <ThreeGlobe />
       </div>
       
-      {/* Dynamic Overlays */}
-      <div className="absolute inset-0 z-[1] bg-gradient-to-r from-white dark:from-brand-navy via-white/40 dark:via-brand-navy/30 to-transparent opacity-95 lg:opacity-85"></div>
+      {/* Aesthetic Overlays */}
+      <div className="absolute inset-0 z-[1] bg-gradient-to-r from-white dark:from-brand-navy via-white/50 dark:via-brand-navy/40 to-transparent opacity-95 lg:opacity-90"></div>
       
       <div className="relative z-10 h-full w-full">
         {!hasSlides ? (
@@ -82,8 +82,9 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
           <Swiper
             modules={[Pagination, Autoplay, EffectFade]}
             pagination={{ clickable: true, dynamicBullets: true }}
-            autoplay={{ delay: 7000, disableOnInteraction: false }}
+            autoplay={{ delay: 8000, disableOnInteraction: false }}
             effect="fade"
+            fadeEffect={{ crossFade: true }}
             loop={slides.length > 1}
             className="h-full w-full"
           >
@@ -93,11 +94,11 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
                   <div className="absolute inset-0">
                     <img 
                       src={slide.url} 
-                      className="w-full h-full object-cover opacity-15 dark:opacity-20 transition-opacity duration-1000" 
+                      className="w-full h-full object-cover opacity-20 dark:opacity-30 transition-opacity duration-[2s]" 
                       alt="" 
                       onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }}
                     />
-                    <div className="absolute inset-0 bg-brand-navy/10 dark:bg-black/40 backdrop-grayscale-[0.4]"></div>
+                    <div className="absolute inset-0 bg-brand-navy/5 dark:bg-black/30"></div>
                   </div>
                   {renderContent(slide)}
                 </div>
