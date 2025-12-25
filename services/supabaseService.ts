@@ -17,140 +17,109 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-// Full SQL templates to resolve missing table errors (PGRST205)
+// SQL templates atualizados para refletir IDs BigInt e Identity do usuário
 export const TABLE_SQL_TEMPLATES: Record<string, string> = {
   products: `CREATE TABLE IF NOT EXISTS public.products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  name_en TEXT,
-  name_es TEXT,
-  description TEXT,
-  description_en TEXT,
-  description_es TEXT,
-  price DECIMAL(10,2) DEFAULT 0,
-  type TEXT CHECK (type IN ('product', 'service')) DEFAULT 'service',
-  config JSONB DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ DEFAULT now()
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name text NOT NULL,
+  name_en text, name_es text,
+  description text,
+  description_en text, description_es text,
+  price numeric NOT NULL DEFAULT 0,
+  type text CHECK (type = ANY (ARRAY['product'::text, 'service'::text])),
+  config jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now()
 );
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.products FOR SELECT USING (true);
-CREATE POLICY "Admin full access" ON public.products FOR ALL TO authenticated USING (true);
+CREATE POLICY "Admin full" ON public.products FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
 
   carousel_images: `CREATE TABLE IF NOT EXISTS public.carousel_images (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  url TEXT NOT NULL,
-  title TEXT,
-  title_en TEXT,
-  title_es TEXT,
-  subtitle TEXT,
-  subtitle_en TEXT,
-  subtitle_es TEXT,
-  cta_text TEXT,
-  cta_text_en TEXT,
-  cta_text_es TEXT,
-  cta_url TEXT,
-  display_order INTEGER DEFAULT 0,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now()
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  url text NOT NULL,
+  title text, title_en text, title_es text,
+  subtitle text, subtitle_en text, subtitle_es text,
+  cta_text text DEFAULT 'Saiba Mais'::text,
+  cta_text_en text, cta_text_es text,
+  cta_url text,
+  display_order integer NOT NULL DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now()
 );
 ALTER TABLE public.carousel_images ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.carousel_images FOR SELECT USING (true);
-CREATE POLICY "Admin full access" ON public.carousel_images FOR ALL TO authenticated USING (true);
+CREATE POLICY "Admin full" ON public.carousel_images FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
 
   insights: `CREATE TABLE IF NOT EXISTS public.insights (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  title_en TEXT,
-  title_es TEXT,
-  subtitle TEXT,
-  excerpt TEXT,
-  excerpt_en TEXT,
-  excerpt_es TEXT,
-  image_url TEXT,
-  content TEXT,
-  content_en TEXT,
-  content_es TEXT,
-  category TEXT DEFAULT 'ADVISORY',
-  published_at TIMESTAMPTZ DEFAULT now(),
-  is_active BOOLEAN DEFAULT true,
-  display_order INTEGER DEFAULT 0
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  title text NOT NULL, title_en text, title_es text,
+  subtitle text,
+  excerpt text, excerpt_en text, excerpt_es text,
+  image_url text,
+  content text, content_en text, content_es text,
+  category text DEFAULT 'ADVISORY',
+  published_at timestamp with time zone DEFAULT now(),
+  is_active boolean DEFAULT true,
+  display_order integer NOT NULL DEFAULT 0
 );
 ALTER TABLE public.insights ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.insights FOR SELECT USING (true);
-CREATE POLICY "Admin full access" ON public.insights FOR ALL TO authenticated USING (true);
+CREATE POLICY "Admin full" ON public.insights FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
 
   metrics: `CREATE TABLE IF NOT EXISTS public.metrics (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  label TEXT NOT NULL,
-  label_en TEXT,
-  label_es TEXT,
-  value TEXT NOT NULL,
-  icon TEXT,
-  display_order INTEGER DEFAULT 0,
-  is_active BOOLEAN DEFAULT true
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  label text NOT NULL, label_en text, label_es text,
+  value text NOT NULL,
+  icon text,
+  display_order integer NOT NULL DEFAULT 0,
+  is_active boolean DEFAULT true,
+  updated_at timestamp with time zone DEFAULT now()
 );
 ALTER TABLE public.metrics ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.metrics FOR SELECT USING (true);
-CREATE POLICY "Admin full access" ON public.metrics FOR ALL TO authenticated USING (true);
-NOTIFY pgrst, 'reload schema';`,
-
-  testimonials: `CREATE TABLE IF NOT EXISTS public.testimonials (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  company TEXT,
-  quote TEXT NOT NULL,
-  quote_en TEXT,
-  quote_es TEXT,
-  approved BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public read" ON public.testimonials FOR SELECT USING (true);
-CREATE POLICY "Admin full access" ON public.testimonials FOR ALL TO authenticated USING (true);
+CREATE POLICY "Admin full" ON public.metrics FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
 
   site_content: `CREATE TABLE IF NOT EXISTS public.site_content (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  page TEXT DEFAULT 'home',
-  key TEXT UNIQUE NOT NULL,
-  value TEXT NOT NULL,
-  value_en TEXT,
-  value_es TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  key text NOT NULL UNIQUE,
+  value text NOT NULL,
+  value_en text, value_es text,
+  page text NOT NULL,
+  created_at timestamp with time zone DEFAULT now()
 );
 ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.site_content FOR SELECT USING (true);
-CREATE POLICY "Admin full access" ON public.site_content FOR ALL TO authenticated USING (true);
+CREATE POLICY "Admin full" ON public.site_content FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
 
   contacts: `CREATE TABLE IF NOT EXISTS public.contacts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  message TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name text NOT NULL,
+  email text NOT NULL,
+  message text NOT NULL,
+  created_at timestamp with time zone DEFAULT now()
 );
 ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anon insert" ON public.contacts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public insert" ON public.contacts FOR INSERT WITH CHECK (true);
 CREATE POLICY "Admin select" ON public.contacts FOR SELECT TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
 
-  profiles: `CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name TEXT,
-  cpf_cnpj TEXT,
-  gender TEXT,
-  whatsapp TEXT,
-  user_type TEXT DEFAULT 'client' CHECK (user_type IN ('client', 'admin')),
-  created_at TIMESTAMPTZ DEFAULT now()
+  testimonials: `CREATE TABLE IF NOT EXISTS public.testimonials (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name text NOT NULL,
+  company text,
+  quote text NOT NULL,
+  quote_en text, quote_es text,
+  approved boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now()
 );
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Users can insert their own profile." ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
-CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
+ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON public.testimonials FOR SELECT USING (true);
+CREATE POLICY "Admin full" ON public.testimonials FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`
 };
 
@@ -170,18 +139,16 @@ const getTableNameFromContext = (context: string): string | null => {
 
 export const logSupabaseError = (context: string, error: any) => {
   if (error) {
-    const message = typeof error === 'string' ? error : (error.message || 'Unknown Supabase Error');
+    const message = typeof error === 'string' ? error : (error.message || 'Erro desconhecido');
     const code = error.code || 'N/A';
-    // Identifies PGRST205 schema cache errors
-    const isMissingTable = message.includes('schema cache') || code === '42P01' || message.includes('Could not find') || code === 'PGRST205';
+    const isMissingTable = code === '42P01' || code === 'PGRST205';
     const tableName = getTableNameFromContext(context);
     
-    const logStr = `[Supabase Error - ${context}] ${message} | Code: ${code}`;
-    console.error(logStr);
+    console.error(`[Supabase Error - ${context}] ${message} | Code: ${code}`);
 
     return {
       isError: true,
-      message: logStr,
+      message,
       code,
       isMissingTable,
       tableName,
@@ -194,7 +161,7 @@ export const logSupabaseError = (context: string, error: any) => {
 export const subscribeToChanges = (table: string, callback: () => void) => {
   return supabase
     .channel(`realtime:${table}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: table }, callback)
+    .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
     .subscribe();
 };
 
@@ -249,7 +216,6 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Ensuring no 'public.' prefix is used here to avoid schema cache issues (PGRST205)
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (logSupabaseError('fetchProducts', error).isError) return [];
     return data || [];
@@ -279,7 +245,7 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
   } catch { return false; }
 };
 
-export const fetchInsightById = async (id: string): Promise<Insight | null> => {
+export const fetchInsightById = async (id: string | number): Promise<Insight | null> => {
   try {
     const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
     if (logSupabaseError('fetchInsightById', error).isError) return null;
