@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import AdminCrudSection from './AdminCrudSection';
-import { supabase } from '../services/supabaseService';
 import { Profile } from '../types';
 
 type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'translations';
@@ -18,27 +17,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     const sql = "NOTIFY pgrst, 'reload schema';";
     if (navigator.clipboard) {
       navigator.clipboard.writeText(sql);
-      alert("🛠️ PROCEDIMENTO DE REPARO ATIVADO!\n\n1. O comando SQL foi copiado para sua área de transferência.\n2. No painel do Supabase, clique em 'SQL Editor'.\n3. Cole o comando: " + sql + "\n4. Clique em 'RUN'.\n\nIsso limpará o cache da API e fará com que as tabelas sejam reconhecidas instantaneamente.");
+      alert("🛠️ PROCEDIMENTO DE REPARO ATIVADO!\n\n1. O comando SQL foi copiado.\n2. No Supabase SQL Editor, cole o comando: " + sql + "\n3. Clique em 'RUN'.\n\nIsso sincroniza as tabelas e o cache da API.");
     } else {
-      alert("Execute este comando no SQL Editor do Supabase: " + sql);
+      alert("Execute no SQL Editor: " + sql);
     }
   };
 
-  if (!profile || profile.user_type !== 'admin') {
+  // Verificação de segurança absoluta para evitar "White Screen"
+  if (!profile) {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center p-8">
+      <div className="fixed inset-0 z-[200] bg-brand-navy flex items-center justify-center p-8">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-slate-500 uppercase tracking-widest text-[10px] font-black">Validando Perfil Executivo...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (profile.user_type !== 'admin') {
+    return (
+      <div className="fixed inset-0 z-[200] bg-slate-950 flex flex-col items-center justify-center text-center p-8">
         <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mb-6 border border-red-500/20">
            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-6V9m0-6H6a2 2 0 00-2 2v14a2 2 0 002-2h12a2 2 0 002-2V9l-6-6z" /></svg>
         </div>
         <h2 className="text-white font-serif italic text-4xl">Acesso Negado</h2>
-        <p className="text-slate-500 text-[11px] mt-4 uppercase tracking-[0.5em] font-black">Identidade não validada no core estratégico.</p>
-        <button onClick={onClose} className="mt-8 text-white/50 hover:text-white underline text-[10px] uppercase tracking-widest">Fechar</button>
+        <p className="text-slate-500 text-[11px] mt-4 uppercase tracking-[0.5em] font-black">Este terminal é exclusivo para a gestão Claudio Tonelli.</p>
+        <button onClick={onClose} className="mt-8 text-white/50 hover:text-white underline text-[10px] uppercase tracking-widest">Retornar ao Hub</button>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-brand-navy/98 backdrop-blur-3xl flex items-center justify-center p-2 lg:p-8 overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-brand-navy/98 backdrop-blur-3xl flex items-center justify-center p-2 lg:p-8 overflow-hidden animate-in fade-in duration-300">
       <div className="bg-[#02050c] border border-white/10 w-full max-w-[1400px] h-full rounded-[3rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl relative">
         
         {/* Sidebar */}
@@ -81,7 +92,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             </button>
             <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
               <div className="text-[8px] uppercase tracking-widest text-slate-600 mb-1">Admin Ativo:</div>
-              <div className="text-[9px] text-blue-500 font-bold truncate">{profile.full_name}</div>
+              <div className="text-[9px] text-blue-500 font-bold truncate">{profile.full_name || 'Gestor'}</div>
             </div>
             <button onClick={onClose} className="text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.4em] p-4 border border-white/5 rounded-2xl transition-all">Sair</button>
           </div>
@@ -100,7 +111,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               </button>
             </header>
 
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               {activeTab === 'carousel' && (
                 <AdminCrudSection
                   tableName="carousel_images"

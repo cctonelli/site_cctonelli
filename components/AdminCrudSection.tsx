@@ -53,8 +53,8 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         });
         setStatus({ 
           text: errorInfo.isMissingTable 
-            ? `Erro de Cache: A tabela '${tableName}' não foi mapeada corretamente.` 
-            : `Erro: ${errorInfo.code}`, 
+            ? `API CACHE ERROR: A tabela '${tableName}' não foi mapeada.` 
+            : `FALHA DB: ${errorInfo.code}`, 
           type: errorInfo.isMissingTable ? 'warning' : 'error' 
         });
         setItems([]);
@@ -63,7 +63,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       }
     } catch (e: any) {
       console.error("[Admin Crud] Critical fail:", e);
-      setStatus({ text: "Falha na comunicação com o banco de dados.", type: 'error' });
+      setStatus({ text: "Conexão interrompida com o Core Advisory.", type: 'error' });
       setItems([]);
     } finally {
       setLoading(false);
@@ -101,7 +101,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
             try {
               payload[f.key] = JSON.parse(payload[f.key]);
             } catch (e) {
-              console.warn("JSON inválido no campo", f.key);
+              console.warn("JSON Parse Error em:", f.key);
             }
           }
         });
@@ -113,34 +113,34 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
       if (error) throw error;
 
-      setStatus({ text: 'Sincronização concluída com sucesso!', type: 'success' });
+      setStatus({ text: 'Registro Sincronizado!', type: 'success' });
       setFormData({});
       setEditingId(null);
       await loadData();
     } catch (e: any) {
       console.error("[Admin Crud] Save Error:", e);
-      setStatus({ text: `Falha ao salvar: ${e.message || "Verifique permissões RLS."}`, type: 'error' });
+      setStatus({ text: `Erro ao salvar: ${e.message || "RLS Violation"}`, type: 'error' });
     } finally {
       setLoading(false);
-      setTimeout(() => setStatus(prev => prev?.type === 'success' ? null : prev), 5000);
+      setTimeout(() => setStatus(prev => prev?.type === 'success' ? null : prev), 3000);
     }
   };
 
   const handleDelete = async (id: any) => {
-    if (!id || !tableName || !confirm('Deseja excluir definitivamente este registro?')) return;
+    if (!id || !tableName || !confirm('Confirmar exclusão estratégica?')) return;
     try {
       const { error } = await supabase.from(tableName).delete().eq(idColumn, id);
       if (error) throw error;
       await loadData();
     } catch (e: any) {
-      alert(`Erro ao excluir: ${e.message}`);
+      alert(`Falha na exclusão: ${e.message}`);
     }
   };
 
   const copySql = () => {
     if (errorDetails?.sql && navigator.clipboard) {
       navigator.clipboard.writeText(errorDetails.sql);
-      alert('Comando SQL copiado! Cole no SQL Editor do Supabase e clique em RUN.');
+      alert('Comando SQL pronto para colar no Supabase SQL Editor.');
     }
   };
 
@@ -155,27 +155,25 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
               </svg>
             </div>
             <div>
-              <h4 className="font-serif italic text-xl text-white">Cache de Schema Obsoleto (PGRST205)</h4>
-              <p className="text-[10px] uppercase tracking-widest text-amber-400 font-bold">A API não está vendo a tabela '{tableName}'</p>
+              <h4 className="font-serif italic text-xl text-white">Cache de Schema Desatualizado (PGRST205)</h4>
+              <p className="text-[10px] uppercase tracking-widest text-amber-400 font-bold">A API Supabase não encontrou a tabela '{tableName}'</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <p className="text-slate-400 text-sm leading-relaxed">
-              Execute o comando abaixo no <strong>SQL Editor</strong> do painel Supabase para forçar o reconhecimento das tabelas:
+              Para desbloquear esta gestão, você deve rodar o comando SQL abaixo no painel do Supabase.
             </p>
             <div className="relative group">
               <pre className="bg-black/50 p-6 rounded-2xl border border-white/5 text-[11px] font-mono text-amber-300 overflow-x-auto">
                 {errorDetails.sql || `NOTIFY pgrst, 'reload schema';`}
               </pre>
-              {navigator.clipboard && (
-                <button 
-                  onClick={copySql}
-                  className="absolute top-4 right-4 bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-amber-500 transition-all opacity-0 group-hover:opacity-100"
-                >
-                  Copiar SQL
-                </button>
-              )}
+              <button 
+                onClick={copySql}
+                className="absolute top-4 right-4 bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-amber-500 transition-all opacity-0 group-hover:opacity-100"
+              >
+                Copiar SQL
+              </button>
             </div>
           </div>
         </div>
@@ -192,7 +190,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         </h3>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {fields && fields.map(f => (
+          {(fields || []).map(f => (
             <div key={f.key} className={f.type === 'textarea' || f.type === 'json' ? 'md:col-span-2' : ''}>
               <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 block">{f.label}</label>
               {f.type === 'textarea' || f.type === 'json' ? (
@@ -249,23 +247,23 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
       <div className="space-y-4">
         <div className="flex justify-between items-center px-4">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600">Base de Dados ({Array.isArray(items) ? items.length : 0})</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600">Base de Dados ({items?.length || 0})</h4>
           <button onClick={loadData} className="text-blue-500 text-[9px] font-bold uppercase tracking-widest hover:underline">Atualizar Grid</button>
         </div>
 
         <div className="grid gap-3">
-          {Array.isArray(items) && items.length > 0 ? items.map(item => (
-            <div key={item[idColumn] || Math.random().toString()} className="bg-slate-900/40 p-5 rounded-2xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all group">
+          {items?.length > 0 ? items.map(item => (
+            <div key={item[idColumn] || Math.random()} className="bg-slate-900/40 p-5 rounded-2xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all group">
               <div className="flex items-center gap-4">
-                {(item.url || item.image_url) && <img src={item.url || item.image_url} className="w-12 h-12 object-cover rounded-lg opacity-40 group-hover:opacity-80 transition-opacity" alt="" />}
+                {(item?.url || item?.image_url) && <img src={item.url || item.image_url} className="w-12 h-12 object-cover rounded-lg opacity-40 group-hover:opacity-80 transition-opacity" alt="" />}
                 <div className="max-w-[200px] sm:max-w-md">
                   <div className="text-white font-medium text-sm truncate">
-                    {item.title || item.name || item.label || item.key || item.full_name || 'Item sem identificador'}
+                    {item?.title || item?.name || item?.label || item?.key || item?.full_name || 'Registro s/ ID'}
                   </div>
                   <div className="text-[9px] text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                    ID: {item[idColumn] || '---'}
-                    {item.is_active === false && <span className="bg-red-500/20 text-red-500 px-2 py-0.5 rounded text-[8px]">INATIVO</span>}
-                    {item.approved === false && <span className="bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded text-[8px]">PENDENTE</span>}
+                    ID: {item?.[idColumn] || '---'}
+                    {item?.is_active === false && <span className="bg-red-500/20 text-red-500 px-2 py-0.5 rounded text-[8px]">INATIVO</span>}
+                    {item?.approved === false && <span className="bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded text-[8px]">PENDENTE</span>}
                   </div>
                 </div>
               </div>
@@ -273,14 +271,14 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
                 <button onClick={() => handleEdit(item)} className="p-2 text-slate-500 hover:text-blue-500 transition-colors">
                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                 </button>
-                <button onClick={() => handleDelete(item[idColumn])} className="p-2 text-slate-800 hover:text-red-500 transition-colors">
+                <button onClick={() => handleDelete(item?.[idColumn])} className="p-2 text-slate-800 hover:text-red-500 transition-colors">
                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
             </div>
           )) : !loading && (
             <div className="text-center p-16 text-slate-700 text-[10px] uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
-              {errorDetails?.isMissing ? `Aguardando sincronização de '${tableName}'...` : 'Não foram encontrados registros.'}
+              {errorDetails?.isMissing ? `Aguardando Sincronização SQL...` : 'Nenhum registro localizado.'}
             </div>
           )}
         </div>
