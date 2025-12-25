@@ -14,7 +14,6 @@ const ArticlePage: React.FC = () => {
   const [article, setArticle] = useState<Insight | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fix: Fetched Insight directly and rely on its translation fields (title_en, etc.)
   useEffect(() => {
     if (id) {
       setLoading(true);
@@ -29,7 +28,6 @@ const ArticlePage: React.FC = () => {
     }
   }, [id]);
 
-  // Fix: Updated resolve function to use the Insight object's localized fields
   const resolve = (field: string, base: string) => {
     if (!article || lang === 'pt') return base;
     const translatedValue = (article as any)[`${field}_${lang}`];
@@ -100,7 +98,7 @@ const ArticlePage: React.FC = () => {
             <div 
               className="rich-text dark:prose-invert prose prose-blue prose-2xl max-w-none text-slate-700 dark:text-slate-300 font-light leading-relaxed space-y-10"
               style={{ fontFamily: "'Inter', sans-serif" }}
-              dangerouslySetInnerHTML={{ __html: resolve('content', article.content || '') }}
+              dangerouslySetInnerHTML={{ __html: resolve('content', article.content || article.excerpt || '') }}
             />
           </div>
         </article>

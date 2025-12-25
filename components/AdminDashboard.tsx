@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import AdminCrudSection from './AdminCrudSection';
 import { supabase, getProfile } from '../services/supabaseService';
 
-type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads';
+type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'translations';
 
 const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('carousel');
@@ -84,6 +84,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               { id: 'metrics', label: 'Impact KPIs' },
               { id: 'testimonials', label: 'Social Proof' },
               { id: 'content', label: 'Copywriting' },
+              { id: 'translations', label: 'Traduções (i18n)' },
               { id: 'leads', label: 'Lead CRM' }
             ].map(tab => (
               <button 
@@ -124,16 +125,8 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 title="Slide do Carrossel"
                 fields={[
                   { key: 'url', label: 'URL da Imagem de Fundo', type: 'image' },
-                  { key: 'title', label: 'Título PT' },
-                  { key: 'title_en', label: 'Título EN' },
-                  { key: 'title_es', label: 'Título ES' },
-                  { key: 'subtitle', label: 'Subtítulo PT', type: 'textarea' },
-                  { key: 'subtitle_en', label: 'Subtítulo EN', type: 'textarea' },
-                  { key: 'subtitle_es', label: 'Subtítulo ES', type: 'textarea' },
-                  { key: 'cta_text', label: 'Texto Botão PT' },
-                  { key: 'cta_text_en', label: 'Texto Botão EN' },
-                  { key: 'cta_text_es', label: 'Texto Botão ES' },
-                  { key: 'cta_url', label: 'Link de Destino (cta_url)' },
+                  { key: 'title', label: 'Título' },
+                  { key: 'subtitle', label: 'Subtítulo', type: 'textarea' },
                   { key: 'display_order', label: 'Ordem de Exibição', type: 'number' },
                   { key: 'is_active', label: 'Publicado', type: 'toggle' },
                 ]}
@@ -146,22 +139,15 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 tableName="insights"
                 title="Insight Estratégico"
                 fields={[
-                  { key: 'title', label: 'Título PT' },
-                  { key: 'title_en', label: 'Título EN' },
-                  { key: 'title_es', label: 'Título ES' },
-                  { key: 'category', label: 'Categoria (Ex: ESTRATÉGIA)' },
-                  { key: 'excerpt', label: 'Resumo PT', type: 'textarea' },
-                  { key: 'excerpt_en', label: 'Resumo EN', type: 'textarea' },
-                  { key: 'excerpt_es', label: 'Resumo ES', type: 'textarea' },
+                  { key: 'title', label: 'Título Principal' },
+                  { key: 'subtitle', label: 'Subtítulo / Head de Seção' },
+                  { key: 'excerpt', label: 'Resumo / Lead', type: 'textarea' },
                   { key: 'image_url', label: 'Imagem de Capa (URL)', type: 'image' },
-                  { key: 'content', label: 'Conteúdo PT (HTML)', type: 'textarea' },
-                  { key: 'content_en', label: 'Conteúdo EN (HTML)', type: 'textarea' },
-                  { key: 'content_es', label: 'Conteúdo ES (HTML)', type: 'textarea' },
                   { key: 'published_at', label: 'Data de Publicação', type: 'text' },
-                  { key: 'display_order', label: 'Ordem', type: 'number' },
+                  { key: 'display_order', label: 'Ordem de Importância', type: 'number' },
                   { key: 'is_active', label: 'Visível no Site', type: 'toggle' },
                 ]}
-                displayColumns={['image_url', 'title', 'category', 'is_active']}
+                displayColumns={['image_url', 'title', 'is_active']}
               />
             )}
 
@@ -170,12 +156,8 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 tableName="products"
                 title="Solução / Produto"
                 fields={[
-                  { key: 'name', label: 'Nome PT' },
-                  { key: 'name_en', label: 'Nome EN' },
-                  { key: 'name_es', label: 'Nome ES' },
-                  { key: 'description', label: 'Descrição PT', type: 'textarea' },
-                  { key: 'description_en', label: 'Descrição EN', type: 'textarea' },
-                  { key: 'description_es', label: 'Descrição ES', type: 'textarea' },
+                  { key: 'name', label: 'Nome da Solução' },
+                  { key: 'description', label: 'Descrição Detalhada', type: 'textarea' },
                   { key: 'price', label: 'Valor Investimento (R$)', type: 'number' },
                   { key: 'type', label: 'Categoria (product/service)' },
                   { key: 'config', label: 'Configuração Avançada (JSON)', type: 'json' },
@@ -190,9 +172,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 title="KPI de Impacto"
                 fields={[
                   { key: 'value', label: 'Valor (Ex: +17k)' },
-                  { key: 'label', label: 'Rótulo PT' },
-                  { key: 'label_en', label: 'Rótulo EN' },
-                  { key: 'label_es', label: 'Rótulo ES' },
+                  { key: 'label', label: 'Rótulo (Ex: Projetos)' },
                   { key: 'display_order', label: 'Ordem', type: 'number' },
                   { key: 'is_active', label: 'Ativo', type: 'toggle' },
                 ]}
@@ -207,9 +187,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 fields={[
                   { key: 'name', label: 'Nome do Líder' },
                   { key: 'company', label: 'Corporação' },
-                  { key: 'quote', label: 'Depoimento PT', type: 'textarea' },
-                  { key: 'quote_en', label: 'Depoimento EN', type: 'textarea' },
-                  { key: 'quote_es', label: 'Depoimento ES', type: 'textarea' },
+                  { key: 'quote', label: 'Depoimento', type: 'textarea' },
                   { key: 'approved', label: 'Aprovado para Exibição', type: 'toggle' },
                 ]}
                 displayColumns={['name', 'company', 'approved']}
@@ -222,12 +200,26 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 title="Arquitetura de Copywriting"
                 idColumn="key"
                 fields={[
-                  { key: 'key', label: 'ID Chave (Não Alterar)' },
-                  { key: 'value', label: 'Texto PT', type: 'textarea' },
-                  { key: 'value_en', label: 'Texto EN', type: 'textarea' },
-                  { key: 'value_es', label: 'Texto ES', type: 'textarea' },
+                  { key: 'key', label: 'ID Chave (Ex: hero_title)' },
+                  { key: 'value', label: 'Texto do Bloco', type: 'textarea' },
+                  { key: 'page', label: 'Página de Destino (Ex: home)' },
                 ]}
-                displayColumns={['key', 'value']}
+                displayColumns={['key', 'value', 'page']}
+              />
+            )}
+
+            {activeTab === 'translations' && (
+              <AdminCrudSection
+                tableName="content_translations"
+                title="Repositório de Traduções"
+                fields={[
+                  { key: 'entity_type', label: 'Tipo de Entidade (Ex: insights)' },
+                  { key: 'entity_id', label: 'ID do Registro Original', type: 'number' },
+                  { key: 'field', label: 'Campo Traduzido (Ex: title)' },
+                  { key: 'locale', label: 'Idioma (en / es)' },
+                  { key: 'value', label: 'Tradução', type: 'textarea' },
+                ]}
+                displayColumns={['entity_type', 'field', 'locale']}
               />
             )}
 

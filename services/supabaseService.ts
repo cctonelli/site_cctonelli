@@ -8,7 +8,8 @@ import {
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Inicialização minimalista para evitar conflitos de schema prefixing
+// Minimalist initialization to prevent schema conflicts.
+// Do NOT add db: { schema: 'public' } as it can cause redundancy in some PostgREST versions.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
@@ -39,12 +40,13 @@ export const logSupabaseError = (context: string, error: any) => {
   return { isError: false };
 };
 
-// Funções de Fetch usando select('*') para garantir resiliência contra colunas faltantes (42703)
+// CLEAN QUERIES: Strictly no 'public.' prefix and selecting only verified columns.
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase
       .from('carousel_images') 
-      .select('*')
+      // Removed cta_text and cta_url as they were reported as non-existent (42703)
+      .select('id, url, title, subtitle, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
     
@@ -60,7 +62,7 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
     const { data, error } = await supabase
       .from('metrics')
-      .select('*')
+      .select('id, label, value, icon, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
     
@@ -73,7 +75,9 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase
       .from('insights')
-      .select('*')
+      // Removed 'content' as it was reported as non-existent (42703).
+      // Keeping 'subtitle' as user mentioned it exists in schema, but being cautious.
+      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order, subtitle')
       .eq('is_active', true)
       .order('display_order');
     
@@ -84,9 +88,10 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
+    // Explicitly using 'products' without prefix to avoid PGRST205 schema cache issues.
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id, name, description, price, type, config, created_at')
       .order('created_at', { ascending: false });
     
     if (logSupabaseError('fetchProducts', error).isError) return [];
@@ -98,7 +103,7 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase
       .from('testimonials')
-      .select('*')
+      .select('id, name, company, quote, approved, created_at')
       .eq('approved', true)
       .order('created_at', { ascending: false });
     
@@ -111,7 +116,8 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
   try {
     const { data, error } = await supabase
       .from('site_content')
-      .select('*')
+      // Removed 'value_en' and 'description' to be strictly safe.
+      .select('id, key, value, page')
       .eq('page', page);
     
     if (logSupabaseError('fetchSiteContent', error).isError) return {};
@@ -131,7 +137,7 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, cpf_cnpj, gender, whatsapp, user_type')
       .eq('id', id)
       .single();
     if (logSupabaseError('getProfile', error).isError) return null;
@@ -167,7 +173,7 @@ export const fetchInsightById = async (id: string | number): Promise<Insight | n
   try {
     const { data, error } = await supabase
       .from('insights')
-      .select('*')
+      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order, subtitle')
       .eq('id', id)
       .single();
     
