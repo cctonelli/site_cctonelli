@@ -89,7 +89,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     refreshUser();
-    syncData();
+    
+    // Pequeno delay inicial para estabilização da conexão
+    const timer = setTimeout(() => syncData(), 500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) refreshUser();
@@ -100,6 +102,7 @@ const App: React.FC = () => {
     const subs = tables.map(table => subscribeToChanges(table, syncData));
     
     return () => {
+      clearTimeout(timer);
       subscription.unsubscribe();
       subs.forEach(s => s.unsubscribe());
     };

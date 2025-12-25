@@ -8,16 +8,16 @@ import {
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Inicialização com tratamento de cache
+// Inicialização "Nuclear" para resolver PGRST205
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  db: {
+    schema: 'public' // Força o schema public para evitar ambiguidades no PostgREST
+  },
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: window.localStorage
-  },
-  global: {
-    headers: { 'x-client-info': 'cctonelli-web' }
   }
 });
 
@@ -40,11 +40,11 @@ export const logSupabaseError = (context: string, error: any) => {
   return { isError: false };
 };
 
+// Funções de Fetch atualizadas para usar nomes limpos e seleção específica de colunas
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
-    // IMPORTANTE: 'carousel_images' sem prefixo 'public.' para evitar PGRST205
     const { data, error } = await supabase
-      .from('carousel_images')
+      .from('carousel_images') // Apenas o nome da tabela
       .select('id, url, title, subtitle, cta_text, cta_url, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
@@ -52,14 +52,19 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
     if (logSupabaseError('fetchCarouselImages', error).isError) return [];
     return data || [];
   } catch (err) {
-    console.error("Critical fetch error:", err);
+    console.error("Critical carousel fetch error:", err);
     return [];
   }
 };
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
-    const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order');
+    const { data, error } = await supabase
+      .from('metrics')
+      .select('id, label, value, icon, display_order, is_active')
+      .eq('is_active', true)
+      .order('display_order');
+    
     if (logSupabaseError('fetchMetrics', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -67,7 +72,12 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
 
 export const fetchInsights = async (): Promise<Insight[]> => {
   try {
-    const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
+    const { data, error } = await supabase
+      .from('insights')
+      .select('id, title, subtitle, excerpt, image_url, link, content, published_at, is_active, display_order')
+      .eq('is_active', true)
+      .order('display_order');
+    
     if (logSupabaseError('fetchInsights', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -75,7 +85,11 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name, description, price, type, config, created_at')
+      .order('created_at', { ascending: false });
+    
     if (logSupabaseError('fetchProducts', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -83,7 +97,12 @@ export const fetchProducts = async (): Promise<Product[]> => {
 
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
-    const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('testimonials')
+      .select('id, name, company, quote, approved, created_at')
+      .eq('approved', true)
+      .order('created_at', { ascending: false });
+    
     if (logSupabaseError('fetchTestimonials', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -91,7 +110,11 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
 
 export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
   try {
-    const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
+    const { data, error } = await supabase
+      .from('site_content')
+      .select('key, value, value_en, value_es, page')
+      .eq('page', page);
+    
     if (logSupabaseError('fetchSiteContent', error).isError) return {};
     return (data || []).reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr }), {});
   } catch { return {}; }
@@ -138,7 +161,12 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
 
 export const fetchInsightById = async (id: string | number): Promise<Insight | null> => {
   try {
-    const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('insights')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
     if (logSupabaseError('fetchInsightById', error).isError) return null;
     return data;
   } catch { return null; }
