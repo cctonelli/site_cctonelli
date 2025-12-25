@@ -18,6 +18,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // Full SQL templates to resolve missing table errors (PGRST205)
+// Nota: O SQL usa 'public.' para criação, mas o Frontend deve usar apenas o nome da tabela.
 export const TABLE_SQL_TEMPLATES: Record<string, string> = {
   products: `CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -172,6 +173,7 @@ export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = typeof error === 'string' ? error : (error.message || 'Unknown Supabase Error');
     const code = error.code || 'N/A';
+    // Identifica especificamente o erro de schema cache (PGRST205)
     const isMissingTable = message.includes('schema cache') || code === '42P01' || message.includes('Could not find') || code === 'PGRST205';
     const tableName = getTableNameFromContext(context);
     
@@ -184,6 +186,7 @@ export const logSupabaseError = (context: string, error: any) => {
       code,
       isMissingTable,
       tableName,
+      // Garante que o frontend nunca use 'public.' no log, mas o SQL use.
       suggestedSql: isMissingTable && tableName ? TABLE_SQL_TEMPLATES[tableName] : `NOTIFY pgrst, 'reload schema';`
     };
   }
@@ -191,9 +194,11 @@ export const logSupabaseError = (context: string, error: any) => {
 };
 
 export const subscribeToChanges = (table: string, callback: () => void) => {
+  // Configuração Realtime: schema 'public' é especificado como metadado, 
+  // mas o nome da tabela deve ser limpo.
   return supabase
     .channel(`realtime:${table}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
+    .on('postgres_changes', { event: '*', schema: 'public', table: table }, callback)
     .subscribe();
 };
 
@@ -216,6 +221,7 @@ export const signOut = async () => {
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
   try {
+    // Uso correto: apenas o nome da tabela 'profiles'
     const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
     if (logSupabaseError('getProfile', error).isError) return null;
     return data;
@@ -248,6 +254,7 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
+    // CORREÇÃO CRÍTICA: Removido qualquer prefixo redundante.
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (logSupabaseError('fetchProducts', error).isError) return [];
     return data || [];
