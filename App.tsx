@@ -19,8 +19,8 @@ import {
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// TAG DE CONTROLE DE DEPLOY
-const APP_VERSION = "v6.7.7-CORE-CLEAN";
+// TAG DE CONTROLE DE DEPLOY - v6.8.3
+const APP_VERSION = "v6.8.3-STABLE";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -90,7 +90,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     refreshUser();
-    const timer = setTimeout(() => syncData(), 400);
+    const timer = setTimeout(() => syncData(), 500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) refreshUser();
@@ -136,7 +136,7 @@ const App: React.FC = () => {
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></div>
             <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-              {isLive ? 'Pulse: Ready' : 'Pulse: Syncing'}
+              {isLive ? 'Pulse: Synchronized' : 'Pulse: Fetching'}
             </span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
@@ -182,7 +182,7 @@ const App: React.FC = () => {
                         <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', m.label)}</div>
                       </div>
                     )) : (
-                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse py-10">Consolidando KPIs de Valor...</div>
+                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse py-10">Conectando ao Dashboard Estratégico...</div>
                     )}
                   </div>
                 </div>
@@ -209,7 +209,7 @@ const App: React.FC = () => {
                         </div>
                       </Link>
                     )) : (
-                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Acessando Hub de Conhecimento...</div>
+                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Sincronizando Knowledge Hub...</div>
                     )}
                   </div>
                 </div>

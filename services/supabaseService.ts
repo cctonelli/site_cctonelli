@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, 
@@ -17,6 +16,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
+const cleanTableName = (name: string) => name.replace('public.', '').trim();
+
 export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
@@ -28,37 +29,11 @@ export const logSupabaseError = (context: string, error: any) => {
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
     const recoverySql = `
--- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.7.5)
--- 1. Forçar Recarga do Cache do PostgREST
+-- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.8.1)
 NOTIFY pgrst, 'reload schema';
-
--- 2. Conceder permissões de uso no schema public (Essencial para evitar 404/PGRST205)
-GRANT USAGE ON SCHEMA public TO anon;
-GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT USAGE ON SCHEMA public TO postgres;
-GRANT USAGE ON SCHEMA public TO service_role;
-
--- 3. Garantir privilégios de leitura em todas as tabelas atuais e futuras
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated;
-
--- 4. Reconstrução de Emergência da Tabela 'products'
-CREATE TABLE IF NOT EXISTS public.products (
-  id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  price NUMERIC DEFAULT 0,
-  type TEXT DEFAULT 'service',
-  config JSONB DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 5. Configuração de RLS (Row Level Security)
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow Public Access" ON public.products;
-CREATE POLICY "Allow Public Access" ON public.products FOR SELECT USING (true);
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon, authenticated;
     `.trim();
     
     return {
@@ -76,8 +51,8 @@ CREATE POLICY "Allow Public Access" ON public.products FOR SELECT USING (true);
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase
-      .from('carousel_images') 
-      .select('id, url, title, subtitle, display_order, is_active')
+      .from(cleanTableName('carousel_images')) 
+      .select('*')
       .eq('is_active', true)
       .order('display_order');
     if (logSupabaseError('fetchCarouselImages', error).isError) return [];
@@ -88,8 +63,8 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
     const { data, error } = await supabase
-      .from('metrics')
-      .select('id, label, value, icon, display_order, is_active')
+      .from(cleanTableName('metrics'))
+      .select('*')
       .eq('is_active', true)
       .order('display_order');
     if (logSupabaseError('fetchMetrics', error).isError) return [];
@@ -100,8 +75,8 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
 export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase
-      .from('insights')
-      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
+      .from(cleanTableName('insights'))
+      .select('*')
       .eq('is_active', true)
       .order('display_order');
     if (logSupabaseError('fetchInsights', error).isError) return [];
@@ -112,7 +87,7 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await supabase
-      .from('products')
+      .from(cleanTableName('products'))
       .select('*')
       .order('created_at', { ascending: false });
     if (logSupabaseError('fetchProducts', error).isError) return [];
@@ -123,8 +98,8 @@ export const fetchProducts = async (): Promise<Product[]> => {
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase
-      .from('testimonials')
-      .select('id, name, company, quote, approved, created_at')
+      .from(cleanTableName('testimonials'))
+      .select('*')
       .eq('approved', true)
       .order('created_at', { ascending: false });
     if (logSupabaseError('fetchTestimonials', error).isError) return [];
@@ -135,8 +110,8 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
 export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
   try {
     const { data, error } = await supabase
-      .from('site_content')
-      .select('id, key, value, page')
+      .from(cleanTableName('site_content'))
+      .select('*')
       .eq('page', page);
     if (logSupabaseError('fetchSiteContent', error).isError) return {};
     return (data || []).reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr }), {});
@@ -144,18 +119,18 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
 };
 
 export const subscribeToChanges = (table: string, callback: () => void) => {
-  const cleanTable = table.replace('public.', '').trim();
+  const tableToWatch = cleanTableName(table);
   return supabase
-    .channel(`realtime:${cleanTable}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: cleanTable }, callback)
+    .channel(`realtime:${tableToWatch}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: tableToWatch }, callback)
     .subscribe();
 };
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
   try {
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, cpf_cnpj, gender, whatsapp, user_type')
+      .from(cleanTableName('profiles'))
+      .select('*')
       .eq('id', id)
       .single();
     if (logSupabaseError('getProfile', error).isError) return null;
@@ -182,7 +157,7 @@ export const signOut = async () => {
 
 export const submitContact = async (contact: Contact): Promise<boolean> => {
   try {
-    const { error } = await supabase.from('contacts').insert([contact]);
+    const { error } = await supabase.from(cleanTableName('contacts')).insert([contact]);
     return !logSupabaseError('submitContact', error).isError;
   } catch { return false; }
 };
@@ -190,8 +165,8 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
 export const fetchInsightById = async (id: string | number): Promise<Insight | null> => {
   try {
     const { data, error } = await supabase
-      .from('insights')
-      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
+      .from(cleanTableName('insights'))
+      .select('*')
       .eq('id', id)
       .single();
     if (logSupabaseError('fetchInsightById', error).isError) return null;
