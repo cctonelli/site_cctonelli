@@ -17,8 +17,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-// Mapas de criação de tabelas para auxílio no Admin
-const TABLE_SQL_TEMPLATES: Record<string, string> = {
+// SQL templates for all tables to help with PGRST205 resolution
+export const TABLE_SQL_TEMPLATES: Record<string, string> = {
   products: `CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -36,29 +36,114 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.products FOR SELECT USING (true);
 CREATE POLICY "Admin full access" ON public.products FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
-  carousel_images: `-- SQL para carousel_images
+  carousel_images: `CREATE TABLE IF NOT EXISTS public.carousel_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  url TEXT NOT NULL,
+  title TEXT,
+  title_en TEXT,
+  title_es TEXT,
+  subtitle TEXT,
+  subtitle_en TEXT,
+  subtitle_es TEXT,
+  cta_text TEXT,
+  cta_text_en TEXT,
+  cta_text_es TEXT,
+  cta_url TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ALTER TABLE public.carousel_images ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.carousel_images FOR SELECT USING (true);
+CREATE POLICY "Admin full access" ON public.carousel_images FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
-  insights: `-- SQL para insights
+  insights: `CREATE TABLE IF NOT EXISTS public.insights (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  title_en TEXT,
+  title_es TEXT,
+  subtitle TEXT,
+  excerpt TEXT,
+  excerpt_en TEXT,
+  excerpt_es TEXT,
+  image_url TEXT,
+  content TEXT,
+  content_en TEXT,
+  content_es TEXT,
+  published_at TIMESTAMPTZ DEFAULT now(),
+  is_active BOOLEAN DEFAULT true,
+  display_order INTEGER DEFAULT 0,
+  category TEXT DEFAULT 'ADVISORY'
+);
 ALTER TABLE public.insights ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.insights FOR SELECT USING (true);
+CREATE POLICY "Admin full access" ON public.insights FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
-  metrics: `-- SQL para metrics
+  metrics: `CREATE TABLE IF NOT EXISTS public.metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  label TEXT NOT NULL,
+  label_en TEXT,
+  label_es TEXT,
+  value TEXT NOT NULL,
+  icon TEXT,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true
+);
 ALTER TABLE public.metrics ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.metrics FOR SELECT USING (true);
+CREATE POLICY "Admin full access" ON public.metrics FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
-  testimonials: `-- SQL para testimonials
+  testimonials: `CREATE TABLE IF NOT EXISTS public.testimonials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  company TEXT,
+  quote TEXT NOT NULL,
+  quote_en TEXT,
+  quote_es TEXT,
+  approved BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.testimonials FOR SELECT USING (true);
+CREATE POLICY "Admin full access" ON public.testimonials FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
-  site_content: `-- SQL para site_content
+  site_content: `CREATE TABLE IF NOT EXISTS public.site_content (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  page TEXT DEFAULT 'home',
+  key TEXT UNIQUE NOT NULL,
+  value TEXT NOT NULL,
+  value_en TEXT,
+  value_es TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.site_content FOR SELECT USING (true);
+CREATE POLICY "Admin full access" ON public.site_content FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
-  contacts: `-- SQL para contacts
+  contacts: `CREATE TABLE IF NOT EXISTS public.contacts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admin insert" ON public.contacts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Admin select" ON public.contacts FOR SELECT TO authenticated USING (true);
+NOTIFY pgrst, 'reload schema';`,
+  profiles: `CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  cpf_cnpj TEXT,
+  gender TEXT,
+  whatsapp TEXT,
+  user_type TEXT DEFAULT 'client' CHECK (user_type IN ('client', 'admin')),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public profiles are viewable by everyone." ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own profile." ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USING (auth.uid() = id);
 NOTIFY pgrst, 'reload schema';`
 };
 
@@ -66,25 +151,23 @@ NOTIFY pgrst, 'reload schema';`
  * Extracts the table name from a context string to find the matching SQL template.
  */
 const getTableNameFromContext = (context: string): string | null => {
-  // If context is "Admin - products", return "products"
   if (context.includes(' - ')) {
     return context.split(' - ')[1].trim();
   }
-  // If context is "fetchProducts", return "products"
-  const fetchMatch = context.match(/fetch([A-Z][a-z]+)/);
-  if (fetchMatch) {
-    const table = fetchMatch[1].toLowerCase();
-    // Special cases for pluralization/mapping
-    if (table === 'carousel') return 'carousel_images';
-    if (table === 'insight') return 'insights';
-    if (table === 'product') return 'products';
-    if (table === 'testimonial') return 'testimonials';
-    if (table === 'metric') return 'metrics';
-    return table;
-  }
-  // Try direct match
-  const directMatch = ['products', 'carousel_images', 'insights', 'metrics', 'testimonials', 'site_content', 'contacts'].find(t => context.toLowerCase().includes(t));
-  return directMatch || null;
+  
+  const lowerContext = context.toLowerCase();
+  
+  // Explicit plural/mapping logic
+  if (lowerContext.includes('carousel')) return 'carousel_images';
+  if (lowerContext.includes('insight')) return 'insights';
+  if (lowerContext.includes('product')) return 'products';
+  if (lowerContext.includes('testimonial')) return 'testimonials';
+  if (lowerContext.includes('metric')) return 'metrics';
+  if (lowerContext.includes('content')) return 'site_content';
+  if (lowerContext.includes('contact')) return 'contacts';
+  if (lowerContext.includes('profile')) return 'profiles';
+  
+  return null;
 };
 
 export const logSupabaseError = (context: string, error: any) => {
@@ -107,7 +190,8 @@ export const logSupabaseError = (context: string, error: any) => {
       message: logString,
       code,
       isMissingTable,
-      suggestedSql: isMissingTable && tableName ? (TABLE_SQL_TEMPLATES[tableName] || `NOTIFY pgrst, 'reload schema';`) : null
+      tableName,
+      suggestedSql: isMissingTable && tableName ? (TABLE_SQL_TEMPLATES[tableName] || `NOTIFY pgrst, 'reload schema';`) : `NOTIFY pgrst, 'reload schema';`
     };
   }
   return { isError: false };
@@ -154,79 +238,92 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
   }
 };
 
+// Fix: Implemented fetchCarouselImages correctly
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
-    const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
+    const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
     if (logSupabaseError('fetchCarouselImages', error).isError) return [];
     return data || [];
-  } catch (err) {
+  } catch (e) {
     return [];
   }
 };
 
+// Fix: Implemented fetchMetrics to resolve App.tsx error
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
-    const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
+    const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order');
     if (logSupabaseError('fetchMetrics', error).isError) return [];
     return data || [];
-  } catch (err) {
+  } catch (e) {
     return [];
   }
 };
 
+// Fix: Implemented fetchInsights to resolve App.tsx error
 export const fetchInsights = async (): Promise<Insight[]> => {
   try {
-    const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
+    const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
     if (logSupabaseError('fetchInsights', error).isError) return [];
     return data || [];
-  } catch (err) {
+  } catch (e) {
     return [];
   }
 };
 
-export const fetchInsightById = async (id: string) => {
-  try {
-    const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
-    if (logSupabaseError('fetchInsightById', error).isError) return null;
-    return data;
-  } catch (err) {
-    return null;
-  }
-};
-
+// Fix: Implemented fetchProducts to resolve App.tsx error
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Uso de nome simples da tabela para evitar duplicação public.public.
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (logSupabaseError('fetchProducts', error).isError) return [];
     return data || [];
-  } catch (err) {
+  } catch (e) {
     return [];
   }
 };
 
+// Fix: Implemented fetchTestimonials to resolve App.tsx error
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
     if (logSupabaseError('fetchTestimonials', error).isError) return [];
     return data || [];
-  } catch (err) {
+  } catch (e) {
     return [];
   }
 };
 
-export const fetchSiteContent = async (page: string) => {
+// Fix: Implemented fetchSiteContent to resolve App.tsx error
+export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
   try {
     const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
     if (logSupabaseError('fetchSiteContent', error).isError) return {};
-    return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item }), {});
-  } catch (err) {
+    return (data || []).reduce((acc: any, curr: any) => {
+      acc[curr.key] = curr;
+      return acc;
+    }, {});
+  } catch (e) {
     return {};
   }
 };
 
-export const submitContact = async (contact: Contact) => {
-  const { error } = await supabase.from('contacts').insert([contact]);
-  logSupabaseError('submitContact', error);
-  return !error;
+// Fix: Implemented submitContact to resolve ContactForm.tsx error
+export const submitContact = async (contact: Contact): Promise<boolean> => {
+  try {
+    const { error } = await supabase.from('contacts').insert([contact]);
+    return !logSupabaseError('submitContact', error).isError;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Fix: Implemented fetchInsightById to resolve ArticlePage.tsx error
+export const fetchInsightById = async (id: string): Promise<Insight | null> => {
+  try {
+    const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
+    if (logSupabaseError('fetchInsightById', error).isError) return null;
+    return data;
+  } catch (e) {
+    return null;
+  }
 };
