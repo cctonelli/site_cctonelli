@@ -46,7 +46,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     return (
       <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center p-8">
         <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mb-6 border border-red-500/20">
-           <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-6V9m0-6H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" /></svg>
+           <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-6V9m0-6H6a2 2 0 00-2 2v14a2 2 0 002-2h12a2 2 0 002-2V9l-6-6z" /></svg>
         </div>
         <h2 className="text-white font-serif italic text-4xl">Acesso Negado</h2>
         <p className="text-slate-500 text-[11px] mt-4 uppercase tracking-[0.5em] font-black">Identidade não validada no core estratégico.</p>
@@ -140,7 +140,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 title="Insight Estratégico"
                 fields={[
                   { key: 'title', label: 'Título Principal' },
-                  { key: 'subtitle', label: 'Subtítulo / Head de Seção' },
                   { key: 'excerpt', label: 'Resumo / Lead', type: 'textarea' },
                   { key: 'image_url', label: 'Imagem de Capa (URL)', type: 'image' },
                   { key: 'published_at', label: 'Data de Publicação', type: 'text' },

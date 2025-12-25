@@ -45,7 +45,6 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase
       .from('carousel_images') 
-      // Removed cta_text and cta_url as they were reported as non-existent (42703)
       .select('id, url, title, subtitle, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
@@ -75,9 +74,8 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase
       .from('insights')
-      // Removed 'content' as it was reported as non-existent (42703).
-      // Keeping 'subtitle' as user mentioned it exists in schema, but being cautious.
-      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order, subtitle')
+      // Removed 'subtitle' and 'content' as they were reported as non-existent (42703).
+      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
       .eq('is_active', true)
       .order('display_order');
     
@@ -88,10 +86,10 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Explicitly using 'products' without prefix to avoid PGRST205 schema cache issues.
+    // Ensuring 'products' is called without any prefix to avoid PGRST205 schema cache conflicts.
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, price, type, config, created_at')
+      .select('*')
       .order('created_at', { ascending: false });
     
     if (logSupabaseError('fetchProducts', error).isError) return [];
@@ -116,7 +114,6 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
   try {
     const { data, error } = await supabase
       .from('site_content')
-      // Removed 'value_en' and 'description' to be strictly safe.
       .select('id, key, value, page')
       .eq('page', page);
     
@@ -173,7 +170,7 @@ export const fetchInsightById = async (id: string | number): Promise<Insight | n
   try {
     const { data, error } = await supabase
       .from('insights')
-      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order, subtitle')
+      .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
       .eq('id', id)
       .single();
     
