@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../services/supabaseService';
+import { supabase, logSupabaseError } from '../services/supabaseService';
 
 interface Field {
   key: string;
@@ -27,33 +27,40 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<{message: string, isMissing: boolean, sql?: string | null} | null>(null);
   const [status, setStatus] = useState<{ text: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setStatus(null);
+    setErrorDetails(null);
     try {
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
         .order(idColumn, { ascending: idColumn === 'display_order' });
 
-      if (error) {
-        console.warn(`[Admin Crud - ${tableName}]`, error.message);
+      const errorInfo = logSupabaseError(`Admin - ${tableName}`, error);
+      
+      if (errorInfo.isError) {
+        setErrorDetails({
+          message: errorInfo.message,
+          isMissing: errorInfo.isMissingTable,
+          sql: errorInfo.suggestedSql
+        });
         
-        let errorMsg = `Erro na API: ${error.message}`;
-        if (error.message.includes('schema cache') || error.code === 'PGRST116') {
-          errorMsg = `Tabela '${tableName}' não encontrada. Certifique-se que ela existe e o RLS está configurado.`;
+        if (errorInfo.isMissingTable) {
+          setStatus({ text: `A tabela '${tableName}' não foi encontrada.`, type: 'warning' });
+        } else {
+          setStatus({ text: errorInfo.message, type: 'error' });
         }
-        
-        setStatus({ text: errorMsg, type: 'error' });
         setItems([]);
       } else {
         setItems(Array.isArray(data) ? data : []);
       }
     } catch (e: any) {
-      console.error("[Admin Crud] Fatal Error:", e);
-      setStatus({ text: "Erro crítico de conexão com o Supabase.", type: 'error' });
+      console.error("[Admin Crud] Critical Error:", e);
+      setStatus({ text: "Erro crítico de sincronização.", type: 'error' });
       setItems([]);
     } finally {
       setLoading(false);
@@ -102,7 +109,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
       if (error) throw error;
 
-      setStatus({ text: 'Operação realizada com sucesso!', type: 'success' });
+      setStatus({ text: 'Sincronização concluída com sucesso!', type: 'success' });
       setFormData({});
       setEditingId(null);
       await loadData();
@@ -122,13 +129,58 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       if (error) throw error;
       await loadData();
     } catch (e: any) {
-      console.error("[Admin Crud] Delete Error:", e);
       alert(`Erro ao excluir: ${e.message}`);
+    }
+  };
+
+  const copySql = () => {
+    if (errorDetails?.sql) {
+      navigator.clipboard.writeText(errorDetails.sql);
+      alert('SQL copiado! Cole no SQL Editor do Supabase.');
     }
   };
 
   return (
     <div className="space-y-10">
+      {errorDetails?.isMissing && (
+        <div className="bg-blue-600/10 border border-blue-500/20 p-8 rounded-[2.5rem] space-y-6 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-4 text-blue-500">
+            <div className="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-serif italic text-xl text-white">Configuração de Banco Necessária</h4>
+              <p className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">A tabela '{tableName}' não foi encontrada</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Para habilitar esta seção, acesse o <strong>SQL Editor</strong> no seu Dashboard do Supabase e execute o comando abaixo:
+            </p>
+            <div className="relative group">
+              <pre className="bg-black/50 p-6 rounded-2xl border border-white/5 text-[11px] font-mono text-blue-300 overflow-x-auto">
+                {errorDetails.sql || `-- Nenhum script mapeado para ${tableName}`}
+              </pre>
+              {errorDetails.sql && (
+                <button 
+                  onClick={copySql}
+                  className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-blue-500 transition-all opacity-0 group-hover:opacity-100"
+                >
+                  Copiar SQL
+                </button>
+              )}
+            </div>
+            <p className="text-[9px] text-slate-500 uppercase tracking-widest flex items-center gap-2 italic">
+              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+              Isso criará a tabela e as políticas de segurança (RLS).
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-slate-900/60 p-8 rounded-[2rem] border border-white/5 space-y-6 shadow-2xl relative overflow-hidden">
         {loading && <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] z-20 flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -170,7 +222,11 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         </div>
         
         <div className="flex gap-4">
-          <button onClick={handleSave} disabled={loading} className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50">
+          <button 
+            onClick={handleSave} 
+            disabled={loading || errorDetails?.isMissing} 
+            className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-30"
+          >
             {editingId ? 'Salvar Alterações' : 'Publicar no Core'}
           </button>
           {editingId && (
@@ -222,7 +278,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
             </div>
           )) : !loading && (
             <div className="text-center p-16 text-slate-700 text-[10px] uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
-              {status?.type === 'error' ? 'Falha ao sincronizar com o banco de dados.' : 'Não foram encontrados registros para esta seção.'}
+              {errorDetails?.isMissing ? `Aguardando criação da tabela '${tableName}'...` : 'Não foram encontrados registros.'}
             </div>
           )}
           {loading && !items.length && (

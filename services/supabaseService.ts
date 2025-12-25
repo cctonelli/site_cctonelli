@@ -17,19 +17,49 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-/**
- * Utilitário para formatar e logar erros do Supabase de forma legível.
- */
-const logSupabaseError = (context: string, error: any) => {
+// Mapas de criação de tabelas para auxílio no Admin
+const TABLE_SQL_TEMPLATES: Record<string, string> = {
+  products: `CREATE TABLE IF NOT EXISTS public.products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  name_en TEXT,
+  name_es TEXT,
+  description TEXT,
+  description_en TEXT,
+  description_es TEXT,
+  price DECIMAL(10,2) DEFAULT 0,
+  type TEXT CHECK (type IN ('product', 'service')) DEFAULT 'service',
+  config JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON public.products FOR SELECT USING (true);
+CREATE POLICY "Admin full access" ON public.products FOR ALL TO authenticated USING (true);`,
+  carousel_images: `-- SQL para carousel_images disponível no painel admin`,
+  insights: `-- SQL para insights disponível no painel admin`,
+  metrics: `-- SQL para metrics disponível no painel admin`,
+  testimonials: `-- SQL para testimonials disponível no painel admin`,
+  site_content: `-- SQL para site_content disponível no painel admin`,
+  contacts: `-- SQL para contacts disponível no painel admin`
+};
+
+export const logSupabaseError = (context: string, error: any) => {
   if (error) {
-    const message = error.message || 'Erro desconhecido';
-    const details = error.details || 'Sem detalhes adicionais';
-    const hint = error.hint ? `| Dica: ${error.hint}` : '';
+    const message = typeof error === 'string' ? error : (error.message || 'Erro de conexão');
+    const code = error.code || 'UNKNOWN';
+    const isMissingTable = message.includes('schema cache') || code === '42P01' || message.includes('Could not find');
     
-    console.error(`[Supabase Error - ${context}] ${message} (${details}) ${hint}`);
-    return true;
+    console.error(`[Supabase Error - ${context}]`, { message, code, details: error.details });
+    
+    return {
+      isError: true,
+      message,
+      code,
+      isMissingTable,
+      suggestedSql: isMissingTable ? (TABLE_SQL_TEMPLATES[context.split(' - ')[1]] || TABLE_SQL_TEMPLATES[context.split('-')[1]?.trim()]) : null
+    };
   }
-  return false;
+  return { isError: false };
 };
 
 export const subscribeToChanges = (table: string, callback: () => void) => {
@@ -66,10 +96,9 @@ export const signOut = async () => {
 export const getProfile = async (id: string): Promise<Profile | null> => {
   try {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
-    if (logSupabaseError('getProfile', error)) return null;
+    if (logSupabaseError('getProfile', error).isError) return null;
     return data;
   } catch (e) {
-    console.error("Critical Profile Error:", e);
     return null;
   }
 };
@@ -77,10 +106,9 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
-    if (logSupabaseError('fetchCarouselImages', error)) return [];
+    if (logSupabaseError('fetchCarouselImages', error).isError) return [];
     return data || [];
   } catch (err) {
-    console.error("Critical Carousel Error:", err);
     return [];
   }
 };
@@ -88,10 +116,9 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
     const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
-    if (logSupabaseError('fetchMetrics', error)) return [];
+    if (logSupabaseError('fetchMetrics', error).isError) return [];
     return data || [];
   } catch (err) {
-    console.error("Critical Metrics Error:", err);
     return [];
   }
 };
@@ -99,10 +126,9 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
 export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
-    if (logSupabaseError('fetchInsights', error)) return [];
+    if (logSupabaseError('fetchInsights', error).isError) return [];
     return data || [];
   } catch (err) {
-    console.error("Critical Insights Error:", err);
     return [];
   }
 };
@@ -116,10 +142,9 @@ export const fetchInsightById = async (id: string) => {
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (logSupabaseError('fetchProducts', error)) return [];
+    if (logSupabaseError('fetchProducts', error).isError) return [];
     return data || [];
   } catch (err) {
-    console.error("Critical Products Error:", err);
     return [];
   }
 };
@@ -127,10 +152,9 @@ export const fetchProducts = async (): Promise<Product[]> => {
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
-    if (logSupabaseError('fetchTestimonials', error)) return [];
+    if (logSupabaseError('fetchTestimonials', error).isError) return [];
     return data || [];
   } catch (err) {
-    console.error("Critical Testimonials Error:", err);
     return [];
   }
 };
@@ -138,10 +162,9 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
 export const fetchSiteContent = async (page: string) => {
   try {
     const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
-    if (logSupabaseError('fetchSiteContent', error)) return {};
+    if (logSupabaseError('fetchSiteContent', error).isError) return {};
     return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item }), {});
   } catch (err) {
-    console.error("Critical SiteContent Error:", err);
     return {};
   }
 };
