@@ -14,11 +14,12 @@ export const getConsultancyAdvice = async (userPrompt: string): Promise<string> 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: userPrompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.7,
+        thinkingConfig: { thinkingBudget: 4000 }
       },
     });
     return response.text || "Desculpe, tive um problema ao processar seu pedido. Por favor, tente novamente.";

@@ -14,10 +14,11 @@ export const getPersonalizedRecommendations = async (profile: Profile, products:
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
         temperature: 0.8,
+        thinkingConfig: { thinkingBudget: 2000 }
       },
     });
     return response.text || "Recomendamos uma análise estratégica personalizada para o seu caso.";
