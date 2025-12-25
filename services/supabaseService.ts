@@ -17,14 +17,16 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-const handleSupabaseError = (context: string, error: any) => {
+/**
+ * Utilitário para formatar e logar erros do Supabase de forma legível.
+ */
+const logSupabaseError = (context: string, error: any) => {
   if (error) {
-    console.error(`[Supabase Error - ${context}]`, {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    });
+    const message = error.message || 'Erro desconhecido';
+    const details = error.details || 'Sem detalhes adicionais';
+    const hint = error.hint ? `| Dica: ${error.hint}` : '';
+    
+    console.error(`[Supabase Error - ${context}] ${message} (${details}) ${hint}`);
     return true;
   }
   return false;
@@ -64,7 +66,7 @@ export const signOut = async () => {
 export const getProfile = async (id: string): Promise<Profile | null> => {
   try {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
-    if (handleSupabaseError('getProfile', error)) return null;
+    if (logSupabaseError('getProfile', error)) return null;
     return data;
   } catch (e) {
     console.error("Critical Profile Error:", e);
@@ -75,7 +77,7 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
-    if (handleSupabaseError('fetchCarouselImages', error)) return [];
+    if (logSupabaseError('fetchCarouselImages', error)) return [];
     return data || [];
   } catch (err) {
     console.error("Critical Carousel Error:", err);
@@ -86,7 +88,7 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
     const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
-    if (handleSupabaseError('fetchMetrics', error)) return [];
+    if (logSupabaseError('fetchMetrics', error)) return [];
     return data || [];
   } catch (err) {
     console.error("Critical Metrics Error:", err);
@@ -97,7 +99,7 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
 export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
-    if (handleSupabaseError('fetchInsights', error)) return [];
+    if (logSupabaseError('fetchInsights', error)) return [];
     return data || [];
   } catch (err) {
     console.error("Critical Insights Error:", err);
@@ -107,14 +109,14 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchInsightById = async (id: string) => {
   const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
-  handleSupabaseError('fetchInsightById', error);
+  logSupabaseError('fetchInsightById', error);
   return data;
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (handleSupabaseError('fetchProducts', error)) return [];
+    if (logSupabaseError('fetchProducts', error)) return [];
     return data || [];
   } catch (err) {
     console.error("Critical Products Error:", err);
@@ -125,7 +127,7 @@ export const fetchProducts = async (): Promise<Product[]> => {
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
-    if (handleSupabaseError('fetchTestimonials', error)) return [];
+    if (logSupabaseError('fetchTestimonials', error)) return [];
     return data || [];
   } catch (err) {
     console.error("Critical Testimonials Error:", err);
@@ -136,7 +138,7 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
 export const fetchSiteContent = async (page: string) => {
   try {
     const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
-    if (handleSupabaseError('fetchSiteContent', error)) return {};
+    if (logSupabaseError('fetchSiteContent', error)) return {};
     return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item }), {});
   } catch (err) {
     console.error("Critical SiteContent Error:", err);
@@ -146,6 +148,6 @@ export const fetchSiteContent = async (page: string) => {
 
 export const submitContact = async (contact: Contact) => {
   const { error } = await supabase.from('contacts').insert([contact]);
-  handleSupabaseError('submitContact', error);
+  logSupabaseError('submitContact', error);
   return !error;
 };

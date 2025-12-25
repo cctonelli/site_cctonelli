@@ -39,12 +39,11 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         .order(idColumn, { ascending: idColumn === 'display_order' });
 
       if (error) {
-        console.error(`[Admin Crud - ${tableName}] Fetch Error:`, error);
+        console.warn(`[Admin Crud - ${tableName}]`, error.message);
         
         let errorMsg = `Erro na API: ${error.message}`;
-        if (error.code === 'PGRST116') errorMsg = "Registro não encontrado.";
-        if (error.message.includes('schema cache')) {
-          errorMsg = `Erro Crítico: A tabela '${tableName}' não foi encontrada no banco de dados ou as políticas RLS estão bloqueando o acesso.`;
+        if (error.message.includes('schema cache') || error.code === 'PGRST116') {
+          errorMsg = `Tabela '${tableName}' não encontrada. Certifique-se que ela existe e o RLS está configurado.`;
         }
         
         setStatus({ text: errorMsg, type: 'error' });
@@ -53,7 +52,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         setItems(Array.isArray(data) ? data : []);
       }
     } catch (e: any) {
-      console.error("[Admin Crud] Critical Error:", e);
+      console.error("[Admin Crud] Fatal Error:", e);
       setStatus({ text: "Erro crítico de conexão com o Supabase.", type: 'error' });
       setItems([]);
     } finally {
@@ -109,7 +108,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       await loadData();
     } catch (e: any) {
       console.error("[Admin Crud] Save Error:", e);
-      setStatus({ text: `Falha ao salvar: ${e.message || "Verifique as permissões de escrita."}`, type: 'error' });
+      setStatus({ text: `Falha ao salvar: ${e.message || "Verifique permissões RLS."}`, type: 'error' });
     } finally {
       setLoading(false);
       setTimeout(() => setStatus(prev => prev?.type === 'success' ? null : prev), 5000);
