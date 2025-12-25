@@ -38,7 +38,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const syncData = useCallback(async () => {
-    console.debug("[Sync] Iniciando captura de dados dinâmicos...");
+    console.debug("[Core] Iniciando sincronização de ativos dinâmicos...");
     try {
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
@@ -49,27 +49,31 @@ const App: React.FC = () => {
         fetchCarouselImages()
       ]);
 
-      setMetrics(m || []);
-      setInsights(i || []);
-      setProducts(p || []);
-      setTestimonials(test || []);
+      setMetrics(Array.isArray(m) ? m : []);
+      setInsights(Array.isArray(i) ? i : []);
+      setProducts(Array.isArray(p) ? p : []);
+      setTestimonials(Array.isArray(test) ? test : []);
       setDbContent(s || {});
-      setCarouselImages(car || []);
+      setCarouselImages(Array.isArray(car) ? car : []);
       
       setIsLive(true);
-      console.debug("[Sync] Dashboard executivo sincronizado.");
+      console.debug("[Core] Sincronização concluída com sucesso.");
     } catch (err) {
-      console.error("[Sync Error]", err);
+      console.error("[Core Error] Falha na sincronização crítica:", err);
       setIsLive(false);
     }
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const profile = await getProfile(session.user.id);
-      setUserProfile(profile);
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const profile = await getProfile(session.user.id);
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+      }
+    } catch {
       setUserProfile(null);
     }
   }, []);
@@ -125,11 +129,11 @@ const App: React.FC = () => {
     <Router>
       <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500 selection:bg-blue-600 selection:text-white">
         
-        {/* Realtime Status */}
+        {/* Hub Status Indicador */}
         <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-2'}`}>
           <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
           <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
-            {isLive ? 'Advisory Hub: Live' : 'Conectando...'}
+            {isLive ? 'Hub Advisory: Live' : 'Reconectando Core...'}
           </span>
         </div>
 
@@ -166,12 +170,14 @@ const App: React.FC = () => {
               <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 transition-colors">
                 <div className="container mx-auto px-6">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
-                    {(metrics.length > 0 ? metrics : []).map(m => (
+                    {metrics.length > 0 ? metrics.map(m => (
                       <div key={m.id} className="text-center group">
                         <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2">{m.value}</div>
                         <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', m.label)}</div>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse">Sincronizando KPIs de Impacto...</div>
+                    )}
                   </div>
                 </div>
               </section>
@@ -186,7 +192,7 @@ const App: React.FC = () => {
                     <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{t.insights_all}</Link>
                   </div>
                   <div className="grid md:grid-cols-3 gap-12">
-                    {insights.map(insight => (
+                    {insights.length > 0 ? insights.map(insight => (
                       <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-6">
                         <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 relative shadow-xl">
                           <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
@@ -196,7 +202,9 @@ const App: React.FC = () => {
                           <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light">{resolveTranslation(insight, 'excerpt', insight.excerpt || '')}</p>
                         </div>
                       </Link>
-                    ))}
+                    )) : (
+                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse">Carregando Knowledge Hub...</div>
+                    )}
                   </div>
                 </div>
               </section>
