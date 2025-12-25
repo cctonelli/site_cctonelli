@@ -43,7 +43,8 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase
       .from('carousel_images') 
-      .select('id, url, title, display_order, is_active, cta_text, cta_url')
+      // Removed 'cta_text' and 'cta_url' as they were reported non-existent (Code: 42703)
+      .select('id, url, title, subtitle, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
     
@@ -72,7 +73,6 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase
       .from('insights')
-      // Removed 'content' as it was reported non-existent (Code: 42703)
       .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
       .eq('is_active', true)
       .order('display_order');
@@ -84,10 +84,10 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Explicitly listing verified columns to handle PGRST205 more robustly
+    // Using select('*') as a more robust fallback for PGRST205 table cache resolution
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, price, type, config, created_at')
+      .select('*')
       .order('created_at', { ascending: false });
     
     if (logSupabaseError('fetchProducts', error).isError) return [];

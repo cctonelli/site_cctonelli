@@ -126,8 +126,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 fields={[
                   { key: 'url', label: 'URL da Imagem de Fundo', type: 'image' },
                   { key: 'title', label: 'Título' },
-                  { key: 'cta_text', label: 'Texto do Botão' },
-                  { key: 'cta_url', label: 'Link do Botão' },
+                  { key: 'subtitle', label: 'Subtítulo' },
                   { key: 'display_order', label: 'Ordem de Exibição', type: 'number' },
                   { key: 'is_active', label: 'Publicado', type: 'toggle' },
                 ]}
@@ -143,7 +142,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'title', label: 'Título Principal' },
                   { key: 'excerpt', label: 'Resumo / Lead', type: 'textarea' },
                   { key: 'image_url', label: 'Imagem de Capa (URL)', type: 'image' },
-                  // Removed 'content' field as it doesn't exist in DB (Code: 42703)
                   { key: 'published_at', label: 'Data de Publicação', type: 'text' },
                   { key: 'display_order', label: 'Ordem de Importância', type: 'number' },
                   { key: 'is_active', label: 'Visível no Site', type: 'toggle' },
