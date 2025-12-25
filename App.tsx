@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatBot from './components/ChatBot';
 import ProductsSection from './components/ProductsSection';
@@ -20,7 +20,7 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 // TAG DE CONTROLE DE DEPLOY
-const APP_VERSION = "v6.7.3-HARD-RESET";
+const APP_VERSION = "v6.7.4-TOTAL-RECOVERY";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -41,7 +41,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const syncData = useCallback(async () => {
-    console.debug(`[Core ${APP_VERSION}] Auditoria de Schema Iniciada...`);
+    console.debug(`[Core ${APP_VERSION}] Iniciando auditoria de schema...`);
     try {
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
@@ -136,9 +136,9 @@ const App: React.FC = () => {
         {/* Auditor de Versão */}
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`}></div>
+            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></div>
             <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-              {isLive ? 'Terminal Online' : 'Terminal Desincronizado'}
+              {isLive ? 'Pulse: Active' : 'Pulse: Schema Lock'}
             </span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
@@ -184,7 +184,7 @@ const App: React.FC = () => {
                         <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', m.label)}</div>
                       </div>
                     )) : (
-                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse">Aguardando Pulso do Core...</div>
+                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse">Monitorando pulso de dados...</div>
                     )}
                   </div>
                 </div>
@@ -211,7 +211,7 @@ const App: React.FC = () => {
                         </div>
                       </Link>
                     )) : (
-                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Mapeando Matriz de Conhecimento...</div>
+                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Mapeando Hub de Conhecimento...</div>
                     )}
                   </div>
                 </div>

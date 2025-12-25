@@ -27,24 +27,24 @@ export const logSupabaseError = (context: string, error: any) => {
     
     console.error(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
-    // SCRIPT DE RESET TOTAL DE PERMISSÕES
-    // Se o NOTIFY não funcionou, precisamos garantir que o papel 'anon' pode ver o schema public
+    // SCRIPT DE RESET ULTRA (v6.7.4)
+    // Se o NOTIFY básico falhou, precisamos resetar permissões de esquema fundamentais.
     const recoverySql = isMissingTable ? `
--- RESET TOTAL DE ACESSO AO SCHEMA PUBLIC (ULTIMA INSTANCIA)
--- 1. Forçar reload do cache
+-- RESET ULTRA DE PERMISSÕES (v6.7.4)
+-- 1. Forçar reload do cache do PostgREST
 NOTIFY pgrst, 'reload schema';
 
--- 2. Garantir permissões de uso no esquema public (Resolve erro 404/PGRST205 persistente)
+-- 2. Garantir permissões de USAGE no esquema public (CORREÇÃO PARA ERRO 404 PERSISTENTE)
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT USAGE ON SCHEMA public TO postgres;
 GRANT USAGE ON SCHEMA public TO service_role;
 
--- 3. Garantir leitura em todas as tabelas para o papel anon (essencial para o site)
+-- 3. Garantir permissão de leitura em todas as tabelas para visitantes
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
 
--- 4. Reconstrução física da tabela 'products' (caso não exista)
+-- 4. Reconstrução física da tabela 'products'
 CREATE TABLE IF NOT EXISTS public.products (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Habilitar RLS e Política Pública
+-- 5. Habilitar RLS e garantir política de acesso pública
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow Public Access" ON public.products;
 CREATE POLICY "Allow Public Access" ON public.products FOR SELECT USING (true);
