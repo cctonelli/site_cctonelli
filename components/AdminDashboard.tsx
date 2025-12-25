@@ -39,7 +39,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const refreshSchema = () => {
     const sql = "NOTIFY pgrst, 'reload schema';";
     navigator.clipboard.writeText(sql);
-    alert("Comando copiado: " + sql + "\n\nCole no SQL Editor do Supabase e execute para limpar o cache de tabelas e colunas (PGRST205 / 42703).");
+    alert("🛠️ PROCEDIMENTO DE REPARO ATIVADO!\n\n1. O comando SQL foi copiado para sua área de transferência.\n2. No painel do Supabase, clique em 'SQL Editor'.\n3. Cole o comando: " + sql + "\n4. Clique em 'RUN'.\n\nIsso limpará o cache da API e fará com que as tabelas 'products' e outras sejam reconhecidas instantaneamente.");
   };
 
   if (isAuthorized === false) {
@@ -100,12 +100,12 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <div className="mt-auto hidden lg:flex flex-col gap-4">
             <button 
               onClick={refreshSchema}
-              className="w-full py-4 px-6 border border-amber-500/30 bg-amber-500/5 text-amber-500 rounded-2xl text-[9px] font-bold uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all shadow-lg"
+              className="w-full py-5 px-6 border-2 border-blue-500 bg-blue-600/10 text-blue-400 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl group"
             >
-              Emergency: Force Schema Reload
+              <span className="group-hover:animate-pulse">Reparar API (PGRST205)</span>
             </button>
             <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-              <div className="text-[8px] uppercase tracking-widest text-slate-600 mb-1">Usuário:</div>
+              <div className="text-[8px] uppercase tracking-widest text-slate-600 mb-1">Admin Ativo:</div>
               <div className="text-[9px] text-blue-500 font-bold truncate">{userEmail}</div>
             </div>
             <button onClick={onClose} className="text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.4em] p-4 border border-white/5 rounded-2xl transition-all">Sair</button>

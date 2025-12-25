@@ -8,7 +8,7 @@ import {
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Initialization without schema prefix to avoid PostgREST cache redundancy.
+// Initialization without any default schema settings to allow PostgREST to handle 'public' implicitly.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
@@ -22,8 +22,10 @@ export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
-    const isMissingTable = code === 'PGRST205' || code === '42P01' || message.includes('schema cache') || message.includes('not found');
-    const isMissingColumn = code === '42703';
+    
+    // PGRST205 is the specific code for schema cache miss
+    const isCacheError = code === 'PGRST205' || message.includes('schema cache');
+    const isMissingTable = isCacheError || code === '42P01' || message.includes('not found');
     
     console.error(`[Supabase Error - ${context}] ${message} (Code: ${code})`);
     
@@ -32,7 +34,7 @@ export const logSupabaseError = (context: string, error: any) => {
       message,
       code,
       isMissingTable,
-      isMissingColumn,
+      isCacheError,
       suggestedSql: `NOTIFY pgrst, 'reload schema';`
     };
   }
@@ -43,7 +45,6 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase
       .from('carousel_images') 
-      // Removed 'cta_text' and 'cta_url' as they were reported non-existent (Code: 42703)
       .select('id, url, title, subtitle, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
@@ -84,7 +85,7 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Using select('*') as a more robust fallback for PGRST205 table cache resolution
+    // Using select('*') and explicit table name without 'public.' prefix as requested.
     const { data, error } = await supabase
       .from('products')
       .select('*')
