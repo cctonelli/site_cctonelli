@@ -19,6 +19,9 @@ import {
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
+// TAG DE CONTROLE DE DEPLOY
+const APP_VERSION = "v6.7.1-ULTRA-RESILIENT";
+
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -38,7 +41,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const syncData = useCallback(async () => {
-    console.debug("[Core] Iniciando sincronização de ativos dinâmicos...");
+    console.debug(`[Core ${APP_VERSION}] Iniciando sincronização...`);
     try {
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
@@ -57,9 +60,9 @@ const App: React.FC = () => {
       setCarouselImages(Array.isArray(car) ? car : []);
       
       setIsLive(true);
-      console.debug("[Core] Sincronização concluída com sucesso.");
+      console.debug(`[Core ${APP_VERSION}] Sincronização concluída com sucesso.`);
     } catch (err) {
-      console.error("[Core Error] Falha na sincronização crítica:", err);
+      console.error(`[Core ${APP_VERSION}] Erro na sincronização:`, err);
       setIsLive(false);
     }
   }, []);
@@ -89,7 +92,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     refreshUser();
-    
     const timer = setTimeout(() => syncData(), 500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -131,11 +133,16 @@ const App: React.FC = () => {
     <Router>
       <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500 selection:bg-blue-600 selection:text-white">
         
-        <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-2'}`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
-            {isLive ? 'Hub Advisory: Live' : 'Reconectando Core...'}
-          </span>
+        {/* Status bar flutuante com Versão para diagnóstico */}
+        <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
+          <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur-md rounded-full border border-white/5 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-2'}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`}></div>
+            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
+              {isLive ? 'Advisory Core: Online' : 'Core Sync Error'}
+            </span>
+            <div className="w-px h-2 bg-white/10 mx-1"></div>
+            <span className="text-[7px] font-mono text-blue-400 font-bold">{APP_VERSION}</span>
+          </div>
         </div>
 
         <Navbar 
@@ -225,6 +232,10 @@ const App: React.FC = () => {
             <div className="space-y-4">
               <h4 className="text-xl font-serif dark:text-white italic">Claudio Tonelli Group</h4>
               <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
+              <div className="flex flex-col items-center gap-1 mt-8">
+                <p className="text-[8px] text-slate-500 font-mono opacity-50">AI-Powered Advisory Core v.2025</p>
+                <p className="text-[9px] text-blue-600 font-black uppercase tracking-[0.4em] bg-blue-600/5 px-4 py-1 rounded-full border border-blue-600/10">Build ID: {APP_VERSION}</p>
+              </div>
             </div>
           </div>
         </footer>
