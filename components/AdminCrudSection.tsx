@@ -35,6 +35,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
     setStatus(null);
     setErrorDetails(null);
     try {
+      // Garantimos que tableName não tenha prefixos manuais aqui
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
@@ -50,17 +51,17 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         });
         
         if (errorInfo.isMissingTable) {
-          setStatus({ text: `A tabela '${tableName}' não foi encontrada.`, type: 'warning' });
+          setStatus({ text: `Tabela '${tableName}' não resolvida no cache do Supabase.`, type: 'warning' });
         } else {
-          setStatus({ text: errorInfo.message, type: 'error' });
+          setStatus({ text: `Erro Supabase: ${errorInfo.code}`, type: 'error' });
         }
         setItems([]);
       } else {
         setItems(Array.isArray(data) ? data : []);
       }
     } catch (e: any) {
-      console.error("[Admin Crud] Critical Error:", e);
-      setStatus({ text: "Erro crítico de sincronização.", type: 'error' });
+      console.error("[Admin Crud] Sync Error:", e);
+      setStatus({ text: "Falha na comunicação com o banco de dados.", type: 'error' });
       setItems([]);
     } finally {
       setLoading(false);
@@ -151,31 +152,29 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
               </svg>
             </div>
             <div>
-              <h4 className="font-serif italic text-xl text-white">Configuração de Banco Necessária</h4>
-              <p className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">A tabela '{tableName}' não foi encontrada</p>
+              <h4 className="font-serif italic text-xl text-white">Configuração ou Cache Necessário</h4>
+              <p className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">Erro de resolução para '{tableName}'</p>
             </div>
           </div>
           
           <div className="space-y-4">
             <p className="text-slate-400 text-sm leading-relaxed">
-              Para habilitar esta seção, acesse o <strong>SQL Editor</strong> no seu Dashboard do Supabase e execute o comando abaixo:
+              O Supabase não localizou a tabela ou o cache está obsoleto. Execute o comando abaixo no <strong>SQL Editor</strong> para corrigir o cache:
             </p>
             <div className="relative group">
               <pre className="bg-black/50 p-6 rounded-2xl border border-white/5 text-[11px] font-mono text-blue-300 overflow-x-auto">
-                {errorDetails.sql || `-- Nenhum script mapeado para ${tableName}`}
+                {errorDetails.sql || `NOTIFY pgrst, 'reload schema';`}
               </pre>
-              {errorDetails.sql && (
-                <button 
-                  onClick={copySql}
-                  className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-blue-500 transition-all opacity-0 group-hover:opacity-100"
-                >
-                  Copiar SQL
-                </button>
-              )}
+              <button 
+                onClick={copySql}
+                className="absolute top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-blue-500 transition-all opacity-0 group-hover:opacity-100"
+              >
+                Copiar SQL
+              </button>
             </div>
             <p className="text-[9px] text-slate-500 uppercase tracking-widest flex items-center gap-2 italic">
               <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-              Isso criará a tabela e as políticas de segurança (RLS).
+              Isso resolverá erros PGRST205 e atualizará as rotas da API.
             </p>
           </div>
         </div>
@@ -278,11 +277,11 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
             </div>
           )) : !loading && (
             <div className="text-center p-16 text-slate-700 text-[10px] uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
-              {errorDetails?.isMissing ? `Aguardando criação da tabela '${tableName}'...` : 'Não foram encontrados registros.'}
+              {errorDetails?.isMissing ? `Aguardando criação ou limpeza de cache para '${tableName}'...` : 'Não foram encontrados registros.'}
             </div>
           )}
           {loading && !items.length && (
-             <div className="text-center p-10 animate-pulse text-[10px] text-blue-500 uppercase tracking-widest">Acessando Terminal...</div>
+             <div className="text-center p-10 animate-pulse text-[10px] text-blue-500 uppercase tracking-widest">Sincronizando com Terminal Supabase...</div>
           )}
         </div>
       </div>

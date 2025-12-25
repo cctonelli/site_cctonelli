@@ -34,26 +34,33 @@ const TABLE_SQL_TEMPLATES: Record<string, string> = {
 );
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.products FOR SELECT USING (true);
-CREATE POLICY "Admin full access" ON public.products FOR ALL TO authenticated USING (true);`,
-  carousel_images: `-- SQL para carousel_images disponível no painel admin`,
-  insights: `-- SQL para insights disponível no painel admin`,
-  metrics: `-- SQL para metrics disponível no painel admin`,
-  testimonials: `-- SQL para testimonials disponível no painel admin`,
-  site_content: `-- SQL para site_content disponível no painel admin`,
-  contacts: `-- SQL para contacts disponível no painel admin`
+CREATE POLICY "Admin full access" ON public.products FOR ALL TO authenticated USING (true);
+NOTIFY pgrst, 'reload schema';`,
+  carousel_images: `-- SQL para carousel_images\nALTER TABLE public.carousel_images ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "Public read" ON public.carousel_images FOR SELECT USING (true);\nNOTIFY pgrst, 'reload schema';`,
+  insights: `-- SQL para insights\nALTER TABLE public.insights ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "Public read" ON public.insights FOR SELECT USING (true);\nNOTIFY pgrst, 'reload schema';`,
+  metrics: `-- SQL para metrics\nALTER TABLE public.metrics ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "Public read" ON public.metrics FOR SELECT USING (true);\nNOTIFY pgrst, 'reload schema';`,
+  testimonials: `-- SQL para testimonials\nALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "Public read" ON public.testimonials FOR SELECT USING (true);\nNOTIFY pgrst, 'reload schema';`,
+  site_content: `-- SQL para site_content\nALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "Public read" ON public.site_content FOR SELECT USING (true);\nNOTIFY pgrst, 'reload schema';`,
+  contacts: `-- SQL para contacts\nALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "Admin insert" ON public.contacts FOR INSERT WITH CHECK (true);\nNOTIFY pgrst, 'reload schema';`
 };
 
 export const logSupabaseError = (context: string, error: any) => {
   if (error) {
-    const message = typeof error === 'string' ? error : (error.message || 'Erro de conexão');
-    const code = error.code || 'UNKNOWN';
-    const isMissingTable = message.includes('schema cache') || code === '42P01' || message.includes('Could not find');
+    const message = typeof error === 'string' ? error : (error.message || 'Erro de conexão desconhecido');
+    const code = error.code || 'NO_CODE';
+    const details = error.details || 'Sem detalhes';
+    const hint = error.hint ? ` | Dica: ${error.hint}` : '';
     
-    console.error(`[Supabase Error - ${context}]`, { message, code, details: error.details });
+    // Log formatado como string para evitar [object Object]
+    const logString = `[Supabase Error - ${context}] ${message} | Código: ${code} | Detalhes: ${details}${hint}`;
+    console.error(logString);
+    
+    // PGRST205 indica erro de resolução de schema/tabela no cache
+    const isMissingTable = message.includes('schema cache') || code === '42P01' || message.includes('Could not find') || code === 'PGRST205';
     
     return {
       isError: true,
-      message,
+      message: logString,
       code,
       isMissingTable,
       suggestedSql: isMissingTable ? (TABLE_SQL_TEMPLATES[context.split(' - ')[1]] || TABLE_SQL_TEMPLATES[context.split('-')[1]?.trim()]) : null
@@ -141,6 +148,7 @@ export const fetchInsightById = async (id: string) => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
+    // Uso de nome simples da tabela para evitar duplicação public.public.
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (logSupabaseError('fetchProducts', error).isError) return [];
     return data || [];
