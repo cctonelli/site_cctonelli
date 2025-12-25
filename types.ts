@@ -27,7 +27,7 @@ export interface Insight {
   excerpt: string | null;
   image_url: string | null;
   link: string | null;
-  content: string | null;
+  content?: string | null;
   published_at: string;
   is_active: boolean;
   display_order: number;

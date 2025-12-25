@@ -39,7 +39,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const refreshSchema = () => {
     const sql = "NOTIFY pgrst, 'reload schema';";
     navigator.clipboard.writeText(sql);
-    alert("Comando copiado: " + sql + "\n\nCole no SQL Editor do Supabase e execute para limpar o cache de tabelas (PGRST205).");
+    alert("Comando copiado: " + sql + "\n\nCole no SQL Editor do Supabase e execute para limpar o cache de tabelas e colunas (PGRST205 / 42703).");
   };
 
   if (isAuthorized === false) {
@@ -100,9 +100,9 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <div className="mt-auto hidden lg:flex flex-col gap-4">
             <button 
               onClick={refreshSchema}
-              className="w-full py-4 px-6 border border-yellow-500/30 bg-yellow-500/5 text-yellow-500 rounded-2xl text-[9px] font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-white transition-all"
+              className="w-full py-4 px-6 border border-amber-500/30 bg-amber-500/5 text-amber-500 rounded-2xl text-[9px] font-bold uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all shadow-lg"
             >
-              Emergency: Refresh Cache
+              Emergency: Force Schema Reload
             </button>
             <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
               <div className="text-[8px] uppercase tracking-widest text-slate-600 mb-1">Usuário:</div>
@@ -126,9 +126,8 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 fields={[
                   { key: 'url', label: 'URL da Imagem de Fundo', type: 'image' },
                   { key: 'title', label: 'Título' },
-                  { key: 'subtitle', label: 'Subtítulo', type: 'textarea' },
-                  { key: 'cta_text', label: 'Texto Botão (cta_text)' },
-                  { key: 'cta_url', label: 'Link Botão (cta_url)' },
+                  { key: 'cta_text', label: 'Texto do Botão' },
+                  { key: 'cta_url', label: 'Link do Botão' },
                   { key: 'display_order', label: 'Ordem de Exibição', type: 'number' },
                   { key: 'is_active', label: 'Publicado', type: 'toggle' },
                 ]}
@@ -142,11 +141,9 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 title="Insight Estratégico"
                 fields={[
                   { key: 'title', label: 'Título Principal' },
-                  // Temporarily removing subtitle from CRUD form if missing in cache to avoid 42703.
-                  // Re-add { key: 'subtitle', label: 'Subtítulo' } once cache is refreshed.
                   { key: 'excerpt', label: 'Resumo / Lead', type: 'textarea' },
                   { key: 'image_url', label: 'Imagem de Capa (URL)', type: 'image' },
-                  { key: 'content', label: 'Conteúdo (HTML)', type: 'textarea' },
+                  // Removed 'content' field as it doesn't exist in DB (Code: 42703)
                   { key: 'published_at', label: 'Data de Publicação', type: 'text' },
                   { key: 'display_order', label: 'Ordem de Importância', type: 'number' },
                   { key: 'is_active', label: 'Visível no Site', type: 'toggle' },
@@ -207,7 +204,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'key', label: 'ID Chave (Ex: hero_title)' },
                   { key: 'value', label: 'Texto do Bloco', type: 'textarea' },
                   { key: 'page', label: 'Página de Destino (Ex: home)' },
-                  { key: 'description', label: 'Nota Interna' },
                 ]}
                 displayColumns={['key', 'value', 'page']}
               />
