@@ -90,7 +90,6 @@ const App: React.FC = () => {
   useEffect(() => {
     refreshUser();
     
-    // Pequeno delay inicial para estabilização da conexão
     const timer = setTimeout(() => syncData(), 500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -132,7 +131,6 @@ const App: React.FC = () => {
     <Router>
       <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500 selection:bg-blue-600 selection:text-white">
         
-        {/* Hub Status Indicador */}
         <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-2'}`}>
           <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
           <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
@@ -162,7 +160,7 @@ const App: React.FC = () => {
         />
 
         {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={() => { refreshUser(); syncData(); }} />}
-        {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
+        {isAdminOpen && userProfile && <AdminDashboard profile={userProfile} onClose={() => setIsAdminOpen(false)} />}
         {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
         <Routes>

@@ -23,8 +23,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   displayColumns,
   idColumn = 'id' 
 }) => {
-  // Garante que o nome da tabela nunca tenha prefixo 'public.'
-  const tableName = useMemo(() => rawTableName.replace('public.', ''), [rawTableName]);
+  const tableName = useMemo(() => (rawTableName || '').replace('public.', ''), [rawTableName]);
 
   const [items, setItems] = useState<any[]>([]); 
   const [formData, setFormData] = useState<any>({});
@@ -34,6 +33,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const [status, setStatus] = useState<{ text: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
   const loadData = useCallback(async () => {
+    if (!tableName) return;
     setLoading(true);
     setStatus(null);
     setErrorDetails(null);
@@ -62,7 +62,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         setItems(Array.isArray(data) ? data : []);
       }
     } catch (e: any) {
-      console.error("[Admin Crud] Critical komunikace fail:", e);
+      console.error("[Admin Crud] Critical fail:", e);
       setStatus({ text: "Falha na comunicação com o banco de dados.", type: 'error' });
       setItems([]);
     } finally {
@@ -89,6 +89,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   };
 
   const handleSave = async () => {
+    if (!tableName) return;
     setLoading(true);
     setStatus(null);
     const payload = { ...formData };
@@ -126,7 +127,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   };
 
   const handleDelete = async (id: any) => {
-    if (!id || !confirm('Deseja excluir definitivamente este registro?')) return;
+    if (!id || !tableName || !confirm('Deseja excluir definitivamente este registro?')) return;
     try {
       const { error } = await supabase.from(tableName).delete().eq(idColumn, id);
       if (error) throw error;
@@ -137,7 +138,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   };
 
   const copySql = () => {
-    if (errorDetails?.sql) {
+    if (errorDetails?.sql && navigator.clipboard) {
       navigator.clipboard.writeText(errorDetails.sql);
       alert('Comando SQL copiado! Cole no SQL Editor do Supabase e clique em RUN.');
     }
@@ -167,12 +168,14 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
               <pre className="bg-black/50 p-6 rounded-2xl border border-white/5 text-[11px] font-mono text-amber-300 overflow-x-auto">
                 {errorDetails.sql || `NOTIFY pgrst, 'reload schema';`}
               </pre>
-              <button 
-                onClick={copySql}
-                className="absolute top-4 right-4 bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-amber-500 transition-all opacity-0 group-hover:opacity-100"
-              >
-                Copiar SQL
-              </button>
+              {navigator.clipboard && (
+                <button 
+                  onClick={copySql}
+                  className="absolute top-4 right-4 bg-amber-600 text-white px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-amber-500 transition-all opacity-0 group-hover:opacity-100"
+                >
+                  Copiar SQL
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -252,11 +255,13 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
         <div className="grid gap-3">
           {Array.isArray(items) && items.length > 0 ? items.map(item => (
-            <div key={item[idColumn] || Math.random()} className="bg-slate-900/40 p-5 rounded-2xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all group">
+            <div key={item[idColumn] || Math.random().toString()} className="bg-slate-900/40 p-5 rounded-2xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all group">
               <div className="flex items-center gap-4">
                 {(item.url || item.image_url) && <img src={item.url || item.image_url} className="w-12 h-12 object-cover rounded-lg opacity-40 group-hover:opacity-80 transition-opacity" alt="" />}
                 <div className="max-w-[200px] sm:max-w-md">
-                  <div className="text-white font-medium text-sm truncate">{item.title || item.name || item.label || item.key || 'Sem Título'}</div>
+                  <div className="text-white font-medium text-sm truncate">
+                    {item.title || item.name || item.label || item.key || item.full_name || 'Item sem identificador'}
+                  </div>
                   <div className="text-[9px] text-slate-600 uppercase tracking-widest flex items-center gap-2">
                     ID: {item[idColumn] || '---'}
                     {item.is_active === false && <span className="bg-red-500/20 text-red-500 px-2 py-0.5 rounded text-[8px]">INATIVO</span>}
