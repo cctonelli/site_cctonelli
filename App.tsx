@@ -55,6 +55,7 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
+      // Atualiza os estados apenas se os dados retornados não forem vazios
       if (m && m.length > 0) setMetrics(m);
       if (i && i.length > 0) setInsights(i);
       if (p && p.length > 0) setProducts(p);
@@ -63,7 +64,7 @@ const HomePage: React.FC = () => {
       if (car && car.length > 0) setCarouselImages(car);
       
       setIsLive(true);
-      console.debug("[Sync] Dados Supabase integrados.");
+      console.debug("[Sync] Dados integrados com sucesso do Supabase.");
     } catch (err) {
       console.error("[Sync Error]", err);
       setIsLive(false);
@@ -110,12 +111,11 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
-      
       {/* Realtime Status Indicator */}
-      <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all ${isLive ? 'opacity-100' : 'opacity-20'}`}>
+      <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all ${isLive ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-2'}`}>
         <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
         <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
-          {isLive ? 'Core Synced' : 'Syncing...'}
+          {isLive ? 'Live Core Connected' : 'Syncing Hub...'}
         </span>
       </div>
 
@@ -143,12 +143,12 @@ const HomePage: React.FC = () => {
       <main>
         <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} />
 
-        <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
+        <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 transition-colors">
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
               {metrics.map(m => (
                 <div key={m.id} className="text-center group">
-                  <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform">{m.value}</div>
+                  <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform duration-500">{m.value}</div>
                   <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">
                     {resolveTranslation(m, 'label', m.label)}
                   </div>
@@ -165,7 +165,7 @@ const HomePage: React.FC = () => {
                 <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{t.insights_badge}</div>
                 <h2 className="text-4xl lg:text-5xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', t.insights_title)}</h2>
               </div>
-              <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1">
+              <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">
                 {t.insights_all}
               </Link>
             </div>
@@ -188,7 +188,7 @@ const HomePage: React.FC = () => {
               ))}
               {insights.length === 0 && (
                 <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem]">
-                   <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 animate-pulse">Sincronizando Insights...</span>
+                   <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 animate-pulse">Sincronizando Capital Intelectual...</span>
                 </div>
               )}
             </div>
@@ -200,12 +200,13 @@ const HomePage: React.FC = () => {
         <ContactForm language={language} />
       </main>
 
-      <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center">
-        <div className="container mx-auto px-6 space-y-10">
-          <div className="w-14 h-14 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white">CT</div>
+      <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
+        <div className="container mx-auto px-6 space-y-10 relative z-10">
+          <div className="w-14 h-14 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white shadow-2xl">CT</div>
           <div className="space-y-4">
             <h4 className="text-xl font-serif dark:text-white italic">Claudio Tonelli Group</h4>
-            <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto">
+            <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">
               {resolveContent('copyright', t.copyright)}
             </p>
           </div>

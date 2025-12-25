@@ -35,7 +35,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
         <span className="inline-block px-5 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-600 dark:text-blue-500 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.4em]">
           {resolveContent('hero_badge', t.hero_badge)}
         </span>
-        <h1 className="text-4xl lg:text-[7rem] font-serif text-slate-900 dark:text-white italic leading-[1] lg:leading-[0.9] tracking-tighter drop-shadow-sm">
+        <h1 className="text-4xl lg:text-[6.5rem] font-serif text-slate-900 dark:text-white italic leading-[1] lg:leading-[0.9] tracking-tighter drop-shadow-sm">
           {slide ? resolveTranslation(slide, 'title', slide.title || '') : resolveContent('hero_title', t.hero_title)}
         </h1>
         <p className="text-base lg:text-2xl text-slate-600 dark:text-slate-300 font-light italic border-l-4 border-blue-600/50 pl-6 lg:pl-8 max-w-2xl leading-relaxed">
@@ -53,9 +53,11 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
           {(slide?.link || resolveContent('hero_cta_link', '')) && (
             <a 
               href={slide?.link || resolveContent('hero_cta_link', '#insights')} 
+              target={slide?.link?.startsWith('http') ? "_blank" : "_self"}
+              rel={slide?.link?.startsWith('http') ? "noopener noreferrer" : ""}
               className="bg-white/10 dark:bg-white/5 backdrop-blur-md text-slate-900 dark:text-white border border-slate-200 dark:border-white/20 px-8 lg:px-12 py-4 lg:py-6 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-white dark:hover:bg-white hover:text-blue-600 transition-all active:scale-95 inline-block text-center"
             >
-              {slide ? resolveTranslation(slide, 'cta_text', slide.cta_text || t.explore_exp) : resolveContent('hero_cta_text', t.btn_insights)}
+              {slide ? resolveTranslation(slide, 'cta_text', slide.cta_text || 'Saiba Mais') : resolveContent('hero_cta_text', t.btn_insights)}
             </a>
           )}
         </div>
@@ -65,10 +67,13 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
 
   return (
     <section id="hero" className="relative h-screen bg-white dark:bg-brand-navy overflow-hidden">
+      {/* Background Interactive Layer */}
       <div className="absolute inset-0 z-0 transform scale-125 lg:scale-110">
         <ThreeGlobe />
       </div>
-      <div className="absolute inset-0 z-[1] bg-gradient-to-r from-white dark:from-brand-navy via-white/40 dark:via-brand-navy/30 to-transparent opacity-90 lg:opacity-80"></div>
+      
+      {/* Dynamic Overlays */}
+      <div className="absolute inset-0 z-[1] bg-gradient-to-r from-white dark:from-brand-navy via-white/40 dark:via-brand-navy/30 to-transparent opacity-95 lg:opacity-85"></div>
       
       <div className="relative z-10 h-full w-full">
         {!hasSlides ? (
@@ -77,7 +82,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
           <Swiper
             modules={[Pagination, Autoplay, EffectFade]}
             pagination={{ clickable: true, dynamicBullets: true }}
-            autoplay={{ delay: 8000, disableOnInteraction: false }}
+            autoplay={{ delay: 7000, disableOnInteraction: false }}
             effect="fade"
             loop={slides.length > 1}
             className="h-full w-full"
@@ -86,8 +91,13 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
               <SwiperSlide key={slide.id}>
                 <div className="relative h-full w-full overflow-hidden">
                   <div className="absolute inset-0">
-                    <img src={slide.url} className="w-full h-full object-cover opacity-20 dark:opacity-25" alt="" />
-                    <div className="absolute inset-0 bg-brand-navy/20 dark:bg-black/40"></div>
+                    <img 
+                      src={slide.url} 
+                      className="w-full h-full object-cover opacity-15 dark:opacity-20 transition-opacity duration-1000" 
+                      alt="" 
+                      onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }}
+                    />
+                    <div className="absolute inset-0 bg-brand-navy/10 dark:bg-black/40 backdrop-grayscale-[0.4]"></div>
                   </div>
                   {renderContent(slide)}
                 </div>
@@ -96,6 +106,11 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
           </Swiper>
         )}
       </div>
+
+      <style>{`
+        .swiper-pagination-bullet { background: #fff !important; width: 6px; height: 6px; transition: all 0.3s; opacity: 0.2 !important; }
+        .swiper-pagination-bullet-active { width: 32px !important; border-radius: 4px !important; background: #2563eb !important; opacity: 1 !important; }
+      `}</style>
     </section>
   );
 };

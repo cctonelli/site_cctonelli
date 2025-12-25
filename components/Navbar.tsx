@@ -58,10 +58,10 @@ const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-[80] transition-all duration-500 ${isScrolled ? 'bg-white/90 dark:bg-slate-950/80 backdrop-blur-2xl py-4 border-b border-slate-200 dark:border-white/5 shadow-2xl' : 'bg-transparent py-10'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-[80] transition-all duration-700 ${isScrolled ? 'bg-white/95 dark:bg-slate-950/80 backdrop-blur-2xl py-4 border-b border-slate-200 dark:border-white/5 shadow-2xl' : 'bg-transparent py-10'}`}>
       <div className="container mx-auto px-6 flex justify-between items-center">
-        <div className="flex items-center gap-4 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-2xl text-white shadow-xl shadow-blue-600/30">CT</div>
+        <div className="flex items-center gap-4 cursor-pointer group" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-2xl text-white shadow-xl shadow-blue-600/30 group-hover:scale-105 transition-transform duration-500">CT</div>
           <div className="flex flex-col">
             <span className="text-xl font-bold tracking-tighter leading-none dark:text-white text-slate-900 uppercase">Claudio Tonelli</span>
             <span className="text-[9px] uppercase tracking-[0.5em] text-slate-500 font-black mt-2">Executive Advisory</span>
@@ -69,10 +69,10 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
         
         <div className="hidden lg:flex items-center space-x-12 text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">
-          <a href="#hero" className="hover:text-blue-500 transition-colors">{labels.strategy}</a>
-          <a href="#insights" className="hover:text-blue-500 transition-colors">{labels.insights}</a>
-          <a href="#products" className="hover:text-blue-500 transition-colors">{labels.performance}</a>
-          <a href="#contact-form" className="hover:text-blue-500 transition-colors">{labels.connection}</a>
+          <a href="#hero" className="hover:text-blue-500 transition-colors duration-300">{labels.strategy}</a>
+          <a href="#insights" className="hover:text-blue-500 transition-colors duration-300">{labels.insights}</a>
+          <a href="#products" className="hover:text-blue-500 transition-colors duration-300">{labels.performance}</a>
+          <a href="#contact-form" className="hover:text-blue-500 transition-colors duration-300">{labels.connection}</a>
         </div>
 
         <div className="flex items-center gap-4 lg:gap-8">
@@ -82,7 +82,7 @@ const Navbar: React.FC<NavbarProps> = ({
               <button 
                 key={lang.code}
                 onClick={() => setLanguage(lang.code)}
-                className={`w-10 h-10 lg:w-11 lg:h-11 flex items-center justify-center rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${
+                className={`w-10 h-10 lg:w-11 lg:h-11 flex items-center justify-center rounded-full text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${
                   language === lang.code 
                     ? 'bg-blue-600 text-white shadow-lg scale-105' 
                     : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
@@ -93,7 +93,7 @@ const Navbar: React.FC<NavbarProps> = ({
             ))}
           </div>
 
-          <button onClick={cycleTheme} className="w-10 h-10 lg:w-11 lg:h-11 flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-blue-500 transition-all">
+          <button onClick={cycleTheme} className="w-10 h-10 lg:w-11 lg:h-11 flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-500 hover:text-blue-500 transition-all active:scale-95 shadow-sm">
             <ThemeIcon />
           </button>
 
@@ -104,19 +104,19 @@ const Navbar: React.FC<NavbarProps> = ({
             >
               {userProfile ? (
                 <>
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  <span className="max-w-[100px] truncate">{userProfile.full_name?.split(' ')[0] || 'Executive'}</span>
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
+                  <span className="max-w-[100px] truncate">{userProfile.full_name?.split(' ')[0] || 'Executivo'}</span>
                 </>
               ) : labels.client_area}
             </button>
 
             {userProfile && (
-              <div className="absolute top-full right-0 mt-6 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-2xl opacity-0 invisible group-hover/user:opacity-100 group-hover/user:visible transition-all backdrop-blur-3xl">
+              <div className="absolute top-full right-0 mt-6 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-2xl opacity-0 invisible group-hover/user:opacity-100 group-hover/user:visible transition-all duration-500 backdrop-blur-3xl transform -translate-y-2 group-hover/user:translate-y-0">
                 <button onClick={onAdminClick} className="w-full text-left px-8 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
-                  {userProfile.user_type === 'admin' ? t.nav_admin : t.nav_portal}
+                  {userProfile.user_type === 'admin' ? translations[language].nav_admin : translations[language].nav_portal}
                 </button>
                 <button onClick={onLogout} className="w-full text-left px-8 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-red-500 hover:bg-red-500/10 transition-all border-t border-slate-200 dark:border-white/5">
-                  {t.nav_logout}
+                  {translations[language].nav_logout}
                 </button>
               </div>
             )}
