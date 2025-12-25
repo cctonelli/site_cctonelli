@@ -17,7 +17,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-// SQL templates for all tables to help with PGRST205 resolution
+// Full SQL templates to resolve missing table errors (PGRST205)
 export const TABLE_SQL_TEMPLATES: Record<string, string> = {
   products: `CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -36,6 +36,7 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.products FOR SELECT USING (true);
 CREATE POLICY "Admin full access" ON public.products FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
+
   carousel_images: `CREATE TABLE IF NOT EXISTS public.carousel_images (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   url TEXT NOT NULL,
@@ -57,6 +58,7 @@ ALTER TABLE public.carousel_images ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.carousel_images FOR SELECT USING (true);
 CREATE POLICY "Admin full access" ON public.carousel_images FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
+
   insights: `CREATE TABLE IF NOT EXISTS public.insights (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
@@ -70,15 +72,16 @@ NOTIFY pgrst, 'reload schema';`,
   content TEXT,
   content_en TEXT,
   content_es TEXT,
+  category TEXT DEFAULT 'ADVISORY',
   published_at TIMESTAMPTZ DEFAULT now(),
   is_active BOOLEAN DEFAULT true,
-  display_order INTEGER DEFAULT 0,
-  category TEXT DEFAULT 'ADVISORY'
+  display_order INTEGER DEFAULT 0
 );
 ALTER TABLE public.insights ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.insights FOR SELECT USING (true);
 CREATE POLICY "Admin full access" ON public.insights FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
+
   metrics: `CREATE TABLE IF NOT EXISTS public.metrics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   label TEXT NOT NULL,
@@ -93,6 +96,7 @@ ALTER TABLE public.metrics ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.metrics FOR SELECT USING (true);
 CREATE POLICY "Admin full access" ON public.metrics FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
+
   testimonials: `CREATE TABLE IF NOT EXISTS public.testimonials (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -107,6 +111,7 @@ ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.testimonials FOR SELECT USING (true);
 CREATE POLICY "Admin full access" ON public.testimonials FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
+
   site_content: `CREATE TABLE IF NOT EXISTS public.site_content (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   page TEXT DEFAULT 'home',
@@ -120,6 +125,7 @@ ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read" ON public.site_content FOR SELECT USING (true);
 CREATE POLICY "Admin full access" ON public.site_content FOR ALL TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
+
   contacts: `CREATE TABLE IF NOT EXISTS public.contacts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -128,9 +134,10 @@ NOTIFY pgrst, 'reload schema';`,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Admin insert" ON public.contacts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Anon insert" ON public.contacts FOR INSERT WITH CHECK (true);
 CREATE POLICY "Admin select" ON public.contacts FOR SELECT TO authenticated USING (true);
 NOTIFY pgrst, 'reload schema';`,
+
   profiles: `CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
@@ -147,51 +154,37 @@ CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USIN
 NOTIFY pgrst, 'reload schema';`
 };
 
-/**
- * Extracts the table name from a context string to find the matching SQL template.
- */
 const getTableNameFromContext = (context: string): string | null => {
-  if (context.includes(' - ')) {
-    return context.split(' - ')[1].trim();
-  }
-  
-  const lowerContext = context.toLowerCase();
-  
-  // Explicit plural/mapping logic
-  if (lowerContext.includes('carousel')) return 'carousel_images';
-  if (lowerContext.includes('insight')) return 'insights';
-  if (lowerContext.includes('product')) return 'products';
-  if (lowerContext.includes('testimonial')) return 'testimonials';
-  if (lowerContext.includes('metric')) return 'metrics';
-  if (lowerContext.includes('content')) return 'site_content';
-  if (lowerContext.includes('contact')) return 'contacts';
-  if (lowerContext.includes('profile')) return 'profiles';
-  
+  if (context.includes(' - ')) return context.split(' - ')[1].trim();
+  const lower = context.toLowerCase();
+  if (lower.includes('carousel')) return 'carousel_images';
+  if (lower.includes('insight')) return 'insights';
+  if (lower.includes('product')) return 'products';
+  if (lower.includes('testimonial')) return 'testimonials';
+  if (lower.includes('metric')) return 'metrics';
+  if (lower.includes('content')) return 'site_content';
+  if (lower.includes('contact')) return 'contacts';
+  if (lower.includes('profile')) return 'profiles';
   return null;
 };
 
 export const logSupabaseError = (context: string, error: any) => {
   if (error) {
-    const message = typeof error === 'string' ? error : (error.message || 'Erro de conexão desconhecido');
-    const code = error.code || 'NO_CODE';
-    const details = error.details || 'Sem detalhes';
-    const hint = error.hint ? ` | Dica: ${error.hint}` : '';
-    
-    const logString = `[Supabase Error - ${context}] ${message} | Código: ${code} | Detalhes: ${details}${hint}`;
-    console.error(logString);
-    
-    // PGRST205 indicates schema cache/table resolution error
+    const message = typeof error === 'string' ? error : (error.message || 'Unknown Supabase Error');
+    const code = error.code || 'N/A';
     const isMissingTable = message.includes('schema cache') || code === '42P01' || message.includes('Could not find') || code === 'PGRST205';
-    
     const tableName = getTableNameFromContext(context);
     
+    const logStr = `[Supabase Error - ${context}] ${message} | Code: ${code}`;
+    console.error(logStr);
+
     return {
       isError: true,
-      message: logString,
+      message: logStr,
       code,
       isMissingTable,
       tableName,
-      suggestedSql: isMissingTable && tableName ? (TABLE_SQL_TEMPLATES[tableName] || `NOTIFY pgrst, 'reload schema';`) : `NOTIFY pgrst, 'reload schema';`
+      suggestedSql: isMissingTable && tableName ? TABLE_SQL_TEMPLATES[tableName] : `NOTIFY pgrst, 'reload schema';`
     };
   }
   return { isError: false };
@@ -200,10 +193,7 @@ export const logSupabaseError = (context: string, error: any) => {
 export const subscribeToChanges = (table: string, callback: () => void) => {
   return supabase
     .channel(`realtime:${table}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-      console.log(`[Realtime] Mudança detectada em ${table}. Sincronizando...`);
-      callback();
-    })
+    .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
     .subscribe();
 };
 
@@ -215,11 +205,7 @@ export const signIn = async (email: string, password?: string) => {
 
 export const signUp = async (email: string, password: string, metadata: any) => {
   return await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: metadata
-    }
+    email, password, options: { data: metadata }
   });
 };
 
@@ -233,97 +219,68 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
     if (logSupabaseError('getProfile', error).isError) return null;
     return data;
-  } catch (e) {
-    return null;
-  }
+  } catch { return null; }
 };
 
-// Fix: Implemented fetchCarouselImages correctly
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
     if (logSupabaseError('fetchCarouselImages', error).isError) return [];
     return data || [];
-  } catch (e) {
-    return [];
-  }
+  } catch { return []; }
 };
 
-// Fix: Implemented fetchMetrics to resolve App.tsx error
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
     const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order');
     if (logSupabaseError('fetchMetrics', error).isError) return [];
     return data || [];
-  } catch (e) {
-    return [];
-  }
+  } catch { return []; }
 };
 
-// Fix: Implemented fetchInsights to resolve App.tsx error
 export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
     if (logSupabaseError('fetchInsights', error).isError) return [];
     return data || [];
-  } catch (e) {
-    return [];
-  }
+  } catch { return []; }
 };
 
-// Fix: Implemented fetchProducts to resolve App.tsx error
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (logSupabaseError('fetchProducts', error).isError) return [];
     return data || [];
-  } catch (e) {
-    return [];
-  }
+  } catch { return []; }
 };
 
-// Fix: Implemented fetchTestimonials to resolve App.tsx error
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
     if (logSupabaseError('fetchTestimonials', error).isError) return [];
     return data || [];
-  } catch (e) {
-    return [];
-  }
+  } catch { return []; }
 };
 
-// Fix: Implemented fetchSiteContent to resolve App.tsx error
 export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
   try {
     const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
     if (logSupabaseError('fetchSiteContent', error).isError) return {};
-    return (data || []).reduce((acc: any, curr: any) => {
-      acc[curr.key] = curr;
-      return acc;
-    }, {});
-  } catch (e) {
-    return {};
-  }
+    return (data || []).reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr }), {});
+  } catch { return {}; }
 };
 
-// Fix: Implemented submitContact to resolve ContactForm.tsx error
 export const submitContact = async (contact: Contact): Promise<boolean> => {
   try {
     const { error } = await supabase.from('contacts').insert([contact]);
     return !logSupabaseError('submitContact', error).isError;
-  } catch (e) {
-    return false;
-  }
+  } catch { return false; }
 };
 
-// Fix: Implemented fetchInsightById to resolve ArticlePage.tsx error
 export const fetchInsightById = async (id: string): Promise<Insight | null> => {
   try {
     const { data, error } = await supabase.from('insights').select('*').eq('id', id).single();
     if (logSupabaseError('fetchInsightById', error).isError) return null;
     return data;
-  } catch (e) {
-    return null;
-  }
+  } catch { return null; }
 };

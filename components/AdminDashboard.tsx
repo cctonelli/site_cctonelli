@@ -36,6 +36,12 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     checkAdmin();
   }, [onClose]);
 
+  const refreshSchema = () => {
+    const sql = "NOTIFY pgrst, 'reload schema';";
+    navigator.clipboard.writeText(sql);
+    alert("Comando copiado: " + sql + "\n\nCole no SQL Editor do Supabase e execute para limpar o cache de tabelas (PGRST205).");
+  };
+
   if (isAuthorized === false) {
     return (
       <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center p-8">
@@ -90,7 +96,13 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             ))}
           </nav>
 
-          <div className="mt-auto hidden lg:flex flex-col gap-6">
+          <div className="mt-auto hidden lg:flex flex-col gap-4">
+            <button 
+              onClick={refreshSchema}
+              className="w-full py-4 px-6 border border-yellow-500/30 bg-yellow-500/5 text-yellow-500 rounded-2xl text-[9px] font-bold uppercase tracking-widest hover:bg-yellow-500 hover:text-white transition-all"
+            >
+              Emergency: Refresh Cache
+            </button>
             <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
               <div className="text-[8px] uppercase tracking-widest text-slate-600 mb-1">Usuário:</div>
               <div className="text-[9px] text-blue-500 font-bold truncate">{userEmail}</div>
@@ -137,6 +149,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'title', label: 'Título PT' },
                   { key: 'title_en', label: 'Título EN' },
                   { key: 'title_es', label: 'Título ES' },
+                  { key: 'category', label: 'Categoria (Ex: ESTRATÉGIA)' },
                   { key: 'excerpt', label: 'Resumo PT', type: 'textarea' },
                   { key: 'excerpt_en', label: 'Resumo EN', type: 'textarea' },
                   { key: 'excerpt_es', label: 'Resumo ES', type: 'textarea' },
@@ -144,9 +157,11 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'content', label: 'Conteúdo PT (HTML)', type: 'textarea' },
                   { key: 'content_en', label: 'Conteúdo EN (HTML)', type: 'textarea' },
                   { key: 'content_es', label: 'Conteúdo ES (HTML)', type: 'textarea' },
+                  { key: 'published_at', label: 'Data de Publicação', type: 'text' },
+                  { key: 'display_order', label: 'Ordem', type: 'number' },
                   { key: 'is_active', label: 'Visível no Site', type: 'toggle' },
                 ]}
-                displayColumns={['image_url', 'title', 'is_active']}
+                displayColumns={['image_url', 'title', 'category', 'is_active']}
               />
             )}
 
