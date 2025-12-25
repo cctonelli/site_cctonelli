@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import AdminCrudSection from './AdminCrudSection';
-import { supabase } from '../services/supabaseService';
+import { supabase, getProfile } from '../services/supabaseService';
 
 type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads';
 
@@ -19,11 +19,19 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
+        console.debug("[Admin Check] Nenhuma sessão ativa encontrada.");
         setIsAuthorized(false);
-        setTimeout(onClose, 1500);
+        setTimeout(onClose, 2000);
       } else {
-        setUserEmail(session.user.email || null);
-        setIsAuthorized(true);
+        const profile = await getProfile(session.user.id);
+        if (profile?.user_type === 'admin') {
+          setUserEmail(session.user.email || null);
+          setIsAuthorized(true);
+        } else {
+          console.debug("[Admin Check] Usuário não é administrador.");
+          setIsAuthorized(false);
+          setTimeout(onClose, 2000);
+        }
       }
     };
     
@@ -36,8 +44,8 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mb-6 border border-red-500/20">
            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-6V9m0-6H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" /></svg>
         </div>
-        <h2 className="text-white font-serif italic text-4xl">Acesso Restrito</h2>
-        <p className="text-slate-500 text-[11px] mt-4 uppercase tracking-[0.5em] font-black">Identidade não validada no core estratégico.</p>
+        <h2 className="text-white font-serif italic text-4xl">Acesso Negado</h2>
+        <p className="text-slate-500 text-[11px] mt-4 uppercase tracking-[0.5em] font-black">Nível de segurança não atingido para este terminal.</p>
       </div>
     );
   }
@@ -46,7 +54,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     return (
       <div className="fixed inset-0 z-[100] bg-brand-navy flex flex-col items-center justify-center">
         <div className="w-16 h-16 border-4 border-blue-600/10 border-t-blue-600 rounded-full animate-spin"></div>
-        <span className="mt-8 text-[10px] uppercase tracking-[0.5em] text-blue-500 font-black animate-pulse">Sincronizando Advisory Hub...</span>
+        <span className="mt-8 text-[10px] uppercase tracking-[0.5em] text-blue-500 font-black animate-pulse">Autenticando Credenciais...</span>
       </div>
     );
   }
@@ -90,7 +98,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <div className="text-[8px] uppercase tracking-widest text-slate-600 mb-1">Logado como:</div>
               <div className="text-[9px] text-blue-500 font-bold truncate">{userEmail}</div>
             </div>
-            <button onClick={onClose} className="text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.4em] p-4 border border-white/5 rounded-2xl transition-all hover:bg-red-500/5">Encerrar Sessão</button>
+            <button onClick={onClose} className="text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.4em] p-4 border border-white/5 rounded-2xl transition-all hover:bg-red-500/5">Sair do Terminal</button>
           </div>
         </div>
 
@@ -214,7 +222,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
             {activeTab === 'leads' && (
               <AdminCrudSection
-                tableName="contacts"
+                tableName="leads"
                 title="Lead Qualificado"
                 fields={[
                   { key: 'name', label: 'Prospect' },
