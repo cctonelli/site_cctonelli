@@ -8,7 +8,7 @@ import {
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Inicialização simplificada: removido db.schema para evitar conflito de prefixo 'public.public'
+// Inicialização minimalista para evitar conflitos de schema prefixing
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
@@ -22,7 +22,8 @@ export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
-    const isMissingTable = code === 'PGRST205' || code === '42P01' || message.includes('schema cache');
+    const isMissingTable = code === 'PGRST205' || code === '42P01' || message.includes('schema cache') || message.includes('not found');
+    const isMissingColumn = code === '42703';
     
     console.error(`[Supabase Error - ${context}] ${message} (Code: ${code})`);
     
@@ -31,18 +32,19 @@ export const logSupabaseError = (context: string, error: any) => {
       message,
       code,
       isMissingTable,
+      isMissingColumn,
       suggestedSql: `NOTIFY pgrst, 'reload schema';`
     };
   }
   return { isError: false };
 };
 
-// Tabelas limpas sem prefixo 'public.'
+// Funções de Fetch usando select('*') para garantir resiliência contra colunas faltantes (42703)
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data, error } = await supabase
       .from('carousel_images') 
-      .select('id, url, title, subtitle, cta_text, cta_url, display_order, is_active')
+      .select('*')
       .eq('is_active', true)
       .order('display_order');
     
@@ -58,7 +60,7 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
     const { data, error } = await supabase
       .from('metrics')
-      .select('id, label, value, icon, display_order, is_active')
+      .select('*')
       .eq('is_active', true)
       .order('display_order');
     
@@ -71,7 +73,7 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   try {
     const { data, error } = await supabase
       .from('insights')
-      .select('id, title, subtitle, excerpt, image_url, link, content, published_at, is_active, display_order')
+      .select('*')
       .eq('is_active', true)
       .order('display_order');
     
@@ -84,7 +86,7 @@ export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, price, type, config, created_at')
+      .select('*')
       .order('created_at', { ascending: false });
     
     if (logSupabaseError('fetchProducts', error).isError) return [];
@@ -96,7 +98,7 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase
       .from('testimonials')
-      .select('id, name, company, quote, approved, created_at')
+      .select('*')
       .eq('approved', true)
       .order('created_at', { ascending: false });
     
@@ -109,7 +111,7 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
   try {
     const { data, error } = await supabase
       .from('site_content')
-      .select('key, value, value_en, value_es, page')
+      .select('*')
       .eq('page', page);
     
     if (logSupabaseError('fetchSiteContent', error).isError) return {};
@@ -118,7 +120,6 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
 };
 
 export const subscribeToChanges = (table: string, callback: () => void) => {
-  // Higieniza o nome da tabela para o canal também
   const cleanTable = table.replace('public.', '');
   return supabase
     .channel(`realtime:${cleanTable}`)
@@ -130,7 +131,7 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, cpf_cnpj, gender, whatsapp, user_type')
+      .select('*')
       .eq('id', id)
       .single();
     if (logSupabaseError('getProfile', error).isError) return null;
