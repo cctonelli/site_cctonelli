@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatBot from './components/ChatBot';
@@ -22,7 +22,7 @@ import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from '.
 const SEED_METRICS: Metric[] = [
   { id: '1', value: '+17k', label: 'LinkedIn Connections', icon: null, display_order: 1, is_active: true },
   { id: '2', value: '25+', label: 'Anos de Estratégia', icon: null, display_order: 2, is_active: true },
-  { id: '3', value: '500+', label: 'Executive Mentorships', icon: null, display_order: 3, is_active: true },
+  { id: '3', value: '300+', label: 'Executive Projects', icon: null, display_order: 3, is_active: true },
   { id: '4', value: 'ROI', label: 'Operational Excellence', icon: null, display_order: 4, is_active: true }
 ];
 
@@ -35,8 +35,8 @@ const HomePage: React.FC = () => {
   const [dbContent, setDbContent] = useState<Record<string, string>>({});
   
   const [isLive, setIsLive] = useState(false);
-  const [language, setLanguage] = useState<Language>('pt');
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'pt');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system');
   const t = translations[language];
   
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -55,19 +55,24 @@ const HomePage: React.FC = () => {
         fetchCarouselImages()
       ]);
 
-      if (m?.length) setMetrics(m);
-      if (i?.length) setInsights(i);
-      if (p?.length) setProducts(p);
-      if (test?.length) setTestimonials(test);
-      if (s) setDbContent(s);
-      if (car?.length) setCarouselImages(car);
+      if (m && m.length > 0) setMetrics(m);
+      if (i && i.length > 0) setInsights(i);
+      if (p && p.length > 0) setProducts(p);
+      if (test && test.length > 0) setTestimonials(test);
+      if (s && Object.keys(s).length > 0) setDbContent(s);
+      if (car && car.length > 0) setCarouselImages(car);
       
       setIsLive(true);
+      console.debug("[Sync] Dados Supabase integrados.");
     } catch (err) {
-      console.error("[Supabase Sync Error]", err);
+      console.error("[Sync Error]", err);
       setIsLive(false);
     }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('lang', language);
+  }, [language]);
 
   useEffect(() => {
     const init = async () => {
@@ -78,13 +83,10 @@ const HomePage: React.FC = () => {
       }
       await syncData();
     };
-
     init();
 
-    // Inscrição em Tempo Real para todas as tabelas
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
     const subs = tables.map(table => subscribeToChanges(table, syncData));
-    
     return () => subs.forEach(s => s.unsubscribe());
   }, [syncData]);
 
@@ -92,17 +94,29 @@ const HomePage: React.FC = () => {
     const root = window.document.documentElement;
     const isDark = theme === 'system' ? window.matchMedia('(prefers-color-scheme: dark)').matches : theme === 'dark';
     if (isDark) root.classList.add('dark'); else root.classList.remove('dark');
+    localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const resolveContent = (key: string, localFallback: string) => dbContent[key] || localFallback;
+  const resolveTranslation = (item: any, field: string, fallback: string) => {
+    if (!item) return fallback;
+    if (language === 'pt') return item[field] || fallback;
+    const localized = item[`${field}_${language}`];
+    return localized || item[field] || fallback;
+  };
+
+  const resolveContent = (key: string, localFallback: string) => {
+    return dbContent[key] || localFallback;
+  };
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
       
-      {/* Indicador de Status Realtime */}
-      <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-        <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Database Connected</span>
+      {/* Realtime Status Indicator */}
+      <div className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 backdrop-blur rounded-full border border-white/5 shadow-2xl transition-all ${isLive ? 'opacity-100' : 'opacity-20'}`}>
+        <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+        <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
+          {isLive ? 'Core Synced' : 'Syncing...'}
+        </span>
       </div>
 
       <Navbar 
@@ -127,51 +141,74 @@ const HomePage: React.FC = () => {
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
 
       <main>
-        <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} />
+        <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} />
 
         <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
           <div className="container mx-auto px-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
               {metrics.map(m => (
-                <div key={m.id} className="text-center">
-                  <div className="text-5xl font-serif font-bold text-blue-600 mb-2">{m.value}</div>
-                  <div className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">{m.label}</div>
+                <div key={m.id} className="text-center group">
+                  <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform">{m.value}</div>
+                  <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">
+                    {resolveTranslation(m, 'label', m.label)}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="insights" className="py-32 bg-white dark:bg-slate-950">
+        <section id="insights" className="py-32 bg-white dark:bg-slate-950 transition-colors">
           <div className="container mx-auto px-6">
-            <div className="flex justify-between items-end mb-16">
-              <h2 className="text-4xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', t.insights_title)}</h2>
-              <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b border-blue-600/20 pb-1">{t.insights_all}</Link>
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-4">
+              <div>
+                <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{t.insights_badge}</div>
+                <h2 className="text-4xl lg:text-5xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', t.insights_title)}</h2>
+              </div>
+              <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1">
+                {t.insights_all}
+              </Link>
             </div>
             <div className="grid md:grid-cols-3 gap-12">
               {insights.map(insight => (
                 <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-6">
-                  <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 relative">
-                    <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-700" alt="" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                  <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 relative shadow-xl">
+                    <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
-                  <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors">{insight.title}</h3>
-                  <p className="text-slate-500 text-sm line-clamp-3 italic">{insight.excerpt}</p>
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">
+                      {resolveTranslation(insight, 'title', insight.title)}
+                    </h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light">
+                      {resolveTranslation(insight, 'excerpt', insight.excerpt || '')}
+                    </p>
+                  </div>
                 </Link>
               ))}
+              {insights.length === 0 && (
+                <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem]">
+                   <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 animate-pulse">Sincronizando Insights...</span>
+                </div>
+              )}
             </div>
           </div>
         </section>
 
-        <ProductsSection products={products} language={language} resolveTranslation={(id, f, b) => b} />
-        <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={(id, f, b) => b} />
+        <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} />
+        <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} />
         <ContactForm language={language} />
       </main>
 
-      <footer className="py-20 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center">
-        <div className="container mx-auto px-6 space-y-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl mx-auto flex items-center justify-center font-bold text-xl text-white shadow-2xl">CT</div>
-          <p className="text-[9px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em]">{resolveContent('copyright', t.copyright)}</p>
+      <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center">
+        <div className="container mx-auto px-6 space-y-10">
+          <div className="w-14 h-14 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white">CT</div>
+          <div className="space-y-4">
+            <h4 className="text-xl font-serif dark:text-white italic">Claudio Tonelli Group</h4>
+            <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto">
+              {resolveContent('copyright', t.copyright)}
+            </p>
+          </div>
         </div>
       </footer>
       <ChatBot />
