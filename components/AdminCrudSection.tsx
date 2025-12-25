@@ -53,7 +53,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         });
         setStatus({ 
           text: errorInfo.isMissingTable 
-            ? `API CACHE ERROR: Tabela '${tableName}' offline.` 
+            ? `SYNC ERROR: Tabela '${tableName}' não localizada.` 
             : `FALHA DB: ${errorInfo.code}`, 
           type: errorInfo.isMissingTable ? 'warning' : 'error' 
         });
@@ -63,7 +63,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       }
     } catch (e: any) {
       console.error("[Admin Crud] Critical fail:", e);
-      setStatus({ text: "Conexão de dados interrompida.", type: 'error' });
+      setStatus({ text: "O terminal perdeu a conexão com o banco.", type: 'error' });
       setItems([]);
     } finally {
       setLoading(false);
@@ -113,13 +113,13 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
       if (error) throw error;
 
-      setStatus({ text: 'Sincronizado com o Core!', type: 'success' });
+      setStatus({ text: 'Ativo Sincronizado!', type: 'success' });
       setFormData({});
       setEditingId(null);
       await loadData();
     } catch (e: any) {
       console.error("[Admin Crud] Save Error:", e);
-      setStatus({ text: `Erro de Salvamento: ${e.message}`, type: 'error' });
+      setStatus({ text: `Falha na Persistência: ${e.message}`, type: 'error' });
     } finally {
       setLoading(false);
       setTimeout(() => setStatus(prev => prev?.type === 'success' ? null : prev), 3000);
@@ -127,87 +127,91 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   };
 
   const handleDelete = async (id: any) => {
-    if (!id || !tableName || !confirm('Confirmar deleção permanente deste ativo?')) return;
+    if (!id || !tableName || !confirm('Confirmar deleção permanente?')) return;
     try {
       const { error } = await supabase.from(tableName).delete().eq(idColumn, id);
       if (error) throw error;
       await loadData();
     } catch (e: any) {
-      alert(`Falha na exclusão: ${e.message}`);
+      alert(`Erro na deleção: ${e.message}`);
     }
   };
 
   const copySql = () => {
     if (errorDetails?.sql && navigator.clipboard) {
       navigator.clipboard.writeText(errorDetails.sql);
-      alert('Comando de reparo copiado. Use o SQL Editor do Supabase.');
+      alert('MODO REPARO ATIVADO: Script de reconstrução copiado!\n\nCole no SQL Editor do Supabase e clique em RUN.');
     }
   };
 
   return (
     <div className="space-y-10">
-      {/* Mensagem de Erro Proativa para PGRST205 */}
+      {/* Recovery Wizard para erros PGRST205 / 404 */}
       {errorDetails?.isMissing && (
-        <div className="bg-amber-600/10 border border-amber-500/20 p-8 rounded-[2.5rem] space-y-6 animate-in fade-in slide-in-from-top-4">
-          <div className="flex items-center gap-4 text-amber-500">
-            <div className="w-12 h-12 bg-amber-500/20 rounded-2xl flex items-center justify-center">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <div className="bg-blue-600/5 border border-blue-600/20 p-8 rounded-[2.5rem] space-y-6 animate-in fade-in slide-in-from-top-4 backdrop-blur-3xl shadow-2xl">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 bg-blue-600/20 rounded-3xl flex items-center justify-center text-blue-500 shadow-xl border border-blue-500/20">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <div>
-              <h4 className="font-serif italic text-xl text-white">Desconexão de Schema Detectada</h4>
-              <p className="text-[9px] uppercase tracking-widest text-amber-400 font-bold">A tabela '{tableName}' não foi mapeada na API.</p>
+              <h4 className="font-serif italic text-2xl text-white">Assistente de Reconstrução Core</h4>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-blue-400 font-bold mt-1">Status: Falha de Schema Detectada (PGRST205/404)</p>
             </div>
           </div>
           
-          <div className="space-y-4">
-            <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-              Este erro ocorre quando o Supabase ainda não indexou a tabela. Clique no botão abaixo para copiar o comando de correção e execute-o no SQL Editor do Supabase.
+          <div className="space-y-4 bg-black/40 p-6 rounded-2xl border border-white/5">
+            <p className="text-slate-400 text-sm leading-relaxed">
+              O comando <code className="text-blue-400">NOTIFY</code> falhou em atualizar o cache do Supabase ou a tabela não existe fisicamente. Clique abaixo para obter o script de **Recuperação Total**.
             </p>
             <button 
               onClick={copySql}
-              className="bg-amber-600 text-white px-8 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-amber-500 transition-all shadow-xl active:scale-95"
+              className="bg-blue-600 text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] active:scale-95 flex items-center gap-3"
             >
-              Copiar Comando de Reparo
+              Copiar Script de Reconstrução
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
             </button>
           </div>
         </div>
       )}
 
-      {/* Formulário de Edição/Inserção */}
-      <div className="bg-slate-900/60 p-8 rounded-[2rem] border border-white/5 space-y-6 shadow-2xl relative overflow-hidden">
-        {loading && <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] z-20 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      {/* Editor Principal */}
+      <div className="bg-slate-900/60 p-10 rounded-[2.5rem] border border-white/5 space-y-8 shadow-2xl relative overflow-hidden backdrop-blur-md">
+        {loading && <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] z-20 flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         </div>}
 
-        <h3 className="text-xl font-serif italic text-white flex items-center gap-3">
-          <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
-          {editingId ? 'Refinar Registro' : 'Novo Registro'} em {title}
-        </h3>
+        <div className="flex justify-between items-center">
+          <h3 className="text-2xl font-serif italic text-white flex items-center gap-3">
+            <span className="w-1.5 h-10 bg-blue-600 rounded-full"></span>
+            {editingId ? 'Refinar' : 'Novo'} Ativo: {title}
+          </h3>
+          <span className="text-[8px] font-mono text-slate-700 bg-white/5 px-3 py-1 rounded-full">{tableName}</span>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-8">
           {(fields || []).map(f => (
             <div key={f.key} className={f.type === 'textarea' || f.type === 'json' ? 'md:col-span-2' : ''}>
-              <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 block">{f.label}</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 mb-3 block">{f.label}</label>
               {f.type === 'textarea' || f.type === 'json' ? (
                 <textarea 
-                  className="w-full bg-black border border-white/10 rounded-xl p-4 text-xs text-white focus:border-blue-500 outline-none h-32 font-mono transition-colors"
+                  className="w-full bg-black border border-white/5 rounded-2xl p-6 text-sm text-slate-300 focus:border-blue-500/50 outline-none h-40 font-mono transition-all placeholder:opacity-20"
                   value={formData[f.key] || ''} 
                   onChange={e => setFormData({...formData, [f.key]: e.target.value})}
-                  placeholder={f.type === 'json' ? '{ "image_url": "...", "action_label": "..." }' : ''}
+                  placeholder={f.type === 'json' ? '{\n  "image_url": "...",\n  "label": "..."\n}' : 'Descreva com precisão estratégica...'}
                 />
               ) : f.type === 'toggle' ? (
                 <button 
                   onClick={() => setFormData({...formData, [f.key]: !formData[f.key]})}
-                  className={`px-6 py-3 rounded-xl text-[10px] font-bold border transition-all ${formData[f.key] ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white/5 border-white/10 text-slate-600'}`}
+                  className={`px-8 py-4 rounded-xl text-[10px] font-black tracking-widest border transition-all ${formData[f.key] ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-slate-700'}`}
                 >
-                  {formData[f.key] ? 'ATIVADO' : 'DESATIVADO'}
+                  {formData[f.key] ? 'PUBLICAÇÃO ATIVA' : 'RASCUNHO OFFLINE'}
                 </button>
               ) : (
                 <input 
                   type={f.type === 'number' ? 'number' : 'text'}
-                  className="w-full bg-black border border-white/10 rounded-xl p-4 text-xs text-white focus:border-blue-500 outline-none transition-colors"
+                  className="w-full bg-black border border-white/5 rounded-xl p-5 text-sm text-white focus:border-blue-500/50 outline-none transition-all"
                   value={formData[f.key] || ''} 
                   onChange={e => setFormData({...formData, [f.key]: e.target.value})}
                 />
@@ -216,66 +220,68 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
           ))}
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex gap-6 pt-4">
           <button 
             onClick={handleSave} 
             disabled={loading || errorDetails?.isMissing} 
-            className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-30"
+            className="flex-1 bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.4em] text-[10px] hover:bg-blue-500 transition-all active:scale-[0.98] disabled:opacity-20 shadow-2xl shadow-blue-600/20"
           >
-            {editingId ? 'Confirmar Alterações' : 'Publicar Agora'}
+            {editingId ? 'Confirmar Mudanças' : 'Implantar no Core'}
           </button>
           {editingId && (
-            <button onClick={() => { setEditingId(null); setFormData({}); }} className="px-8 bg-white/5 text-slate-500 py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all">
+            <button onClick={() => { setEditingId(null); setFormData({}); }} className="px-10 bg-white/5 text-slate-600 py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] hover:bg-white/10 transition-all">
               Cancelar
             </button>
           )}
         </div>
 
         {status && (
-          <div className={`p-4 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center animate-in fade-in slide-in-from-top-2 ${
-            status.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-500' : 
-            status.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' :
-            'bg-red-500/10 border-red-500/20 text-red-500'
+          <div className={`p-5 rounded-2xl border text-[10px] font-black uppercase tracking-widest text-center animate-in fade-in slide-in-from-top-2 ${
+            status.type === 'success' ? 'bg-green-500/5 border-green-500/20 text-green-500' : 
+            status.type === 'warning' ? 'bg-amber-500/5 border-amber-500/20 text-amber-500' :
+            'bg-red-500/5 border-red-500/20 text-red-500'
           }`}>
             {status.text}
           </div>
         )}
       </div>
 
-      {/* Listagem de Itens */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center px-4">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600">Registros Ativos ({items?.length || 0})</h4>
-          <button onClick={loadData} className="text-blue-500 text-[9px] font-bold uppercase tracking-widest hover:underline">Recarregar Grid</button>
+      {/* Grid de Itens */}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center px-6">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-700">Inventário Estratégico ({items?.length || 0})</h4>
+          <button onClick={loadData} className="text-blue-600 text-[9px] font-black uppercase tracking-widest hover:text-blue-500 transition-colors">Recarregar Banco</button>
         </div>
 
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {items && items.length > 0 ? items.map(item => (
-            <div key={item[idColumn] || Math.random()} className="bg-slate-900/40 p-5 rounded-2xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all group">
-              <div className="flex items-center gap-4">
-                {(item?.url || item?.image_url) && <img src={item.url || item.image_url} className="w-12 h-12 object-cover rounded-lg opacity-40 group-hover:opacity-80 transition-opacity" alt="" />}
-                <div className="max-w-[200px] sm:max-w-md">
-                  <div className="text-white font-medium text-sm truncate">
-                    {item?.title || item?.name || item?.label || item?.key || item?.full_name || 'Sem Título'}
+            <div key={item[idColumn] || Math.random()} className="bg-slate-900/40 p-6 rounded-[2rem] border border-white/5 flex items-center justify-between hover:border-blue-500/20 transition-all group backdrop-blur-sm">
+              <div className="flex items-center gap-6">
+                {(item?.url || item?.image_url) && <img src={item.url || item.image_url} className="w-16 h-16 object-cover rounded-2xl border border-white/10 opacity-50 group-hover:opacity-100 transition-all" alt="" />}
+                <div className="max-w-md">
+                  <div className="text-white font-serif italic text-lg truncate group-hover:text-blue-400 transition-colors">
+                    {item?.title || item?.name || item?.label || item?.key || item?.full_name || 'Item s/ Rótulo'}
                   </div>
-                  <div className="text-[9px] text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                    ID: {item?.[idColumn] || '---'}
-                    {item?.is_active === false && <span className="bg-red-500/20 text-red-500 px-2 py-0.5 rounded text-[8px]">OFFLINE</span>}
+                  <div className="text-[9px] text-slate-700 uppercase tracking-widest flex items-center gap-4 mt-2">
+                    <span className="font-mono">ID: {item?.[idColumn] || '---'}</span>
+                    {item?.is_active === false && <span className="bg-red-500/10 text-red-500 px-3 py-1 rounded-full text-[8px] font-black">OFFLINE</span>}
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleEdit(item)} className="p-2 text-slate-500 hover:text-blue-500 transition-colors">
-                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+              <div className="flex gap-4">
+                <button onClick={() => handleEdit(item)} className="p-3 text-slate-700 hover:text-blue-500 transition-all hover:scale-110">
+                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                 </button>
-                <button onClick={() => handleDelete(item?.[idColumn])} className="p-2 text-slate-800 hover:text-red-500 transition-colors">
-                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <button onClick={() => handleDelete(item?.[idColumn])} className="p-3 text-slate-800 hover:text-red-500 transition-all hover:scale-110">
+                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
             </div>
           )) : !loading && (
-            <div className="text-center p-16 text-slate-700 text-[10px] uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
-              {errorDetails?.isMissing ? `Sincronize o banco de dados para ver itens.` : 'Nenhum registro encontrado nesta categoria.'}
+            <div className="text-center py-20 bg-slate-950/20 border border-dashed border-white/5 rounded-[3rem]">
+              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-800">
+                {errorDetails?.isMissing ? `Aguardando Implantação de Schema SQL...` : 'Nenhum ativo localizado nesta categoria.'}
+              </span>
             </div>
           )}
         </div>

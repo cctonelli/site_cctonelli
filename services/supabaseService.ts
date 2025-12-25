@@ -8,7 +8,6 @@ import {
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Initialization without any default schema settings to allow PostgREST to handle 'public' implicitly.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
@@ -23,11 +22,34 @@ export const logSupabaseError = (context: string, error: any) => {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
     
-    // PGRST205 is the specific code for schema cache miss
+    // PGRST205 é erro de cache de schema. 404 geralmente significa que a tabela não existe fisicamente no public.
     const isCacheError = code === 'PGRST205' || message.includes('schema cache');
-    const isMissingTable = isCacheError || code === '42P01' || message.includes('not found');
+    const isMissingTable = isCacheError || code === '42P01' || message.includes('not found') || message.includes('404');
     
-    console.error(`[Supabase Error - ${context}] ${message} (Code: ${code})`);
+    console.error(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
+    
+    // Script de recuperação total se o NOTIFY falhar
+    const recoverySql = isMissingTable ? `
+-- REPARAÇÃO TOTAL DE SCHEMA
+NOTIFY pgrst, 'reload schema';
+
+-- Se a tabela 'products' ainda der 404, rode este bloco para garantir existência física:
+CREATE TABLE IF NOT EXISTS public.products (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  price NUMERIC DEFAULT 0,
+  type TEXT DEFAULT 'service',
+  config JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Garantir acesso anon (essencial para evitar 404 simulado)
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow Public Access" ON public.products FOR SELECT USING (true);
+GRANT SELECT ON public.products TO anon;
+GRANT SELECT ON public.products TO authenticated;
+` : `NOTIFY pgrst, 'reload schema';`;
     
     return {
       isError: true,
@@ -35,7 +57,7 @@ export const logSupabaseError = (context: string, error: any) => {
       code,
       isMissingTable,
       isCacheError,
-      suggestedSql: `NOTIFY pgrst, 'reload schema';`
+      suggestedSql: recoverySql.trim()
     };
   }
   return { isError: false };
@@ -85,7 +107,6 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Using select('*') and explicit table name without 'public.' prefix as requested.
     const { data, error } = await supabase
       .from('products')
       .select('*')
