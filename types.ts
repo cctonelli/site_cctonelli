@@ -8,8 +8,8 @@ export interface CarouselImage {
   subtitle: string | null;
   subtitle_en?: string | null;
   subtitle_es?: string | null;
-  link: string | null; // Ex: #products para ir para a loja
-  cta_text?: string | null; // Ex: "Ver Soluções"
+  cta_url: string | null; // Corrigido de 'link' para 'cta_url'
+  cta_text?: string | null;
   cta_text_en?: string | null;
   cta_text_es?: string | null;
   display_order: number;
@@ -94,16 +94,6 @@ export interface SiteContent {
   value: string;
   page: string;
   description?: string;
-}
-
-export interface Tool {
-  id: string;
-  name: string;
-  description: string | null;
-  type: string | null;
-  admin_only: boolean;
-  config: any;
-  created_at?: string;
 }
 
 export interface Contact {

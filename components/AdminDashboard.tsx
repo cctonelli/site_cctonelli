@@ -19,7 +19,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        console.debug("[Admin Check] Nenhuma sessão ativa encontrada.");
         setIsAuthorized(false);
         setTimeout(onClose, 2000);
       } else {
@@ -28,7 +27,6 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           setUserEmail(session.user.email || null);
           setIsAuthorized(true);
         } else {
-          console.debug("[Admin Check] Usuário não é administrador.");
           setIsAuthorized(false);
           setTimeout(onClose, 2000);
         }
@@ -40,12 +38,12 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   if (isAuthorized === false) {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-500">
+      <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-center p-8">
         <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mb-6 border border-red-500/20">
            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-6V9m0-6H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" /></svg>
         </div>
         <h2 className="text-white font-serif italic text-4xl">Acesso Negado</h2>
-        <p className="text-slate-500 text-[11px] mt-4 uppercase tracking-[0.5em] font-black">Nível de segurança não atingido para este terminal.</p>
+        <p className="text-slate-500 text-[11px] mt-4 uppercase tracking-[0.5em] font-black">Identidade não validada no core estratégico.</p>
       </div>
     );
   }
@@ -54,22 +52,21 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     return (
       <div className="fixed inset-0 z-[100] bg-brand-navy flex flex-col items-center justify-center">
         <div className="w-16 h-16 border-4 border-blue-600/10 border-t-blue-600 rounded-full animate-spin"></div>
-        <span className="mt-8 text-[10px] uppercase tracking-[0.5em] text-blue-500 font-black animate-pulse">Autenticando Credenciais...</span>
+        <span className="mt-8 text-[10px] uppercase tracking-[0.5em] text-blue-500 font-black">Verificando Credenciais...</span>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-brand-navy/98 backdrop-blur-3xl flex items-center justify-center p-2 lg:p-8 overflow-hidden animate-in zoom-in-95 duration-700">
-      <div className="bg-[#02050c] border border-white/10 w-full max-w-[1400px] h-full rounded-[3rem] lg:rounded-[4rem] overflow-hidden flex flex-col lg:flex-row shadow-[0_60px_120px_-30px_rgba(0,0,0,1)]">
+    <div className="fixed inset-0 z-[100] bg-brand-navy/98 backdrop-blur-3xl flex items-center justify-center p-2 lg:p-8 overflow-hidden">
+      <div className="bg-[#02050c] border border-white/10 w-full max-w-[1400px] h-full rounded-[3rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl">
         
-        {/* Sidebar Gerencial */}
-        <div className="w-full lg:w-80 bg-[#010309] border-r border-white/5 p-8 lg:p-12 flex flex-row lg:flex-col gap-8 shrink-0 overflow-x-auto scrollbar-none">
+        <div className="w-full lg:w-80 bg-[#010309] border-r border-white/5 p-8 flex flex-row lg:flex-col gap-8 shrink-0 overflow-x-auto scrollbar-none">
           <div className="flex items-center gap-4 mb-0 lg:mb-12 min-w-fit">
-            <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-white shadow-2xl text-2xl">CT</div>
+            <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-white text-2xl">CT</div>
             <div className="flex flex-col">
               <span className="font-black text-[11px] uppercase tracking-[0.6em] text-white">Management</span>
-              <span className="text-[7px] uppercase tracking-[0.2em] text-blue-500 font-bold mt-1">Version 10.0.Core</span>
+              <span className="text-[7px] uppercase tracking-[0.2em] text-blue-500 font-bold mt-1">Terminal Advisory</span>
             </div>
           </div>
           
@@ -86,7 +83,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <button 
                 key={tab.id} 
                 onClick={() => setActiveTab(tab.id as TabType)} 
-                className={`whitespace-nowrap px-6 py-5 rounded-2xl text-[9px] font-black uppercase tracking-[0.3em] transition-all text-left border ${activeTab === tab.id ? 'bg-blue-600 text-white border-blue-500 shadow-xl' : 'text-slate-600 border-transparent hover:bg-white/5 hover:text-slate-300'}`}
+                className={`whitespace-nowrap px-6 py-5 rounded-2xl text-[9px] font-black uppercase tracking-[0.3em] transition-all text-left border ${activeTab === tab.id ? 'bg-blue-600 text-white border-blue-500 shadow-xl' : 'text-slate-600 border-transparent hover:bg-white/5'}`}
               >
                 {tab.label}
               </button>
@@ -95,18 +92,17 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
           <div className="mt-auto hidden lg:flex flex-col gap-6">
             <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-              <div className="text-[8px] uppercase tracking-widest text-slate-600 mb-1">Logado como:</div>
+              <div className="text-[8px] uppercase tracking-widest text-slate-600 mb-1">Usuário:</div>
               <div className="text-[9px] text-blue-500 font-bold truncate">{userEmail}</div>
             </div>
-            <button onClick={onClose} className="text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.4em] p-4 border border-white/5 rounded-2xl transition-all hover:bg-red-500/5">Sair do Terminal</button>
+            <button onClick={onClose} className="text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.4em] p-4 border border-white/5 rounded-2xl transition-all">Sair</button>
           </div>
         </div>
 
-        {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-8 lg:p-20 bg-grid relative custom-scrollbar">
           <div className="max-w-4xl mx-auto pb-32">
             <header className="mb-16">
-              <h2 className="text-4xl lg:text-5xl font-serif text-white italic mb-4">Gestão de {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
+              <h2 className="text-4xl lg:text-5xl font-serif text-white italic mb-4">Gestão de {activeTab}</h2>
               <div className="w-20 h-1 bg-blue-600"></div>
             </header>
 
@@ -125,7 +121,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   { key: 'cta_text', label: 'Texto Botão PT' },
                   { key: 'cta_text_en', label: 'Texto Botão EN' },
                   { key: 'cta_text_es', label: 'Texto Botão ES' },
-                  { key: 'link', label: 'Link de Destino (Ex: #products)' },
+                  { key: 'cta_url', label: 'Link de Destino (cta_url)' },
                   { key: 'display_order', label: 'Ordem de Exibição', type: 'number' },
                   { key: 'is_active', label: 'Publicado', type: 'toggle' },
                 ]}
@@ -222,7 +218,7 @@ const AdminDashboard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
             {activeTab === 'leads' && (
               <AdminCrudSection
-                tableName="leads"
+                tableName="contacts"
                 title="Lead Qualificado"
                 fields={[
                   { key: 'name', label: 'Prospect' },

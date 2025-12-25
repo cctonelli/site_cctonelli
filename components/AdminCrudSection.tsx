@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { supabase } from '../services/supabaseService';
 
 interface Field {
@@ -32,9 +31,25 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from(tableName).select('*').order(idColumn, { ascending: false });
-    if (!error) setItems(data || []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .order(idColumn, { ascending: false });
+
+      if (error) {
+        console.error(`Error loading ${tableName}:`, error);
+        setStatus({ text: `Erro 404/API: Tabela ${tableName} não encontrada ou RLS bloqueado.`, type: 'error' });
+        setItems([]);
+      } else {
+        setItems(data || []);
+      }
+    } catch (e: any) {
+      console.error("Critical Fetch Error:", e);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   }, [tableName, idColumn]);
 
   useEffect(() => {
@@ -44,11 +59,13 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const handleEdit = (item: any) => {
     setEditingId(item[idColumn]);
     const processed = { ...item };
-    fields.forEach(f => {
-      if (f.type === 'json' && typeof item[f.key] === 'object') {
-        processed[f.key] = JSON.stringify(item[f.key], null, 2);
-      }
-    });
+    if (fields) {
+      fields.forEach(f => {
+        if (f.type === 'json' && item[f.key] && typeof item[f.key] === 'object') {
+          processed[f.key] = JSON.stringify(item[f.key], null, 2);
+        }
+      });
+    }
     setFormData(processed);
   };
 
@@ -57,11 +74,17 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
     const payload = { ...formData };
     
     try {
-      fields.forEach(f => {
-        if (f.type === 'json' && typeof payload[f.key] === 'string') {
-          payload[f.key] = JSON.parse(payload[f.key]);
-        }
-      });
+      if (fields) {
+        fields.forEach(f => {
+          if (f.type === 'json' && typeof payload[f.key] === 'string') {
+            try {
+              payload[f.key] = JSON.parse(payload[f.key]);
+            } catch (e) {
+              console.warn("Invalid JSON in field", f.key);
+            }
+          }
+        });
+      }
 
       const { error } = editingId
         ? await supabase.from(tableName).update(payload).eq(idColumn, editingId)
@@ -88,11 +111,11 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
+    <div className="space-y-10">
       <div className="bg-slate-900/60 p-8 rounded-[2rem] border border-white/5 space-y-6 shadow-2xl">
         <h3 className="text-xl font-serif italic text-white">{editingId ? 'Editar' : 'Adicionar'} {title}</h3>
         <div className="grid md:grid-cols-2 gap-6">
-          {fields.map(f => (
+          {fields && fields.map(f => (
             <div key={f.key} className={f.type === 'textarea' || f.type === 'json' ? 'md:col-span-2' : ''}>
               <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2 block">{f.label}</label>
               {f.type === 'textarea' || f.type === 'json' ? (
@@ -120,15 +143,15 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
           ))}
         </div>
         <button onClick={handleSave} disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all">
-          {loading ? 'Sincronizando...' : 'Salvar Alterações'}
+          {loading ? 'Processando...' : 'Salvar Alterações'}
         </button>
         {status && <div className={`text-center text-[10px] font-bold uppercase tracking-widest ${status.type === 'success' ? 'text-green-500' : 'text-red-500'}`}>{status.text}</div>}
       </div>
 
       <div className="space-y-4">
-        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 px-4">Registros em Nuvem ({items.length})</h4>
+        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 px-4">Registros ({Array.isArray(items) ? items.length : 0})</h4>
         <div className="grid gap-3">
-          {items.map(item => (
+          {Array.isArray(items) && items.map(item => (
             <div key={item[idColumn]} className="bg-slate-900/40 p-5 rounded-2xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all">
               <div className="flex items-center gap-4">
                 {(item.url || item.image_url) && <img src={item.url || item.image_url} className="w-12 h-12 object-cover rounded-lg opacity-50" />}
@@ -147,6 +170,11 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
               </div>
             </div>
           ))}
+          {(!Array.isArray(items) || items.length === 0) && !loading && (
+            <div className="text-center p-10 text-slate-700 text-[10px] uppercase tracking-widest border border-dashed border-white/5 rounded-2xl">
+              Nenhum dado disponível. Verifique o banco de dados.
+            </div>
+          )}
         </div>
       </div>
     </div>
