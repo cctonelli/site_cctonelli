@@ -22,18 +22,29 @@ export const logSupabaseError = (context: string, error: any) => {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
     
-    // PGRST205 é erro de cache de schema. 404 geralmente significa que a tabela não existe fisicamente no public.
     const isCacheError = code === 'PGRST205' || message.includes('schema cache');
     const isMissingTable = isCacheError || code === '42P01' || message.includes('not found') || message.includes('404');
     
     console.error(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
-    // Script de recuperação total se o NOTIFY falhar
+    // SCRIPT DE RESET TOTAL DE PERMISSÕES
+    // Se o NOTIFY não funcionou, precisamos garantir que o papel 'anon' pode ver o schema public
     const recoverySql = isMissingTable ? `
--- REPARAÇÃO TOTAL DE SCHEMA
+-- RESET TOTAL DE ACESSO AO SCHEMA PUBLIC (ULTIMA INSTANCIA)
+-- 1. Forçar reload do cache
 NOTIFY pgrst, 'reload schema';
 
--- Se a tabela 'products' ainda der 404, rode este bloco para garantir existência física:
+-- 2. Garantir permissões de uso no esquema public (Resolve erro 404/PGRST205 persistente)
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO postgres;
+GRANT USAGE ON SCHEMA public TO service_role;
+
+-- 3. Garantir leitura em todas as tabelas para o papel anon (essencial para o site)
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
+
+-- 4. Reconstrução física da tabela 'products' (caso não exista)
 CREATE TABLE IF NOT EXISTS public.products (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -44,11 +55,10 @@ CREATE TABLE IF NOT EXISTS public.products (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Garantir acesso anon (essencial para evitar 404 simulado)
+-- 5. Habilitar RLS e Política Pública
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow Public Access" ON public.products;
 CREATE POLICY "Allow Public Access" ON public.products FOR SELECT USING (true);
-GRANT SELECT ON public.products TO anon;
-GRANT SELECT ON public.products TO authenticated;
 ` : `NOTIFY pgrst, 'reload schema';`;
     
     return {

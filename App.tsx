@@ -20,7 +20,7 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 // TAG DE CONTROLE DE DEPLOY
-const APP_VERSION = "v6.7.2-DIAGNOSTIC";
+const APP_VERSION = "v6.7.3-HARD-RESET";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -41,7 +41,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const syncData = useCallback(async () => {
-    console.debug(`[Core ${APP_VERSION}] Sincronizando Ativos...`);
+    console.debug(`[Core ${APP_VERSION}] Auditoria de Schema Iniciada...`);
     try {
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
@@ -60,9 +60,9 @@ const App: React.FC = () => {
       setCarouselImages(Array.isArray(car) ? car : []);
       
       setIsLive(true);
-      console.debug(`[Core ${APP_VERSION}] Sincronização Ok.`);
+      console.debug(`[Core ${APP_VERSION}] Auditoria concluída.`);
     } catch (err) {
-      console.error(`[Core ${APP_VERSION}] Erro Crítico:`, err);
+      console.error(`[Core ${APP_VERSION}] Falha na auditoria:`, err);
       setIsLive(false);
     }
   }, []);
@@ -133,12 +133,12 @@ const App: React.FC = () => {
     <Router>
       <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500 selection:bg-blue-600 selection:text-white">
         
-        {/* Status bar de Diagnóstico */}
+        {/* Auditor de Versão */}
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
-          <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl rounded-full border border-white/5 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-amber-500'}`}></div>
+          <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`}></div>
             <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-              {isLive ? 'Core Synced' : 'Sync Pending'}
+              {isLive ? 'Terminal Online' : 'Terminal Desincronizado'}
             </span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
@@ -184,7 +184,7 @@ const App: React.FC = () => {
                         <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', m.label)}</div>
                       </div>
                     )) : (
-                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic font-light">Sincronizando Ativos Core...</div>
+                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse">Aguardando Pulso do Core...</div>
                     )}
                   </div>
                 </div>
@@ -211,7 +211,7 @@ const App: React.FC = () => {
                         </div>
                       </Link>
                     )) : (
-                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Carregando Hub Estratégico...</div>
+                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Mapeando Matriz de Conhecimento...</div>
                     )}
                   </div>
                 </div>
@@ -233,7 +233,7 @@ const App: React.FC = () => {
               <h4 className="text-xl font-serif dark:text-white italic">Claudio Tonelli Group</h4>
               <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
               <div className="flex flex-col items-center gap-1 mt-8">
-                <p className="text-[8px] text-slate-500 font-mono opacity-50 uppercase tracking-widest">Advisory Hub {APP_VERSION}</p>
+                <p className="text-[9px] text-blue-600 font-black uppercase tracking-[0.4em] bg-blue-600/5 px-4 py-1 rounded-full border border-blue-600/10">Build Signature: {APP_VERSION}</p>
               </div>
             </div>
           </div>
