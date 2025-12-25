@@ -20,7 +20,7 @@ import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
 // TAG DE CONTROLE DE DEPLOY
-const APP_VERSION = "v6.7.4-TOTAL-RECOVERY";
+const APP_VERSION = "v6.7.6-STABLE";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -41,7 +41,6 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
   const syncData = useCallback(async () => {
-    console.debug(`[Core ${APP_VERSION}] Iniciando auditoria de schema...`);
     try {
       const [m, i, p, test, s, car] = await Promise.all([
         fetchMetrics(),
@@ -60,9 +59,8 @@ const App: React.FC = () => {
       setCarouselImages(Array.isArray(car) ? car : []);
       
       setIsLive(true);
-      console.debug(`[Core ${APP_VERSION}] Auditoria concluída.`);
     } catch (err) {
-      console.error(`[Core ${APP_VERSION}] Falha na auditoria:`, err);
+      console.error(`[App Core] Sync Failure:`, err);
       setIsLive(false);
     }
   }, []);
@@ -138,7 +136,7 @@ const App: React.FC = () => {
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></div>
             <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-              {isLive ? 'Pulse: Active' : 'Pulse: Schema Lock'}
+              {isLive ? 'Pulse: Synchronized' : 'Pulse: Error'}
             </span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
@@ -184,7 +182,7 @@ const App: React.FC = () => {
                         <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', m.label)}</div>
                       </div>
                     )) : (
-                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse">Monitorando pulso de dados...</div>
+                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse py-10">Mapeando KPIs de Impacto...</div>
                     )}
                   </div>
                 </div>
@@ -211,7 +209,7 @@ const App: React.FC = () => {
                         </div>
                       </Link>
                     )) : (
-                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Mapeando Hub de Conhecimento...</div>
+                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Acessando Hub de Conhecimento...</div>
                     )}
                   </div>
                 </div>
@@ -232,9 +230,6 @@ const App: React.FC = () => {
             <div className="space-y-4">
               <h4 className="text-xl font-serif dark:text-white italic">Claudio Tonelli Group</h4>
               <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
-              <div className="flex flex-col items-center gap-1 mt-8">
-                <p className="text-[9px] text-blue-600 font-black uppercase tracking-[0.4em] bg-blue-600/5 px-4 py-1 rounded-full border border-blue-600/10">Build Signature: {APP_VERSION}</p>
-              </div>
             </div>
           </div>
         </footer>

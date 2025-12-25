@@ -22,29 +22,29 @@ export const logSupabaseError = (context: string, error: any) => {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
     
-    const isCacheError = code === 'PGRST205' || message.includes('schema cache');
-    const isMissingTable = isCacheError || code === '42P01' || message.includes('not found') || message.includes('404');
+    const isCacheError = code === 'PGRST205' || message.includes('schema cache') || message.includes('404');
+    const isMissingTable = isCacheError || code === '42P01' || message.includes('not found');
     
-    console.error(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
+    console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
-    // SCRIPT DE RESET ULTRA (v6.7.4)
-    // Se o NOTIFY básico falhou, precisamos resetar permissões de esquema fundamentais.
-    const recoverySql = isMissingTable ? `
--- RESET ULTRA DE PERMISSÕES (v6.7.4)
--- 1. Forçar reload do cache do PostgREST
+    const recoverySql = `
+-- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.7.5)
+-- 1. Forçar Recarga do Cache do PostgREST
 NOTIFY pgrst, 'reload schema';
 
--- 2. Garantir permissões de USAGE no esquema public (CORREÇÃO PARA ERRO 404 PERSISTENTE)
+-- 2. Conceder permissões de uso no schema public (Essencial para evitar 404/PGRST205)
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT USAGE ON SCHEMA public TO postgres;
 GRANT USAGE ON SCHEMA public TO service_role;
 
--- 3. Garantir permissão de leitura em todas as tabelas para visitantes
+-- 3. Garantir privilégios de leitura em todas as tabelas atuais e futuras
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO authenticated;
 
--- 4. Reconstrução física da tabela 'products'
+-- 4. Reconstrução de Emergência da Tabela 'products'
 CREATE TABLE IF NOT EXISTS public.products (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -55,11 +55,11 @@ CREATE TABLE IF NOT EXISTS public.products (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Habilitar RLS e garantir política de acesso pública
+-- 5. Configuração de RLS (Row Level Security)
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow Public Access" ON public.products;
 CREATE POLICY "Allow Public Access" ON public.products FOR SELECT USING (true);
-` : `NOTIFY pgrst, 'reload schema';`;
+    `.trim();
     
     return {
       isError: true,
@@ -67,7 +67,7 @@ CREATE POLICY "Allow Public Access" ON public.products FOR SELECT USING (true);
       code,
       isMissingTable,
       isCacheError,
-      suggestedSql: recoverySql.trim()
+      suggestedSql: recoverySql
     };
   }
   return { isError: false };
@@ -80,13 +80,9 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
       .select('id, url, title, subtitle, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
-    
     if (logSupabaseError('fetchCarouselImages', error).isError) return [];
     return data || [];
-  } catch (err) {
-    console.error("Critical carousel fetch error:", err);
-    return [];
-  }
+  } catch { return []; }
 };
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
@@ -96,7 +92,6 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
       .select('id, label, value, icon, display_order, is_active')
       .eq('is_active', true)
       .order('display_order');
-    
     if (logSupabaseError('fetchMetrics', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -109,7 +104,6 @@ export const fetchInsights = async (): Promise<Insight[]> => {
       .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
       .eq('is_active', true)
       .order('display_order');
-    
     if (logSupabaseError('fetchInsights', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -121,13 +115,9 @@ export const fetchProducts = async (): Promise<Product[]> => {
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
-    
     if (logSupabaseError('fetchProducts', error).isError) return [];
     return data || [];
-  } catch (err) {
-    console.error("Critical products fetch error:", err);
-    return [];
-  }
+  } catch { return []; }
 };
 
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
@@ -137,7 +127,6 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
       .select('id, name, company, quote, approved, created_at')
       .eq('approved', true)
       .order('created_at', { ascending: false });
-    
     if (logSupabaseError('fetchTestimonials', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -149,7 +138,6 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
       .from('site_content')
       .select('id, key, value, page')
       .eq('page', page);
-    
     if (logSupabaseError('fetchSiteContent', error).isError) return {};
     return (data || []).reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr }), {});
   } catch { return {}; }
@@ -206,7 +194,6 @@ export const fetchInsightById = async (id: string | number): Promise<Insight | n
       .select('id, title, excerpt, image_url, link, published_at, is_active, display_order')
       .eq('id', id)
       .single();
-    
     if (logSupabaseError('fetchInsightById', error).isError) return null;
     return data;
   } catch { return null; }

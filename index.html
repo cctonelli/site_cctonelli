@@ -41,17 +41,8 @@
     }
   </script>
   <style>
-    :root { 
-      --bg-color: #ffffff; 
-      --text-color: #0f172a; 
-      --accent-blue: #2563eb; 
-    }
-    
-    html.dark { 
-      --bg-color: #010309; 
-      --text-color: #f8fafc;
-    }
-    
+    :root { --bg-color: #ffffff; --text-color: #0f172a; --accent-blue: #2563eb; }
+    html.dark { --bg-color: #010309; --text-color: #f8fafc; }
     body {
       font-family: 'Inter', sans-serif;
       background-color: var(--bg-color);
@@ -61,11 +52,9 @@
       -webkit-font-smoothing: antialiased;
       transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
     .font-serif { font-family: 'Playfair Display', serif; }
     .bg-grid { background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1.5px, transparent 1.5px); background-size: 60px 60px; }
     .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
-    
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
@@ -84,7 +73,7 @@
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.4",
     "react-router-dom": "https://esm.sh/react-router-dom@7.1.5?external=react,react-dom",
     "swiper": "https://esm.sh/swiper@11.1.1",
-    "swiper/react": "https://esm.sh/swiper@11.1.1/react",
+    "swiper/react": "https://esm.sh/swiper@11.1.1/react?external=react,react-dom",
     "swiper/modules": "https://esm.sh/swiper@11.1.1/modules",
     "swiper/css": "data:text/javascript,export default {}",
     "swiper/css/pagination": "data:text/javascript,export default {}",
