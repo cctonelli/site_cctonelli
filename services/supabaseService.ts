@@ -54,22 +54,37 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
   return data;
 };
 
-export const fetchCarouselImages = async () => {
-  const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
-  if (error) { console.error("Erro Carousel:", error.message); return []; }
-  return data || [];
+export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
+  try {
+    const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Erro ao buscar carrossel:", err);
+    return [];
+  }
 };
 
-export const fetchMetrics = async () => {
-  const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
-  if (error) { console.error("Erro Metrics:", error.message); return []; }
-  return data || [];
+export const fetchMetrics = async (): Promise<Metric[]> => {
+  try {
+    const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Erro ao buscar métricas:", err);
+    return [];
+  }
 };
 
-export const fetchInsights = async () => {
-  const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
-  if (error) { console.error("Erro Insights:", error.message); return []; }
-  return data || [];
+export const fetchInsights = async (): Promise<Insight[]> => {
+  try {
+    const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('published_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Erro ao buscar insights:", err);
+    return [];
+  }
 };
 
 export const fetchInsightById = async (id: string) => {
@@ -77,21 +92,37 @@ export const fetchInsightById = async (id: string) => {
   return data;
 };
 
-export const fetchProducts = async () => {
-  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-  return data || [];
+export const fetchProducts = async (): Promise<Product[]> => {
+  try {
+    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Erro ao buscar produtos:", err);
+    return [];
+  }
 };
 
-export const fetchTestimonials = async () => {
-  const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
-  return data || [];
+export const fetchTestimonials = async (): Promise<Testimonial[]> => {
+  try {
+    const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Erro ao buscar depoimentos:", err);
+    return [];
+  }
 };
 
 export const fetchSiteContent = async (page: string) => {
-  const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
-  if (error) return {};
-  // Mapeia o objeto inteiro para permitir traduções de campos como value_en, value_es
-  return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item }), {});
+  try {
+    const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
+    if (error) throw error;
+    return (data || []).reduce((acc: any, item: any) => ({ ...acc, [item.key]: item }), {});
+  } catch (err) {
+    console.error("Erro ao buscar conteúdo do site:", err);
+    return {};
+  }
 };
 
 export const submitContact = async (contact: Contact) => {

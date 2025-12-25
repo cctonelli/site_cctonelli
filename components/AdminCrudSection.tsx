@@ -23,7 +23,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   displayColumns,
   idColumn = 'id' 
 }) => {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]); // Garantindo array inicial vazio
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,17 +35,17 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
-        .order(idColumn, { ascending: false });
+        .order(idColumn, { ascending: idColumn === 'display_order' });
 
       if (error) {
-        console.error(`Error loading ${tableName}:`, error);
-        setStatus({ text: `Erro 404/API: Tabela ${tableName} não encontrada ou RLS bloqueado.`, type: 'error' });
+        console.error(`Erro ao carregar ${tableName}:`, error);
+        setStatus({ text: `Erro: Tabela ${tableName} não encontrada ou sem permissão RLS.`, type: 'error' });
         setItems([]);
       } else {
         setItems(data || []);
       }
     } catch (e: any) {
-      console.error("Critical Fetch Error:", e);
+      console.error("Erro crítico de fetch:", e);
       setItems([]);
     } finally {
       setLoading(false);
@@ -80,7 +80,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
             try {
               payload[f.key] = JSON.parse(payload[f.key]);
             } catch (e) {
-              console.warn("Invalid JSON in field", f.key);
+              console.warn("JSON inválido no campo", f.key);
             }
           }
         });
@@ -97,7 +97,8 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       setEditingId(null);
       await loadData();
     } catch (e: any) {
-      setStatus({ text: e.message, type: 'error' });
+      console.error("Erro ao salvar:", e);
+      setStatus({ text: e.message || "Erro ao salvar", type: 'error' });
     } finally {
       setLoading(false);
       setTimeout(() => setStatus(null), 3000);
@@ -106,8 +107,14 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
   const handleDelete = async (id: any) => {
     if (!confirm('Deseja excluir este registro?')) return;
-    const { error } = await supabase.from(tableName).delete().eq(idColumn, id);
-    if (!error) loadData();
+    try {
+      const { error } = await supabase.from(tableName).delete().eq(idColumn, id);
+      if (error) throw error;
+      loadData();
+    } catch (e: any) {
+      console.error("Erro ao deletar:", e);
+      alert("Falha ao excluir o registro.");
+    }
   };
 
   return (
@@ -151,12 +158,12 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       <div className="space-y-4">
         <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 px-4">Registros ({Array.isArray(items) ? items.length : 0})</h4>
         <div className="grid gap-3">
-          {Array.isArray(items) && items.map(item => (
+          {Array.isArray(items) && items.length > 0 ? items.map(item => (
             <div key={item[idColumn]} className="bg-slate-900/40 p-5 rounded-2xl border border-white/5 flex items-center justify-between hover:border-white/10 transition-all">
               <div className="flex items-center gap-4">
                 {(item.url || item.image_url) && <img src={item.url || item.image_url} className="w-12 h-12 object-cover rounded-lg opacity-50" />}
-                <div>
-                  <div className="text-white font-medium text-sm">{item.title || item.name || item.label || item.key}</div>
+                <div className="max-w-[200px] sm:max-w-md">
+                  <div className="text-white font-medium text-sm truncate">{item.title || item.name || item.label || item.key}</div>
                   <div className="text-[9px] text-slate-600 uppercase tracking-widest">{item[idColumn]}</div>
                 </div>
               </div>
@@ -169,8 +176,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
                 </button>
               </div>
             </div>
-          ))}
-          {(!Array.isArray(items) || items.length === 0) && !loading && (
+          )) : !loading && (
             <div className="text-center p-10 text-slate-700 text-[10px] uppercase tracking-widest border border-dashed border-white/5 rounded-2xl">
               Nenhum dado disponível. Verifique o banco de dados.
             </div>

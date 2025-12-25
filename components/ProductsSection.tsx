@@ -27,7 +27,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, r
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12">
-          {products.map((product) => (
+          {(Array.isArray(products) ? products : []).map((product) => (
             <motion.div 
               key={product.id} 
               whileHover={{ y: -10 }}
@@ -57,7 +57,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, r
                         {product.type === 'service' ? 'Executive Service' : 'Digital Asset'}
                       </span>
                       <div className="text-xl font-bold dark:text-white text-slate-900 font-serif">
-                        R$ {product.price.toLocaleString('pt-BR')}
+                        R$ {(product.price || 0).toLocaleString('pt-BR')}
                       </div>
                     </div>
                     <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">
@@ -80,6 +80,11 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, r
               </div>
             </motion.div>
           ))}
+          {(!Array.isArray(products) || products.length === 0) && (
+             <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem]">
+                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 animate-pulse">Sincronizando Catálogo...</span>
+             </div>
+          )}
         </div>
       </div>
     </section>
