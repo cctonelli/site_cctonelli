@@ -66,7 +66,7 @@ export interface ProductVariant {
   currency: string;
   interval: 'month' | 'semester' | 'year' | null;
   quantity_limit: number | null;
-  features: string[]; // This should be mapped to the JSONB field in DB
+  features: string[];
   is_most_popular: boolean;
   is_free: boolean;
   order_index: number;
@@ -75,9 +75,9 @@ export interface ProductVariant {
 export interface ProductContentBlock {
   id: string;
   product_id: string;
-  block_type: 'hero' | 'text' | 'video' | 'image_gallery' | 'comparison' | 'faq' | 'cta' | 'testimonials' | 'custom';
+  block_type: 'hero' | 'text' | 'video' | 'image_gallery' | 'comparison' | 'faq' | 'cta' | 'testimonials' | 'custom' | 'features';
   order: number;
-  content: any; // JSONB
+  content: any;
 }
 
 export interface Order {
