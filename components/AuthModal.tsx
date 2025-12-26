@@ -21,16 +21,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const validateEmailFormat = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    // Sanitização rigorosa contra erros de validação (espaços invisíveis no e-mail)
+    // Sanitização rigorosa contra erros de validação (espaços invisíveis no e-mail e outros campos)
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = fullName.trim();
     const cleanTaxId = taxId.trim();
     const cleanWhatsapp = whatsapp.trim();
+
+    if (!validateEmailFormat(cleanEmail)) {
+      setError(`O endereço de e-mail "${cleanEmail}" não parece ser válido. Verifique se há caracteres extras.`);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       if (mode === 'login') {
@@ -51,13 +61,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         if (signUpError) {
           // Tratamento amigável para erro de e-mail inválido retornado pela API
           if (signUpError.message.toLowerCase().includes('invalid') && signUpError.message.toLowerCase().includes('email')) {
-            throw new Error(`O e-mail "${cleanEmail}" foi rejeitado. Verifique se digitou corretamente ou tente outro endereço.`);
+            throw new Error(`O e-mail "${cleanEmail}" foi rejeitado pelo servidor de autenticação. Verifique se há espaços no final ou se o provedor é aceito.`);
           }
           throw signUpError;
         }
 
         if (data.user) {
           // 2. Gravação de Perfil via UPSERT (Garante persistência de CPF/CNPJ)
+          // Se isso falhar, provavelmente é um erro de RLS (Row Level Security)
           const profilePayload: Profile = {
             id: data.user.id,
             full_name: cleanName,
@@ -70,7 +81,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           const profileResult = await createProfile(profilePayload);
           
           if (profileResult.isError) {
-            console.warn("[Auth Modal] Perfil persistido via trigger ou erro de RLS não-crítico.");
+            console.warn("[Auth Modal] Falha ao persistir dados adicionais no perfil. Provável erro de RLS no banco de dados.", profileResult.message);
+            // Não bloqueamos o usuário aqui se o Auth deu certo, mas avisamos no console
           }
 
           if (!data.session) {
@@ -83,7 +95,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
       }
     } catch (err: any) {
       console.error("[Auth Modal Error]", err);
-      setError(err.message || 'Falha na autenticação. Verifique os dados e tente novamente.');
+      // Se for erro de RLS na criação do perfil, damos uma dica
+      if (err.message && err.message.includes('row-level security')) {
+        setError('Erro de permissão no banco de dados. Contate o suporte para validar as políticas RLS de perfis.');
+      } else {
+        setError(err.message || 'Falha na autenticação. Verifique os dados e tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +156,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             <input required type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all" />
             <input required type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all" />
 
-            {error && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] text-red-500 font-bold uppercase tracking-widest text-center animate-shake">{error}</div>}
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] text-red-500 font-bold uppercase tracking-widest text-center animate-shake">
+                {error}
+              </div>
+            )}
 
             <button disabled={isLoading} className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50">
               {isLoading ? 'Conectando ao Core...' : (mode === 'login' ? 'Entrar Agora' : 'Finalizar Registro')}

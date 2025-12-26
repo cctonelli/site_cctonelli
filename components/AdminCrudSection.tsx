@@ -29,7 +29,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [loading, setLoading] = useState(false);
-  const [errorDetails, setErrorDetails] = useState<{message: string, isMissing: boolean, sql?: string | null} | null>(null);
+  const [errorDetails, setErrorDetails] = useState<{message: string, isMissing: boolean, isRls: boolean, sql?: string | null} | null>(null);
   const [status, setStatus] = useState<{ text: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
   const loadData = useCallback(async () => {
@@ -49,13 +49,16 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         setErrorDetails({
           message: errorInfo.message,
           isMissing: errorInfo.isMissingTable,
+          isRls: errorInfo.isRlsError,
           sql: errorInfo.suggestedSql
         });
         setStatus({ 
           text: errorInfo.isMissingTable 
             ? `SCHEMA LOCK: Acesso à tabela '${tableName}' negado ou cache travado.` 
+            : errorInfo.isRlsError 
+            ? `RLS BLOCK: Permissão de leitura negada na tabela '${tableName}'.`
             : `FALHA DB: ${errorInfo.code}`, 
-          type: errorInfo.isMissingTable ? 'warning' : 'error' 
+          type: (errorInfo.isMissingTable || errorInfo.isRlsError) ? 'warning' : 'error' 
         });
         setItems([]);
       } else {
@@ -152,7 +155,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
   return (
     <div className="space-y-10">
-      {errorDetails?.isMissing && (
+      {(errorDetails?.isMissing || errorDetails?.isRls) && (
         <div className="bg-red-600/5 border border-red-600/20 p-8 rounded-[2.5rem] space-y-6 animate-in fade-in slide-in-from-top-4 backdrop-blur-3xl shadow-2xl">
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 bg-red-600/20 rounded-3xl flex items-center justify-center text-red-500 border border-red-500/20">
@@ -161,15 +164,24 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
               </svg>
             </div>
             <div>
-              <h4 className="font-serif italic text-2xl text-white">Falha de Mapeamento</h4>
-              <p className="text-[10px] uppercase tracking-[0.4em] text-red-400 font-bold mt-1">Status: PostgREST ignorando esquema public</p>
+              <h4 className="font-serif italic text-2xl text-white">
+                {errorDetails.isMissing ? 'Falha de Mapeamento' : 'Bloqueio de Segurança (RLS)'}
+              </h4>
+              <p className="text-[10px] uppercase tracking-[0.4em] text-red-400 font-bold mt-1">
+                {errorDetails.isMissing ? 'Status: PostgREST ignorando esquema public' : `Status: Acesso negado à tabela '${tableName}'`}
+              </p>
             </div>
           </div>
+          <p className="text-slate-400 text-xs font-light leading-relaxed">
+            {errorDetails.isRls 
+              ? `O Supabase está bloqueando operações nesta tabela. Isso acontece porque não há políticas RLS definidas ou o usuário atual não tem permissão.`
+              : `A tabela não foi localizada ou o cache do servidor está desatualizado.`}
+          </p>
           <button 
             onClick={() => {
               if (errorDetails.sql) {
                 navigator.clipboard.writeText(errorDetails.sql);
-                alert('Script de Reparo Copiado! Rode no SQL Editor do Supabase.');
+                alert('Script de Reparo Copiado! Rode no SQL Editor do Supabase para corrigir as permissões (incluindo perfis de usuários).');
               }
             }}
             className="w-full bg-red-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
