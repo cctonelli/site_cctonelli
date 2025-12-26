@@ -37,7 +37,7 @@ export const staticTranslations: Record<Language, UIContent> = {
     products_subtitle: 'Acelere sua jornada estratégica com produtos digitais e mentorias exclusivas.',
     products_buy: 'Aderir Agora',
     testimonials_title: 'O que dizem os líderes',
-    testimonials_subtitle: 'Relatos de transformação e excelência.',
+    testimonials_subtitle: 'Relatos de transformação e excellence.',
     contact_title: 'Vamos conversar?',
     contact_subtitle: 'Dúvidas sobre nossas mentorias ou interessado em uma consultoria personalizada?',
     contact_name: 'Nome Completo',
@@ -46,7 +46,9 @@ export const staticTranslations: Record<Language, UIContent> = {
     contact_send: 'Enviar Mensagem',
     contact_sending: 'Enviando...',
     footer_desc: 'Arquitetando o amanhã através de rigor metodológico e inovação digital.',
-    copyright: '© 2025 Claudio Tonelli Group. Excelência em Advisory.'
+    copyright: '© 2025 Claudio Tonelli Group. Excelência em Advisory.',
+    cta_portfolio: 'Nosso Portfólio',
+    badge_new: 'Novo'
   },
   en: {
     nav_strategy: 'Strategy',
@@ -82,7 +84,9 @@ export const staticTranslations: Record<Language, UIContent> = {
     contact_send: 'Send Message',
     contact_sending: 'Sending...',
     footer_desc: 'Architecting tomorrow through methodological rigor and digital innovation.',
-    copyright: '© 2025 Claudio Tonelli Group. Excellence in Advisory.'
+    copyright: '© 2025 Claudio Tonelli Group. Excellence in Advisory.',
+    cta_portfolio: 'Our Portfolio',
+    badge_new: 'New'
   },
   es: {
     nav_strategy: 'Estrategia',
@@ -106,7 +110,7 @@ export const staticTranslations: Record<Language, UIContent> = {
     insights_all: 'Ver Todo el Acervo',
     products_badge: 'Portafolio de Soluciones',
     products_title: 'Ingeniería de Valor Exponencial.',
-    products_subtitle: 'Acelere su viaje estratégico con productos digitales y mentorías exclusivas.',
+    products_subtitle: 'Acelere su viaje estratégico con productos digitais y mentorías exclusivas.',
     products_buy: 'Unirse Ahora',
     testimonials_title: 'Lo que dicen los líderes',
     testimonials_subtitle: 'Relatos de transformación y excelencia.',
@@ -118,6 +122,8 @@ export const staticTranslations: Record<Language, UIContent> = {
     contact_send: 'Enviar Mensaje',
     contact_sending: 'Enviando...',
     footer_desc: 'Arquitectando el mañana a través do rigor metodológico y la innovación digital.',
-    copyright: '© 2025 Claudio Tonelli Group. Excelencia en Advisory.'
+    copyright: '© 2025 Claudio Tonelli Group. Excelencia en Advisory.',
+    cta_portfolio: 'Nuestro Portafolio',
+    badge_new: 'Nuevo'
   }
 };

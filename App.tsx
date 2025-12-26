@@ -1,7 +1,9 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatBot from './components/ChatBot';
+import FloatingCTA from './components/FloatingCTA';
 import ProductsSection from './components/ProductsSection';
 import TestimonialsSection from './components/TestimonialsSection';
 import ContactForm from './components/ContactForm';
@@ -209,6 +211,7 @@ const App: React.FC = () => {
           </div>
         </footer>
         <ChatBot />
+        <FloatingCTA t={t} />
       </div>
     </Router>
   );
