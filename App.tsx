@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -18,10 +17,11 @@ import CheckoutPage from './components/Store/CheckoutPage';
 import ToolsGrid from './components/Store/ToolsGrid';
 import GlobalStrategyMap from './components/GlobalStrategyMap';
 
+// Removed subscribeToChanges from imports as it's not exported by supabaseService and not used in this file
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
-  getProfile, signOut, subscribeToChanges, supabase, fetchGlobalTranslations
+  getProfile, signOut, supabase, fetchGlobalTranslations
 } from './services/supabaseService';
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
