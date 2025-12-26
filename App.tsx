@@ -20,8 +20,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// TAG DE CONTROLE DE DEPLOY - v7.1.0-ULTRA-I18N
-const APP_VERSION = "v7.1.0-ULTRA-I18N";
+const APP_VERSION = "v7.1.0-FINAL";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -41,9 +40,9 @@ const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  // MOTOR DE TRADUÇÃO UNIFICADO (Hierarquia: DB Global -> Local Static)
+  // UNIFIED TRANSLATION ENGINE (v7.1.0)
   const t = useMemo(() => {
-    const base = staticTranslations[language];
+    const base = staticTranslations[language] || staticTranslations['pt'];
     return { ...base, ...dbTranslations };
   }, [language, dbTranslations]);
 
@@ -59,13 +58,13 @@ const App: React.FC = () => {
         fetchGlobalTranslations(language)
       ]);
 
-      setMetrics(Array.isArray(m) ? m : []);
-      setInsights(Array.isArray(i) ? i : []);
-      setProducts(Array.isArray(p) ? p : []);
-      setTestimonials(Array.isArray(test) ? test : []);
-      setDbContent(s || {});
-      setCarouselImages(Array.isArray(car) ? car : []);
-      setDbTranslations(translationsMap || {});
+      setMetrics(m);
+      setInsights(i);
+      setProducts(p);
+      setTestimonials(test);
+      setDbContent(s);
+      setCarouselImages(car);
+      setDbTranslations(translationsMap);
       
       setIsLive(true);
     } catch (err) {
@@ -90,27 +89,19 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('lang', language);
-    document.title = {
-      pt: 'Claudio Tonelli Consultoria | Estratégia de Elite',
-      en: 'Claudio Tonelli Consulting | Elite Strategy',
-      es: 'Claudio Tonelli Consultoría | Estrategia de Élite'
-    }[language];
+    document.title = `Claudio Tonelli Consultoria | ${language.toUpperCase()}`;
   }, [language]);
 
   useEffect(() => {
     refreshUser();
-    const timer = setTimeout(() => syncData(), 400);
+    syncData();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) refreshUser();
-      else setUserProfile(null);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => refreshUser());
 
     const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content', 'content_translations'];
     const subs = tables.map(table => subscribeToChanges(table, syncData));
     
     return () => {
-      clearTimeout(timer);
       subscription.unsubscribe();
       subs.forEach(s => s.unsubscribe());
     };
@@ -123,31 +114,18 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // HELPER DE TRADUÇÃO HIERÁRQUICA PARA ENTIDADES (Tabela.coluna_lang -> Translation_Table -> Fallback)
   const resolveTranslation = useCallback((item: any, field: string, fallbackKey: string) => {
     if (!item) return t[fallbackKey] || '';
-    
-    // 1. Prioridade: Coluna de Idioma na Tabela Principal (ex: title_en)
-    if (language !== 'pt' && item[`${field}_${language}`]) {
-      return item[`${field}_${language}`];
-    }
-    
-    // 2. Se for PT ou não tiver coluna lang, usa o field original
-    if (item[field]) return item[field];
-    
-    // 3. Fallback Final: Bundle de Traduções (Global ou Estático)
-    return t[fallbackKey] || '';
+    if (language !== 'pt' && item[`${field}_${language}`]) return item[`${field}_${language}`];
+    return item[field] || t[fallbackKey] || '';
   }, [language, t]);
 
   const resolveContent = useCallback((key: string, localFallback: string) => {
-    // 1. Tabela site_content (Hierárquico: value_en -> value -> i18n_bundle)
     const item = dbContent[key];
     if (item) {
       if (language !== 'pt' && item[`value_${language}`]) return item[`value_${language}`];
       if (item.value) return item.value;
     }
-    
-    // 2. Fallback i18n unificado (Global DB Translations + Static Bundle)
     return t[key] || localFallback;
   }, [language, dbContent, t]);
 
@@ -155,12 +133,12 @@ const App: React.FC = () => {
     <Router>
       <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500 selection:bg-blue-600 selection:text-white">
         
-        {/* Version Audit & Health Pulse */}
+        {/* Connection Pulse */}
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></div>
+            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
             <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-              {isLive ? 'Core: Operational' : 'Core: Calibrating'}
+              {isLive ? 'ADVISORY CORE ACTIVE' : 'CALIBRATING SYNC'}
             </span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
@@ -179,13 +157,7 @@ const App: React.FC = () => {
           setLanguage={setLanguage}
           theme={theme}
           setTheme={setTheme}
-          labels={{
-            strategy: resolveContent('nav_strategy', 'Estratégia'),
-            insights: resolveContent('nav_insights', 'Insights'),
-            performance: resolveContent('nav_performance', 'Performance'),
-            connection: resolveContent('nav_connection', 'Conexão'),
-            client_area: resolveContent('nav_client_area', 'Área do Cliente')
-          }}
+          labels={t}
         />
 
         {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={() => { refreshUser(); syncData(); }} />}
@@ -194,26 +166,18 @@ const App: React.FC = () => {
 
         <Routes>
           <Route path="/" element={
-            <main className="pt-20 lg:pt-24 transition-all duration-700">
-              <HeroCarousel 
-                slides={carouselImages} 
-                t={t} 
-                resolveContent={resolveContent} 
-                language={language} 
-                isLive={isLive} 
-              />
+            <main className="pt-20 lg:pt-24">
+              <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} isLive={isLive} />
 
               <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 transition-colors">
                 <div className="container mx-auto px-6">
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
-                    {metrics.length > 0 ? metrics.map(m => (
+                    {metrics.map(m => (
                       <div key={m.id} className="text-center group">
                         <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2">{m.value}</div>
                         <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', '')}</div>
                       </div>
-                    )) : (
-                      <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse py-10 italic">Initializing KPIs...</div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </section>
@@ -222,13 +186,13 @@ const App: React.FC = () => {
                 <div className="container mx-auto px-6">
                   <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-4">
                     <div>
-                      <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{resolveContent('insights_badge', 'Conhecimento Estratégico')}</div>
-                      <h2 className="text-4xl lg:text-5xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', 'Insights')}</h2>
+                      <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
+                      <h2 className="text-4xl lg:text-5xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', t.insights_title)}</h2>
                     </div>
-                    <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{resolveContent('insights_all', 'Ver Todo o Acervo')}</Link>
+                    <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{resolveContent('insights_all', t.insights_all)}</Link>
                   </div>
                   <div className="grid md:grid-cols-3 gap-12">
-                    {insights.length > 0 ? insights.map(insight => (
+                    {insights.map(insight => (
                       <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-6">
                         <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 relative shadow-xl">
                           <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
@@ -238,9 +202,7 @@ const App: React.FC = () => {
                           <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light">{resolveTranslation(insight, 'excerpt', '')}</p>
                         </div>
                       </Link>
-                    )) : (
-                       <div className="col-span-full py-20 text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse italic">Synchronizing Knowledge Assets...</div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </section>
@@ -254,13 +216,12 @@ const App: React.FC = () => {
           <Route path="/wip" element={<WorkInProgress />} />
         </Routes>
 
-        <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
-          <div className="container mx-auto px-6 space-y-10 relative z-10">
+        <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center relative">
+          <div className="container mx-auto px-6 space-y-10">
             <div className="w-14 h-14 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white shadow-2xl">CT</div>
             <div className="space-y-4">
               <h4 className="text-xl font-serif dark:text-white italic">Claudio Tonelli Group</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', '© 2025 Claudio Tonelli Group')}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
             </div>
           </div>
         </footer>

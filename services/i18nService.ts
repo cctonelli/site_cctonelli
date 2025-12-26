@@ -5,6 +5,12 @@ export interface UIContent {
   [key: string]: string;
 }
 
+export const languages: { code: Language; label: string; flag: string }[] = [
+  { code: 'pt', label: 'Português', flag: 'BR' },
+  { code: 'en', label: 'English', flag: 'US' },
+  { code: 'es', label: 'Español', flag: 'ES' }
+];
+
 export const staticTranslations: Record<Language, UIContent> = {
   pt: {
     nav_strategy: 'Estratégia',

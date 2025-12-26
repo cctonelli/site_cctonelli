@@ -5,7 +5,7 @@ import { Profile } from '../types';
 
 type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'translations';
 
-const ADMIN_VERSION = "v7.1.0-ULTRA-I18N";
+const ADMIN_VERSION = "v7.1.0-FINAL";
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -19,7 +19,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     const sql = "NOTIFY pgrst, 'reload schema';";
     if (navigator.clipboard) {
       navigator.clipboard.writeText(sql);
-      alert("🛠️ TERMINAL DE REPARO\n\nComando de pulso SQL copiado. Execute no SQL Editor do Supabase.");
+      alert("Comando de sincronia SQL copiado!");
     }
   };
 
@@ -75,10 +75,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             </header>
 
             <div key={activeTab}>
-              {activeTab === 'carousel' && <AdminCrudSection tableName="carousel_images" title="Slide" fields={[{ key: 'url', label: 'URL Imagem', type: 'image' }, { key: 'title', label: 'Título' }, { key: 'title_en', label: 'Título (EN)' }, { key: 'title_es', label: 'Título (ES)' }, { key: 'display_order', label: 'Ordem', type: 'number' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['url', 'title', 'is_active']} />}
-              {activeTab === 'insights' && <AdminCrudSection tableName="insights" title="Insight" fields={[{ key: 'title', label: 'Título (PT)' }, { key: 'title_en', label: 'Título (EN)' }, { key: 'title_es', label: 'Título (ES)' }, { key: 'content', label: 'Conteúdo (PT)', type: 'rich-text' }, { key: 'content_en', label: 'Conteúdo (EN)', type: 'rich-text' }, { key: 'image_url', label: 'Capa', type: 'image' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['title', 'is_active']} />}
+              {activeTab === 'carousel' && <AdminCrudSection tableName="carousel_images" title="Slide" fields={[{ key: 'url', label: 'URL Imagem', type: 'image' }, { key: 'title', label: 'Título (PT)' }, { key: 'title_en', label: 'Título (EN)' }, { key: 'title_es', label: 'Título (ES)' }, { key: 'subtitle', label: 'Subtítulo (PT)' }, { key: 'subtitle_en', label: 'Subtítulo (EN)' }, { key: 'cta_url', label: 'Link' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['url', 'title', 'is_active']} />}
+              {activeTab === 'insights' && <AdminCrudSection tableName="insights" title="Insight" fields={[{ key: 'title', label: 'Título (PT)' }, { key: 'title_en', label: 'Título (EN)' }, { key: 'title_es', label: 'Título (ES)' }, { key: 'excerpt', label: 'Resumo (PT)', type: 'textarea' }, { key: 'excerpt_en', label: 'Resumo (EN)', type: 'textarea' }, { key: 'content', label: 'Conteúdo (PT)', type: 'rich-text' }, { key: 'content_en', label: 'Conteúdo (EN)', type: 'rich-text' }, { key: 'image_url', label: 'Capa', type: 'image' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['title', 'is_active']} />}
               {activeTab === 'translations' && <AdminCrudSection tableName="content_translations" title="Tradução Global" fields={[{ key: 'field', label: 'Chave do Sistema' }, { key: 'locale', label: 'Idioma (pt/en/es)' }, { key: 'value', label: 'Tradução', type: 'textarea' }]} displayColumns={['field', 'locale', 'value']} />}
-              {activeTab === 'content' && <AdminCrudSection tableName="site_content" title="Copywriting" idColumn="key" fields={[{ key: 'key', label: 'Chave ID' }, { key: 'value', label: 'Conteúdo (PT)', type: 'rich-text' }, { key: 'value_en', label: 'Conteúdo (EN)', type: 'rich-text' }, { key: 'value_es', label: 'Conteúdo (ES)', type: 'rich-text' }]} displayColumns={['key', 'page']} />}
+              {activeTab === 'content' && <AdminCrudSection tableName="site_content" title="Copywriting" idColumn="key" fields={[{ key: 'key', label: 'Chave ID' }, { key: 'value', label: 'Conteúdo (PT)', type: 'rich-text' }, { key: 'value_en', label: 'Conteúdo (EN)', type: 'rich-text' }, { key: 'value_es', label: 'Conteúdo (ES)', type: 'rich-text' }, { key: 'page', label: 'Página' }]} displayColumns={['key', 'page']} />}
+              {activeTab === 'leads' && <AdminCrudSection tableName="contacts" title="Leads" fields={[{ key: 'name', label: 'Nome' }, { key: 'email', label: 'Email' }, { key: 'message', label: 'Mensagem', type: 'textarea' }]} displayColumns={['name', 'email']} />}
             </div>
           </div>
         </div>
