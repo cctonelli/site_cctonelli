@@ -19,8 +19,8 @@ import {
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// TAG DE CONTROLE DE DEPLOY - v6.8.5
-const APP_VERSION = "v6.8.5-PLATINUM-SYNC";
+// TAG DE CONTROLE DE DEPLOY - v6.8.6
+const APP_VERSION = "v6.8.6-UI-STABLE";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -170,7 +170,7 @@ const App: React.FC = () => {
 
         <Routes>
           <Route path="/" element={
-            <main>
+            <main className="pt-24 lg:pt-32 transition-all duration-500">
               <HeroCarousel 
                 slides={carouselImages} 
                 t={t} 

@@ -11,7 +11,7 @@ interface HeroCarouselProps {
   t: any;
   resolveContent: (key: string, fallback: string) => string;
   language?: string;
-  isLive?: boolean; // Novo prop para controle de sincronia
+  isLive?: boolean;
 }
 
 const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, language = 'pt', isLive = false }) => {
@@ -39,22 +39,22 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          className="max-w-4xl p-8 lg:p-16 glass rounded-[3rem] space-y-6 lg:space-y-10 border border-white/10 shadow-2xl backdrop-blur-xl text-center lg:text-left"
+          className="max-w-4xl p-8 lg:p-14 glass rounded-[3rem] space-y-6 lg:space-y-8 border border-white/10 shadow-2xl backdrop-blur-xl text-center lg:text-left"
         >
           <span className="inline-block px-5 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-600 dark:text-blue-500 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.4em]">
             {resolveContent('hero_badge', t.hero_badge)}
           </span>
-          <h1 className="text-4xl lg:text-[6.5rem] font-serif text-slate-900 dark:text-white italic leading-[1] lg:leading-[0.9] tracking-tighter drop-shadow-sm">
+          <h1 className="text-4xl lg:text-[5.5rem] font-serif text-slate-900 dark:text-white italic leading-[1] lg:leading-[0.9] tracking-tighter drop-shadow-sm">
             {slide ? resolveTranslation(slide, 'title', slide.title || '') : resolveContent('hero_title', t.hero_title)}
           </h1>
-          <p className="text-base lg:text-2xl text-slate-600 dark:text-slate-300 font-light italic border-l-4 border-blue-600/50 pl-6 lg:pl-8 max-w-2xl leading-relaxed mx-auto lg:mx-0">
+          <p className="text-base lg:text-xl text-slate-600 dark:text-slate-300 font-light italic border-l-4 border-blue-600/50 pl-6 lg:pl-8 max-w-2xl leading-relaxed mx-auto lg:mx-0">
             {slide ? resolveTranslation(slide, 'subtitle', slide.subtitle || '') : resolveContent('hero_subtitle', t.hero_subtitle)}
           </p>
           
-          <div className="flex flex-wrap gap-4 lg:gap-6 pt-4 lg:pt-6 justify-center lg:justify-start">
+          <div className="flex flex-wrap gap-4 lg:gap-6 pt-4 lg:pt-2 justify-center lg:justify-start">
             <a 
               href="#contact-form" 
-              className="bg-blue-600 text-white px-8 lg:px-12 py-4 lg:py-6 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/30 active:scale-95 inline-block text-center"
+              className="bg-blue-600 text-white px-8 lg:px-12 py-4 lg:py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/30 active:scale-95 inline-block text-center"
             >
               {resolveContent('btn_diagnosis', t.btn_diagnosis)}
             </a>
@@ -64,7 +64,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
                 href={slide ? slideCtaUrl : mainCtaUrl} 
                 target={(slide ? slideCtaUrl : mainCtaUrl).startsWith('http') ? "_blank" : "_self"}
                 rel={(slide ? slideCtaUrl : mainCtaUrl).startsWith('http') ? "noopener noreferrer" : ""}
-                className="bg-white/10 dark:bg-white/5 backdrop-blur-md text-slate-900 dark:text-white border border-slate-200 dark:border-white/20 px-8 lg:px-12 py-4 lg:py-6 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-white dark:hover:bg-white hover:text-blue-600 transition-all active:scale-95 inline-block text-center"
+                className="bg-white/10 dark:bg-white/5 backdrop-blur-md text-slate-900 dark:text-white border border-slate-200 dark:border-white/20 px-8 lg:px-12 py-4 lg:py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-white dark:hover:bg-white hover:text-blue-600 transition-all active:scale-95 inline-block text-center"
               >
                 {slide ? slideCtaText : mainCtaText}
               </a>
@@ -76,7 +76,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
   };
 
   return (
-    <section id="hero" className="relative h-screen bg-white dark:bg-brand-navy overflow-hidden">
+    <section id="hero" className="relative h-[calc(100vh-8rem)] min-h-[600px] lg:h-[calc(100vh-9rem)] bg-white dark:bg-brand-navy overflow-hidden">
       {/* O Globo sempre fica ao fundo como base imersiva */}
       <div className="absolute inset-0 z-0 transform scale-125 lg:scale-110 pointer-events-none">
         <ThreeGlobe />
@@ -87,16 +87,13 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
       <div className="relative z-10 h-full w-full">
         <AnimatePresence mode="wait">
           {!isLive ? (
-            /* Enquanto não houver sinal do banco, não mostramos texto para evitar o 'flash' */
             <motion.div 
               key="calibrating" 
               exit={{ opacity: 0 }} 
               className="h-full w-full flex items-center justify-center"
             >
-              {/* Espaço reservado vazio ou loader sutil se desejado */}
             </motion.div>
           ) : !hasSlides ? (
-            /* Se o banco terminar de carregar e estiver vazio, mostramos o fallback fixo */
             <motion.div 
               key="fallback-content"
               initial={{ opacity: 0 }}
@@ -107,7 +104,6 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
               {renderContent()}
             </motion.div>
           ) : (
-            /* Carregamento normal dos slides do banco de dados */
             <motion.div 
               key="swiper-content"
               initial={{ opacity: 0 }}
@@ -147,6 +143,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
       </div>
 
       <style>{`
+        .swiper-pagination { bottom: 2rem !important; }
         .swiper-pagination-bullet { background: #fff !important; width: 6px; height: 6px; transition: all 0.3s; opacity: 0.2 !important; }
         .swiper-pagination-bullet-active { width: 32px !important; border-radius: 4px !important; background: #2563eb !important; opacity: 1 !important; }
       `}</style>
