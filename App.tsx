@@ -19,8 +19,8 @@ import {
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// TAG DE CONTROLE DE DEPLOY - v6.8.6
-const APP_VERSION = "v6.8.6-UI-STABLE";
+// TAG DE CONTROLE DE DEPLOY - v6.8.7
+const APP_VERSION = "v6.8.7-PLATINUM-ULTRA";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -90,7 +90,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     refreshUser();
-    const timer = setTimeout(() => syncData(), 500);
+    const timer = setTimeout(() => syncData(), 400);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) refreshUser();
@@ -170,7 +170,7 @@ const App: React.FC = () => {
 
         <Routes>
           <Route path="/" element={
-            <main className="pt-24 lg:pt-32 transition-all duration-500">
+            <main className="pt-20 lg:pt-24 transition-all duration-700">
               <HeroCarousel 
                 slides={carouselImages} 
                 t={t} 

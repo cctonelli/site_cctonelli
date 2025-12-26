@@ -5,7 +5,7 @@ import { Profile } from '../types';
 
 type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'translations';
 
-const ADMIN_VERSION = "v6.7.3-HARD-RESET";
+const ADMIN_VERSION = "v6.8.7-HARD-SYNC";
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -91,7 +91,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             </header>
 
             <div key={activeTab}>
-              {activeTab === 'carousel' && <AdminCrudSection tableName="carousel_images" title="Slide do Carrossel" fields={[{ key: 'url', label: 'URL da Imagem', type: 'image' }, { key: 'title', label: 'Título' }, { key: 'subtitle', label: 'Subtítulo' }, { key: 'display_order', label: 'Ordem', type: 'number' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['url', 'title', 'is_active']} />}
+              {activeTab === 'carousel' && <AdminCrudSection tableName="carousel_images" title="Slide do Carrossel" fields={[{ key: 'url', label: 'URL da Imagem', type: 'image' }, { key: 'title', label: 'Título' }, { key: 'subtitle', label: 'Subtítulo' }, { key: 'cta_url', label: 'Link do Botão (Saiba Mais)' }, { key: 'display_order', label: 'Ordem', type: 'number' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['url', 'title', 'is_active']} />}
               {activeTab === 'insights' && <AdminCrudSection tableName="insights" title="Insight Estratégico" fields={[{ key: 'title', label: 'Título' }, { key: 'excerpt', label: 'Resumo', type: 'textarea' }, { key: 'image_url', label: 'Capa (URL)', type: 'image' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['image_url', 'title', 'is_active']} />}
               {activeTab === 'products' && <AdminCrudSection tableName="products" title="Solução" fields={[{ key: 'name', label: 'Nome' }, { key: 'description', label: 'Descrição', type: 'textarea' }, { key: 'price', label: 'Preço', type: 'number' }, { key: 'type', label: 'Tipo' }, { key: 'config', label: 'Config (JSON)', type: 'json' }]} displayColumns={['name', 'price', 'type']} />}
               {activeTab === 'metrics' && <AdminCrudSection tableName="metrics" title="KPI" fields={[{ key: 'value', label: 'Valor' }, { key: 'label', label: 'Rótulo' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['value', 'label', 'is_active']} />}
