@@ -45,6 +45,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
 
   const handleProcessOrder = async () => {
     if (!profile) {
+      // Se não estiver logado, dispara o modal de auth e não prossegue
       onAuthRequest();
       return;
     }
@@ -53,8 +54,9 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
 
     setStatus('processing');
     
-    // Simulação de geração de PIX com dados reais do produto
-    const pixPayload = `00020126580014br.gov.bcb.pix0136contato@claudiotonelli.com.br520400005303986540${variant.price.toFixed(2)}5802BR5925Claudio Tonelli Consulto6009SAO PAULO62070503***6304${Math.random().toString(16).slice(2, 6).toUpperCase()}`;
+    // Geração de PIX estático simulado com dados da variante
+    const randomRef = Math.random().toString(16).slice(2, 6).toUpperCase();
+    const pixPayload = `00020126580014br.gov.bcb.pix0136contato@claudiotonelli.com.br520400005303986540${variant.price.toFixed(2)}5802BR5925Claudio Tonelli Consulto6009SAO PAULO62070503***6304${randomRef}`;
 
     const newOrder: Partial<Order> = {
       user_id: profile.id,
@@ -66,12 +68,17 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
       pix_qrcode_url: `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(pixPayload)}&bgcolor=f8fafc`
     };
 
-    const result = await createOrder(newOrder);
-    if (result) {
-      setOrder(result);
-      setStatus('success');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
+    try {
+      const result = await createOrder(newOrder);
+      if (result) {
+        setOrder(result);
+        setStatus('success');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        setStatus('error');
+      }
+    } catch (err) {
+      console.error("Order Creation Error:", err);
       setStatus('error');
     }
   };
@@ -106,7 +113,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
         </header>
 
         <div className="grid lg:grid-cols-12 gap-16 items-start">
-          {/* Main Content */}
           <div className="lg:col-span-7 space-y-10">
             <AnimatePresence mode="wait">
               {status === 'success' && order ? (
@@ -199,7 +205,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
             </AnimatePresence>
           </div>
 
-          {/* Checkout Card */}
           <aside className="lg:col-span-5 space-y-8">
             <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-[4rem] p-12 shadow-2xl space-y-12 sticky top-32">
                <div className="space-y-8">
@@ -230,18 +235,18 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
                         {status === 'processing' ? (
                           <>
                             <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin"></div>
-                            PROCESSANDO PROTOCOLO...
+                            PROCESSANDO...
                           </>
-                        ) : 'GERAR PIX E FINALIZAR'}
+                        ) : (profile ? 'GERAR PIX E FINALIZAR' : 'CONECTAR PARA FINALIZAR')}
                       </button>
-                      <p className="text-[9px] text-center text-slate-500 font-bold uppercase tracking-[0.3em] italic">Segurança validada por Claudio Tonelli Advisory</p>
+                      <p className="text-[9px] text-center text-slate-500 font-bold uppercase tracking-[0.3em] italic">Protocolo validado por Advisory Core</p>
                    </div>
                  )}
                </AnimatePresence>
 
                {status === 'error' && (
                  <div className="p-5 bg-red-600/5 border border-red-600/20 rounded-2xl text-[10px] text-red-500 font-bold uppercase tracking-widest text-center animate-shake">
-                    Falha na comunicação com o Core. Tente novamente em instantes.
+                    Falha na comunicação com o Core. Tente novamente.
                  </div>
                )}
             </div>
@@ -256,19 +261,19 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500">Autenticação Necessária</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 italic font-light leading-relaxed">Vincule este ativo ao seu perfil de sócio/parceiro para acesso imediato.</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500">Acesso Restrito</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 italic font-light leading-relaxed">É necessário autenticar sua identidade de parceiro para vincular este ativo.</p>
                 </div>
-                <button onClick={onAuthRequest} className="px-10 py-4 bg-amber-500 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-600/10">CONECTAR AGORA</button>
+                <button onClick={onAuthRequest} className="px-10 py-4 bg-amber-500 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-600/10">IDENTIFICAR-SE</button>
               </motion.div>
             ) : (
               <div className="p-8 bg-slate-900/40 border border-white/5 rounded-[3rem] flex items-center gap-6">
                 <div className="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center text-green-500 shrink-0">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Identidade Validada</span>
-                  <span className="text-xs font-bold text-white truncate max-w-[200px]">{profile.full_name}</span>
+                <div className="flex flex-col overflow-hidden">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Partner Validado</span>
+                  <span className="text-xs font-bold text-white truncate">{profile.full_name}</span>
                 </div>
               </div>
             )}

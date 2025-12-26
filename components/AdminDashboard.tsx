@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminCrudSection from './AdminCrudSection';
 import { Profile, Order } from '../types';
-import { fetchAllOrders, updateOrder, createUserProduct } from '../services/supabaseService';
+import { fetchAllOrders, updateOrder, createUserProduct, supabase } from '../services/supabaseService';
 
 type TabType = 'carousel' | 'insights' | 'products' | 'variants' | 'canvas' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'orders' | 'tools';
 
@@ -35,30 +35,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     const link = prompt("Insira o Link de Download / FTP para este ativo:", order.download_link || "https://ftp.claudiotonelli.com.br/assets/");
     if (link === null) return;
 
-    // 1. Atualiza Pedido
-    const resOrder = await updateOrder(order.id, { 
-      status: 'approved', 
-      approved_by_admin: true,
-      download_link: link 
-    });
-
-    if (!resOrder.isError) {
-      // 2. Insere em User Products (Liberação definitiva)
-      const resAsset = await createUserProduct({
-        user_id: order.user_id,
-        product_id: order.product_id,
-        variant_id: order.variant_id,
-        status: 'active',
+    setLoadingOrders(true);
+    try {
+      // 1. Atualiza o status do pedido para 'approved'
+      const resOrder = await updateOrder(order.id, { 
+        status: 'approved', 
         approved_by_admin: true,
-        download_link: link
+        download_link: link 
       });
 
-      if (!resAsset.isError) {
-        alert("PROTOCOLO ELITE: Pedido aprovado e ativo liberado no Executive Hub!");
-        loadOrders();
+      if (!resOrder.isError) {
+        // 2. Insere na tabela user_products para liberação no Executive Hub
+        const resAsset = await createUserProduct({
+          user_id: order.user_id,
+          product_id: order.product_id,
+          variant_id: order.variant_id,
+          status: 'active',
+          approved_by_admin: true,
+          download_link: link
+        });
+
+        if (!resAsset.isError) {
+          alert("PROTOCOLO ELITE: Ativo liberado com sucesso em realtime!");
+          await loadOrders();
+        } else {
+          alert(`Erro na liberação do ativo: ${resAsset.message}`);
+        }
       } else {
-        alert("Pedido aprovado, mas falha ao inserir em user_products. Verifique permissões RLS.");
+        alert(`Erro ao atualizar pedido: ${resOrder.message}`);
       }
+    } catch (err) {
+      console.error("Critical Approval Error:", err);
+    } finally {
+      setLoadingOrders(false);
     }
   };
 
@@ -125,42 +134,54 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               {activeTab === 'orders' ? (
                 <div className="space-y-6">
                   {loadingOrders ? (
-                    <div className="py-20 text-center"><div className="w-10 h-10 border-t-2 border-blue-600 rounded-full animate-spin mx-auto"></div></div>
+                    <div className="py-20 text-center">
+                      <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin mx-auto"></div>
+                      <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-500 animate-pulse">Sincronizando Ativos...</p>
+                    </div>
                   ) : orders.length === 0 ? (
-                    <p className="text-slate-500 italic text-center py-20">Nenhum pedido registrado no sistema.</p>
+                    <div className="py-40 text-center border-2 border-dashed border-white/5 rounded-[3rem] space-y-4">
+                       <p className="text-slate-500 italic font-serif text-xl">Nenhum pedido aguardando protocolo.</p>
+                       <button onClick={loadOrders} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-white transition-colors">Recarregar Lista</button>
+                    </div>
                   ) : (
                     <div className="grid gap-6">
                       {orders.map(order => (
-                        <div key={order.id} className="bg-slate-900/60 border border-white/5 p-8 rounded-[2rem] flex flex-col lg:flex-row justify-between items-center gap-8 group hover:border-blue-600/20 transition-all">
-                          <div className="space-y-3 flex-1">
-                             <div className="flex items-center gap-4">
-                               <span className="text-xl font-serif italic text-white">{order.profiles?.full_name || 'Desconhecido'}</span>
-                               <span className={`text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest ${
-                                 order.status === 'approved' ? 'bg-green-600 text-white' : 
-                                 order.status === 'pending' ? 'bg-amber-600 text-white' : 'bg-red-600 text-white'
+                        <div key={order.id} className="bg-slate-900/60 border border-white/5 p-8 rounded-[2.5rem] flex flex-col lg:flex-row justify-between items-center gap-8 group hover:border-blue-600/20 transition-all shadow-2xl backdrop-blur-md">
+                          <div className="space-y-4 flex-1">
+                             <div className="flex items-center gap-6">
+                               <div className="w-12 h-12 rounded-2xl bg-slate-950 flex items-center justify-center border border-white/5 text-slate-500 font-bold text-xs uppercase">
+                                 {order.profiles?.full_name?.charAt(0) || '?'}
+                               </div>
+                               <div className="flex flex-col">
+                                 <span className="text-xl font-serif italic text-white leading-none">{order.profiles?.full_name || 'Desconhecido'}</span>
+                                 <span className="text-[9px] text-slate-500 font-mono mt-1">{order.profiles?.whatsapp || 'Sem WhatsApp'}</span>
+                               </div>
+                               <span className={`ml-4 text-[7px] px-3 py-1 rounded-full font-black uppercase tracking-widest ${
+                                 order.status === 'approved' ? 'bg-green-600/20 text-green-400 border border-green-600/20' : 
+                                 order.status === 'pending' ? 'bg-amber-600/20 text-amber-400 border border-amber-600/20 animate-pulse' : 'bg-red-600/20 text-red-400 border border-red-600/20'
                                }`}>
                                  {order.status}
                                </span>
                              </div>
-                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-[9px] font-black uppercase tracking-widest text-slate-500">
-                                <div className="flex flex-col"><span className="text-blue-500">VALOR</span> R$ {order.amount.toLocaleString('pt-BR')}</div>
-                                <div className="flex flex-col"><span className="text-blue-500">WHATSAPP</span> {order.profiles?.whatsapp || 'N/A'}</div>
-                                <div className="flex flex-col"><span className="text-blue-500">CPF/CNPJ</span> {order.profiles?.cpf_cnpj || 'N/A'}</div>
-                                <div className="flex flex-col"><span className="text-blue-500">REF</span> {order.id.slice(0,8).toUpperCase()}</div>
+                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-white/5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                <div className="flex flex-col"><span className="text-blue-500/50 mb-1">VALOR</span> <span className="text-white">R$ {order.amount.toLocaleString('pt-BR')}</span></div>
+                                <div className="flex flex-col"><span className="text-blue-500/50 mb-1">METODO</span> <span className="text-white uppercase">{order.payment_method}</span></div>
+                                <div className="flex flex-col"><span className="text-blue-500/50 mb-1">ID PEDIDO</span> <span className="text-slate-600 font-mono">{order.id.slice(0,8).toUpperCase()}</span></div>
+                                <div className="flex flex-col"><span className="text-blue-500/50 mb-1">DATA</span> <span className="text-white">{new Date(order.created_at || '').toLocaleDateString('pt-BR')}</span></div>
                              </div>
                           </div>
-                          <div className="flex gap-4">
+                          <div className="flex gap-4 w-full lg:w-auto">
                             {order.status !== 'approved' && (
                               <button 
                                 onClick={() => handleApproveOrder(order)}
-                                className="px-8 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20"
+                                className="flex-1 lg:flex-none px-10 py-4 bg-blue-600 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
                               >
                                 Aprovar & Liberar
                               </button>
                             )}
                             <button 
-                              onClick={() => { if(confirm('Rejeitar este pedido?')) updateOrder(order.id, { status: 'rejected' }).then(() => loadOrders()); }}
-                              className="px-8 py-3 bg-red-600/10 text-red-500 border border-red-500/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all"
+                              onClick={() => { if(confirm('Rejeitar este pedido permanentemente?')) updateOrder(order.id, { status: 'rejected' }).then(() => loadOrders()); }}
+                              className="px-6 py-4 bg-red-600/10 text-red-500 border border-red-500/20 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all active:scale-95"
                             >
                               Rejeitar
                             </button>
