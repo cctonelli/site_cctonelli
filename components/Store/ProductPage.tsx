@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -32,6 +31,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
         ]);
         setVariants(v);
         setBlocks(b);
+        setLoading(false);
+      }).catch(err => {
+        console.error("Error fetching product data:", err);
         setLoading(false);
       });
       window.scrollTo(0, 0);
@@ -85,11 +87,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
         return (
           <section key={block.id} className="py-24 container mx-auto px-6">
              <div className="max-w-4xl mx-auto text-center mb-16 space-y-4">
-               <h3 className="text-3xl font-serif italic dark:text-white">{content.label || 'Demonstração Executiva'}</h3>
+               <h3 className="text-3xl font-serif italic dark:text-white text-slate-900">{content.label || 'Demonstração Executiva'}</h3>
                <div className="w-20 h-1 bg-blue-600 mx-auto"></div>
              </div>
              <div className="aspect-video max-w-5xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 bg-black">
-                <iframe src={content.url} className="w-full h-full" allowFullScreen />
+                <iframe src={content.url || content.video_url} className="w-full h-full" allowFullScreen />
              </div>
           </section>
         );
@@ -106,11 +108,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
       case 'faq':
         return (
           <section key={block.id} className="py-24 max-w-4xl mx-auto px-6 space-y-12">
-            <h3 className="text-4xl font-serif italic dark:text-white text-center">Dúvidas Estratégicas</h3>
+            <h3 className="text-4xl font-serif italic dark:text-white text-slate-900 text-center">Dúvidas Estratégicas</h3>
             <div className="grid gap-6">
               {content.items?.map((item: any, i: number) => (
                 <details key={i} className="group bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden transition-all">
-                  <summary className="p-8 cursor-pointer list-none flex justify-between items-center font-serif text-xl italic dark:text-white">
+                  <summary className="p-8 cursor-pointer list-none flex justify-between items-center font-serif text-xl italic dark:text-white text-slate-900">
                     {item.question}
                     <span className="text-blue-500 group-open:rotate-180 transition-transform">
                       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -188,8 +190,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
           blocks.map(renderBlock)
         ) : (
           <div className="max-w-4xl mx-auto text-center py-32 space-y-12">
-            <h2 className="text-6xl font-serif italic dark:text-white">{product.title}</h2>
-            <p className="text-xl text-slate-500 font-light italic">{product.subtitle}</p>
+            <h2 className="text-6xl font-serif italic dark:text-white text-slate-900">{product.title}</h2>
+            <p className="text-xl text-slate-500 dark:text-slate-400 font-light italic">{product.subtitle}</p>
             <div className="pt-12">
               <a href="#pricing" className="bg-blue-600 text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl">Visualizar Planos</a>
             </div>

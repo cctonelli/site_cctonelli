@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Product, Profile, Order, UserProduct } from '../types';
 import { getPersonalizedRecommendations } from '../services/aiService';
@@ -37,6 +36,9 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
         setOrders(ordersData);
         setUserProducts(productsData);
         setLoading(false);
+      }).catch(err => {
+        console.error("Error loading assets:", err);
+        setLoading(false);
       });
     }
   }, [activeTab, profile.id]);
@@ -45,9 +47,9 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
     <div className="fixed inset-0 z-[110] bg-[#030712] flex flex-col animate-in fade-in duration-500">
       <header className="p-8 border-b border-white/5 flex justify-between items-center bg-slate-950/50 backdrop-blur-xl sticky top-0 z-10">
         <div className="flex items-center gap-6">
-          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-xl shadow-xl shadow-blue-600/20">CT</div>
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-xl shadow-xl shadow-blue-600/20 text-white">CT</div>
           <div>
-            <h1 className="text-xl font-serif font-bold dark:text-white">Executive Hub</h1>
+            <h1 className="text-xl font-serif font-bold text-white">Executive Hub</h1>
             <p className="text-[10px] uppercase tracking-widest text-slate-500 font-black">Portal de Ativos Estratégicos</p>
           </div>
         </div>
@@ -115,7 +117,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
                             {p.pricing_type}
                           </span>
                         </div>
-                        <h4 className="text-2xl font-serif italic dark:text-white group-hover:text-blue-500 transition-colors">{p.title}</h4>
+                        <h4 className="text-2xl font-serif italic text-white group-hover:text-blue-500 transition-colors">{p.title}</h4>
                         <p className="text-slate-500 text-sm font-light leading-relaxed italic">{p.subtitle}</p>
                       </div>
                       <Link to={`/loja/${p.slug}`} className="w-full mt-10 py-5 bg-white text-slate-950 rounded-2xl font-black uppercase tracking-widest text-[9px] text-center hover:bg-blue-600 hover:text-white transition-all active:scale-95">
@@ -156,7 +158,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
                                   order.status === 'approved' ? 'bg-green-500/10 text-green-500' : 
                                   order.status === 'pending' ? 'bg-amber-500/10 text-amber-500' : 'bg-red-500/10 text-red-500'
                                 }`}>
-                                  {order.status === 'approved' ? 'Liberado' : 'Aguardando Aprovação'}
+                                  {order.status === 'approved' ? 'Liberado' : order.status === 'pending' ? 'Aguardando Aprovação' : 'Pedido Rejeitado'}
                                 </span>
                                 <span className="text-[8px] text-slate-600 font-mono">#{order.id.slice(0,8)}</span>
                               </div>
@@ -174,12 +176,12 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
                                 Acessar / Download FTP
                               </a>
                             ) : order.status === 'pending' ? (
-                              <div className="flex flex-col items-center md:items-end gap-2">
+                              <div className="flex flex-col items-center md:items-end gap-2 text-center md:text-right">
                                 <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest italic">Validação Administrativa em Curso</span>
                                 <button className="text-[8px] text-blue-500 font-bold uppercase tracking-widest border border-blue-500/20 px-4 py-2 rounded-lg opacity-50 cursor-not-allowed">Suporte Prioritário</button>
                               </div>
                             ) : (
-                              <span className="text-red-500 text-[10px] font-black uppercase tracking-widest">Pedido Cancelado</span>
+                              <span className="text-red-500 text-[10px] font-black uppercase tracking-widest">Acesso Negado</span>
                             )}
                           </div>
                         </div>
