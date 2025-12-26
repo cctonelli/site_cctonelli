@@ -54,7 +54,7 @@ export interface Product {
   featured: boolean;
   pricing_type: 'subscription' | 'one_time' | 'per_quantity' | 'free';
   is_active: boolean;
-  download_ftp_link: string | null;
+  download_ftp_link?: string | null;
   created_at?: string;
 }
 
@@ -66,7 +66,7 @@ export interface ProductVariant {
   currency: string;
   interval: 'month' | 'semester' | 'year' | null;
   quantity_limit: number | null;
-  features: string[];
+  features: string[]; // This should be mapped to the JSONB field in DB
   is_most_popular: boolean;
   is_free: boolean;
   order_index: number;
@@ -77,7 +77,7 @@ export interface ProductContentBlock {
   product_id: string;
   block_type: 'hero' | 'text' | 'video' | 'image_gallery' | 'comparison' | 'faq' | 'cta' | 'testimonials' | 'custom';
   order: number;
-  content: any;
+  content: any; // JSONB
 }
 
 export interface Order {
