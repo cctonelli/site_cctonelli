@@ -5,7 +5,8 @@ import { Product, Profile } from "../types";
 export const getPersonalizedRecommendations = async (profile: Profile, products: Product[]): Promise<string> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const productNames = products.map(p => p.name).join(", ");
+    // Fix: Using p.title instead of p.name as per Product interface in types.ts
+    const productNames = products.map(p => p.title).join(", ");
     const prompt = `
       Como consultor sênior da Claudio Tonelli, recomende um dos seguintes serviços: ${productNames}.
       O cliente é ${profile.full_name}, ${profile.user_type === 'admin' ? 'um administrador' : 'um cliente corporativo'}.

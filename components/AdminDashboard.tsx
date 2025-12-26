@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import AdminCrudSection from './AdminCrudSection';
 import { Profile } from '../types';
 
-type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'translations';
+type TabType = 'carousel' | 'insights' | 'products' | 'variants' | 'canvas' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'orders';
 
-const ADMIN_VERSION = "v7.1.0-FINAL";
+const ADMIN_VERSION = "v8.0.0-ELITE";
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -35,7 +35,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-white text-2xl shadow-xl shadow-blue-600/20">CT</div>
             <div className="flex flex-col">
               <span className="font-black text-[11px] uppercase tracking-[0.6em] text-white">Advisory Admin</span>
-              <span className="text-[7px] uppercase tracking-[0.3em] text-blue-500 font-bold mt-1">CORE ENGINE {ADMIN_VERSION}</span>
+              <span className="text-[7px] uppercase tracking-[0.3em] text-blue-500 font-bold mt-1">ELITE CORE {ADMIN_VERSION}</span>
             </div>
           </div>
           
@@ -43,11 +43,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             {[
               { id: 'carousel', label: 'Carrossel / Hero' },
               { id: 'insights', label: 'Knowledge Hub' },
-              { id: 'products', label: 'Soluções / Loja' },
+              { id: 'products', label: 'Gestão Loja' },
+              { id: 'variants', label: 'Variantes / Preços' },
+              { id: 'canvas', label: 'Canvas Dinâmico' },
+              { id: 'orders', label: 'Pedidos / Aprovações' },
               { id: 'metrics', label: 'Impact KPIs' },
               { id: 'testimonials', label: 'Social Proof' },
               { id: 'content', label: 'Copywriting' },
-              { id: 'translations', label: 'Traduções Globais' },
               { id: 'leads', label: 'CRM Leads' }
             ].map(tab => (
               <button 
@@ -75,11 +77,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             </header>
 
             <div key={activeTab}>
-              {activeTab === 'carousel' && <AdminCrudSection tableName="carousel_images" title="Slide" fields={[{ key: 'url', label: 'URL Imagem', type: 'image' }, { key: 'title', label: 'Título (PT)' }, { key: 'title_en', label: 'Título (EN)' }, { key: 'title_es', label: 'Título (ES)' }, { key: 'subtitle', label: 'Subtítulo (PT)' }, { key: 'subtitle_en', label: 'Subtítulo (EN)' }, { key: 'cta_url', label: 'Link' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['url', 'title', 'is_active']} />}
-              {activeTab === 'insights' && <AdminCrudSection tableName="insights" title="Insight" fields={[{ key: 'title', label: 'Título (PT)' }, { key: 'title_en', label: 'Título (EN)' }, { key: 'title_es', label: 'Título (ES)' }, { key: 'excerpt', label: 'Resumo (PT)', type: 'textarea' }, { key: 'excerpt_en', label: 'Resumo (EN)', type: 'textarea' }, { key: 'content', label: 'Conteúdo (PT)', type: 'rich-text' }, { key: 'content_en', label: 'Conteúdo (EN)', type: 'rich-text' }, { key: 'image_url', label: 'Capa', type: 'image' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['title', 'is_active']} />}
-              {activeTab === 'translations' && <AdminCrudSection tableName="content_translations" title="Tradução Global" fields={[{ key: 'field', label: 'Chave do Sistema' }, { key: 'locale', label: 'Idioma (pt/en/es)' }, { key: 'value', label: 'Tradução', type: 'textarea' }]} displayColumns={['field', 'locale', 'value']} />}
-              {activeTab === 'content' && <AdminCrudSection tableName="site_content" title="Copywriting" idColumn="key" fields={[{ key: 'key', label: 'Chave ID' }, { key: 'value', label: 'Conteúdo (PT)', type: 'rich-text' }, { key: 'value_en', label: 'Conteúdo (EN)', type: 'rich-text' }, { key: 'value_es', label: 'Conteúdo (ES)', type: 'rich-text' }, { key: 'page', label: 'Página' }]} displayColumns={['key', 'page']} />}
-              {activeTab === 'leads' && <AdminCrudSection tableName="contacts" title="Leads" fields={[{ key: 'name', label: 'Nome' }, { key: 'email', label: 'Email' }, { key: 'message', label: 'Mensagem', type: 'textarea' }]} displayColumns={['name', 'email']} />}
+              {activeTab === 'carousel' && <AdminCrudSection tableName="carousel_images" title="Slide" fields={[{ key: 'url', label: 'URL Imagem', type: 'image' }, { key: 'title', label: 'Título (PT)' }, { key: 'title_en', label: 'Título (EN)' }, { key: 'subtitle', label: 'Subtítulo (PT)' }, { key: 'cta_url', label: 'Link' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['url', 'title', 'is_active']} />}
+              {activeTab === 'insights' && <AdminCrudSection tableName="insights" title="Insight" fields={[{ key: 'title', label: 'Título (PT)' }, { key: 'title_en', label: 'Título (EN)' }, { key: 'excerpt', label: 'Resumo (PT)', type: 'textarea' }, { key: 'content', label: 'Conteúdo (PT)', type: 'rich-text' }, { key: 'image_url', label: 'Capa', type: 'image' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['title', 'is_active']} />}
+              
+              {/* STORE MANAGEMENT (v8.0.0) */}
+              {activeTab === 'products' && <AdminCrudSection tableName="products" title="Produto" fields={[{ key: 'title', label: 'Título' }, { key: 'slug', label: 'URL Slug' }, { key: 'subtitle', label: 'Subtítulo' }, { key: 'pricing_type', label: 'Tipo Preço (subscription/one_time/per_quantity/free)' }, { key: 'image_url', label: 'Imagem', type: 'image' }, { key: 'featured', label: 'Destaque', type: 'toggle' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }, { key: 'download_ftp_link', label: 'Link FTP Base' }]} displayColumns={['title', 'slug', 'is_active']} />}
+              {activeTab === 'variants' && <AdminCrudSection tableName="product_variants" title="Variante de Preço" fields={[{ key: 'product_id', label: 'ID do Produto' }, { key: 'name', label: 'Nome Variante' }, { key: 'price', label: 'Preço (R$)', type: 'number' }, { key: 'interval', label: 'Intervalo (month/semester/year)' }, { key: 'features', label: 'Recursos (Array JSON)', type: 'json' }, { key: 'is_most_popular', label: 'Mais Vendido', type: 'toggle' }, { key: 'order_index', label: 'Ordem', type: 'number' }]} displayColumns={['name', 'price', 'product_id']} />}
+              {activeTab === 'canvas' && <AdminCrudSection tableName="product_content_blocks" title="Bloco de Conteúdo" fields={[{ key: 'product_id', label: 'ID do Produto' }, { key: 'block_type', label: 'Tipo (hero/text/video/image_gallery/comparison/faq/cta)' }, { key: 'order', label: 'Ordem', type: 'number' }, { key: 'content', label: 'Conteúdo (JSON)', type: 'json' }]} displayColumns={['block_type', 'product_id', 'order']} />}
+              {activeTab === 'orders' && <AdminCrudSection tableName="orders" title="Pedido" fields={[{ key: 'status', label: 'Status (pending/paid/approved/rejected)' }, { key: 'approved_by_admin', label: 'Aprovado', type: 'toggle' }, { key: 'download_link', label: 'Link de Entrega Final' }, { key: 'amount', label: 'Valor Recebido', type: 'number' }]} displayColumns={['user_id', 'status', 'amount']} />}
+
+              {activeTab === 'metrics' && <AdminCrudSection tableName="metrics" title="KPI" fields={[{ key: 'label', label: 'Label' }, { key: 'value', label: 'Valor' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['label', 'value']} />}
+              {activeTab === 'content' && <AdminCrudSection tableName="site_content" title="Copywriting" idColumn="key" fields={[{ key: 'key', label: 'Chave ID' }, { key: 'value', label: 'Conteúdo (PT)', type: 'rich-text' }, { key: 'value_en', label: 'Conteúdo (EN)', type: 'rich-text' }]} displayColumns={['key', 'page']} />}
             </div>
           </div>
         </div>

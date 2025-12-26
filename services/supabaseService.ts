@@ -1,7 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { 
-  Metric, Insight, Product, 
+  Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
   Testimonial, Profile, Contact, CarouselImage
 } from '../types';
 
@@ -34,7 +34,7 @@ export const logSupabaseError = (context: string, error: any) => {
     
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
-    const recoverySql = `-- REPARAÇÃO TOTAL (v7.1.0)\nNOTIFY pgrst, 'reload schema';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;`.trim();
+    const recoverySql = `-- REPARAÇÃO TOTAL (v8.0.0)\nNOTIFY pgrst, 'reload schema';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;`.trim();
     
     return { isError: true, message, code, suggestedSql: recoverySql, isMissingTable, isRlsError };
   }
@@ -57,6 +57,67 @@ export const fetchGlobalTranslations = async (locale: string): Promise<Record<st
       [curr.field]: curr.value
     }), {});
   } catch { return {}; }
+};
+
+// --- MÉTODOS DE LOJA E PRODUTOS (v8.0.0) ---
+
+// Fixed fetchProducts to correctly handle the query execution
+export const fetchProducts = async (onlyActive = true): Promise<Product[]> => {
+  try {
+    let query = supabase.from('products').select('*').order('featured', { ascending: false });
+    if (onlyActive) query = query.eq('is_active', true);
+    const { data, error } = await query;
+    if (logSupabaseError('fetchProducts', error).isError) return [];
+    return data || [];
+  } catch { return []; }
+};
+
+export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
+  try {
+    const { data, error } = await supabase.from('products').select('*').eq('slug', slug).single();
+    if (logSupabaseError('fetchProductBySlug', error).isError) return null;
+    return data;
+  } catch { return null; }
+};
+
+export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
+  try {
+    const { data, error } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('order_index');
+    if (logSupabaseError('fetchProductVariants', error).isError) return [];
+    return data || [];
+  } catch { return []; }
+};
+
+export const fetchProductContentBlocks = async (productId: string): Promise<ProductContentBlock[]> => {
+  try {
+    const { data, error } = await supabase.from('product_content_blocks').select('*').eq('product_id', productId).order('order');
+    if (logSupabaseError('fetchProductContentBlocks', error).isError) return [];
+    return data || [];
+  } catch { return []; }
+};
+
+export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
+  try {
+    const { data, error } = await supabase.from('orders').insert([order]).select().single();
+    if (logSupabaseError('createOrder', error).isError) return null;
+    return data;
+  } catch { return null; }
+};
+
+export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (logSupabaseError('fetchUserOrders', error).isError) return [];
+    return data || [];
+  } catch { return []; }
+};
+
+export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
+  try {
+    const { data, error } = await supabase.from('user_products').select('*').eq('user_id', userId);
+    if (logSupabaseError('fetchUserProducts', error).isError) return [];
+    return data || [];
+  } catch { return []; }
 };
 
 // --- MÉTODOS EXISTENTES ---
@@ -97,17 +158,7 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   } catch { return []; }
 };
 
-export const fetchProducts = async (): Promise<Product[]> => {
-  try {
-    const { data, error } = await supabase
-      .from(cleanTableName('products'))
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (logSupabaseError('fetchProducts', error).isError) return [];
-    return data || [];
-  } catch { return []; }
-};
-
+// Added fetchTestimonials to resolve the missing export error in App.tsx
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase

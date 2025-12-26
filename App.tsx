@@ -12,6 +12,10 @@ import AuthModal from './components/AuthModal';
 import ArticlePage from './components/ArticlePage';
 import HeroCarousel from './components/HeroCarousel';
 import WorkInProgress from './components/WorkInProgress';
+import StoreGrid from './components/Store/StoreGrid';
+import ProductPage from './components/Store/ProductPage';
+import CheckoutPage from './components/Store/CheckoutPage';
+
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
@@ -20,7 +24,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v7.1.0-FINAL";
+const APP_VERSION = "v8.0.0-ELITE";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -40,7 +44,7 @@ const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  // UNIFIED TRANSLATION ENGINE (v7.1.0)
+  // UNIFIED TRANSLATION ENGINE (v8.0.0)
   const t = useMemo(() => {
     const base = staticTranslations[language] || staticTranslations['pt'];
     return { ...base, ...dbTranslations };
@@ -51,7 +55,7 @@ const App: React.FC = () => {
       const [m, i, p, test, s, car, translationsMap] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
-        fetchProducts(),
+        fetchProducts(true),
         fetchTestimonials(),
         fetchSiteContent('home'),
         fetchCarouselImages(),
@@ -98,7 +102,7 @@ const App: React.FC = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => refreshUser());
 
-    const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content', 'content_translations'];
+    const tables = ['metrics', 'insights', 'products', 'product_variants', 'testimonials', 'carousel_images', 'site_content', 'content_translations', 'orders', 'user_products'];
     const subs = tables.map(table => subscribeToChanges(table, syncData));
     
     return () => {
@@ -136,9 +140,9 @@ const App: React.FC = () => {
         {/* Connection Pulse */}
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></div>
             <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-              {isLive ? 'ADVISORY CORE ACTIVE' : 'CALIBRATING SYNC'}
+              {isLive ? 'ELITE ENGINE ACTIVE' : 'SYNC CALIBRATING'}
             </span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
@@ -212,6 +216,9 @@ const App: React.FC = () => {
               <ContactForm language={language} t={t} />
             </main>
           } />
+          <Route path="/loja" element={<StoreGrid language={language} t={t} resolveTranslation={resolveTranslation} />} />
+          <Route path="/loja/:slug" element={<ProductPage language={language} t={t} resolveTranslation={resolveTranslation} />} />
+          <Route path="/loja/:slug/checkout" element={<CheckoutPage profile={userProfile} onAuthRequest={() => setIsAuthOpen(true)} language={language} t={t} />} />
           <Route path="/insight/:id" element={<ArticlePage />} />
           <Route path="/wip" element={<WorkInProgress />} />
         </Routes>

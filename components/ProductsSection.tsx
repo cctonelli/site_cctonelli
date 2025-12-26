@@ -4,6 +4,7 @@ import React from 'react';
 import { Product } from '../types';
 import { motion } from 'framer-motion';
 import { Language } from '../services/i18nService';
+import { Link } from 'react-router-dom';
 
 interface ProductsSectionProps {
   products: Product[];
@@ -35,10 +36,10 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, r
             >
               <div className="grid md:grid-cols-5 h-full">
                 <div className="md:col-span-2 relative h-48 md:h-full bg-slate-200 dark:bg-slate-900 overflow-hidden">
-                  {product.config?.image_url ? (
+                  {product.image_url ? (
                     <img 
-                      src={product.config.image_url} 
-                      alt={product.name} 
+                      src={product.image_url} 
+                      alt={product.title} 
                       className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-700 group-hover:scale-110 transition-transform duration-1000"
                     />
                   ) : (
@@ -53,15 +54,12 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, r
                 <div className="md:col-span-3 p-10 flex flex-col justify-between space-y-8">
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
-                      <span className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase tracking-widest ${product.type === 'service' ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-600/20' : 'bg-purple-600/10 text-purple-600 dark:text-purple-400 border border-purple-600/20'}`}>
-                        {product.type === 'service' ? 'Executive Service' : 'Digital Asset'}
+                      <span className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase tracking-widest ${product.pricing_type === 'subscription' ? 'bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-600/20' : 'bg-purple-600/10 text-purple-600 dark:text-purple-400 border border-purple-600/20'}`}>
+                        {product.pricing_type === 'subscription' ? 'Executive Service' : 'Digital Asset'}
                       </span>
-                      <div className="text-xl font-bold dark:text-white text-slate-900 font-serif">
-                        R$ {(product.price || 0).toLocaleString('pt-BR')}
-                      </div>
                     </div>
                     <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">
-                      {resolveTranslation(product, 'name', '')}
+                      {resolveTranslation(product, 'title', '')}
                     </h3>
                     <p className="text-slate-500 dark:text-slate-400 font-light text-sm leading-relaxed line-clamp-3">
                       {resolveTranslation(product, 'description', '')}
@@ -69,12 +67,12 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, r
                   </div>
                   
                   <div className="pt-4 flex flex-col gap-4">
-                    <button 
-                      onClick={() => product.config?.url && window.open(product.config.url, '_blank')}
-                      className="w-full bg-blue-600 dark:bg-white text-white dark:text-slate-950 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-500 dark:hover:bg-blue-600 dark:hover:text-white transition-all shadow-xl shadow-blue-600/10 active:scale-95"
+                    <Link 
+                      to={`/loja/${product.slug}`}
+                      className="w-full bg-blue-600 dark:bg-white text-white dark:text-slate-950 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest text-center hover:bg-blue-500 dark:hover:bg-blue-600 dark:hover:text-white transition-all shadow-xl shadow-blue-600/10 active:scale-95"
                     >
-                      {resolveTranslation(product.config, 'action_label', 'products_buy')}
-                    </button>
+                      {t.products_buy || 'Aderir Agora'}
+                    </Link>
                   </div>
                 </div>
               </div>

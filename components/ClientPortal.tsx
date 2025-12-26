@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Product, Profile } from '../types';
 import { getPersonalizedRecommendations } from '../services/aiService';
+import { Link } from 'react-router-dom';
 
 interface ClientPortalProps {
   profile: Profile;
@@ -82,17 +83,16 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
                 <div key={p.id} className="glass p-8 rounded-3xl flex flex-col justify-between group hover:border-blue-500/30 transition-all">
                   <div>
                     <div className="flex justify-between items-center mb-6">
-                      <span className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase tracking-widest ${p.type === 'service' ? 'bg-blue-600/10 text-blue-400' : 'bg-green-600/10 text-green-400'}`}>
-                        {p.type}
+                      <span className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase tracking-widest ${p.pricing_type === 'subscription' ? 'bg-blue-600/10 text-blue-400' : 'bg-green-600/10 text-green-400'}`}>
+                        {p.pricing_type}
                       </span>
-                      <span className="font-bold text-white">R$ {p.price.toLocaleString('pt-BR')}</span>
                     </div>
-                    <h4 className="text-xl font-serif mb-4 group-hover:text-blue-400 transition-colors">{p.name}</h4>
+                    <h4 className="text-xl font-serif mb-4 group-hover:text-blue-400 transition-colors">{p.title}</h4>
                     <p className="text-slate-500 text-sm font-light leading-relaxed mb-8">{p.description}</p>
                   </div>
-                  <button className="w-full py-4 bg-white text-slate-950 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-white/5 active:scale-95">
-                    Contratar Agora
-                  </button>
+                  <Link to={`/loja/${p.slug}`} className="w-full py-4 bg-white text-slate-950 rounded-xl font-bold text-center hover:bg-blue-600 hover:text-white transition-all shadow-xl shadow-white/5 active:scale-95">
+                    Saiba Mais
+                  </Link>
                 </div>
               ))}
             </div>

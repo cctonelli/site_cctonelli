@@ -35,12 +35,64 @@ export interface Insight {
 }
 
 export interface Product {
-  id: string | number;
-  name: string;
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
   description: string | null;
+  image_url: string | null;
+  featured: boolean;
+  pricing_type: 'subscription' | 'one_time' | 'per_quantity' | 'free';
+  is_active: boolean;
+  download_ftp_link: string | null;
+  created_at?: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  name: string;
   price: number;
-  type: 'product' | 'service';
-  config: any;
+  currency: string;
+  interval: 'month' | 'semester' | 'year' | null;
+  quantity_limit: number | null;
+  features: string[];
+  is_most_popular: boolean;
+  is_free: boolean;
+  order_index: number;
+}
+
+export interface ProductContentBlock {
+  id: string;
+  product_id: string;
+  block_type: 'hero' | 'text' | 'video' | 'image_gallery' | 'comparison' | 'faq' | 'cta' | 'testimonials' | 'custom';
+  order: number;
+  content: any;
+}
+
+export interface Order {
+  id: string;
+  user_id: string;
+  product_id: string;
+  variant_id: string;
+  status: 'pending' | 'paid' | 'approved' | 'rejected' | 'delivered';
+  payment_method: string;
+  pix_qrcode_url: string | null;
+  amount: number;
+  approved_by_admin: boolean;
+  download_link: string | null;
+  created_at?: string;
+}
+
+export interface UserProduct {
+  id: string;
+  user_id: string;
+  product_id: string;
+  variant_id: string | null;
+  status: 'pending' | 'active' | 'expired' | 'trial' | 'canceled';
+  expires_at: string | null;
+  access_token: string | null;
+  approved_by_admin: boolean;
   created_at?: string;
 }
 
@@ -54,7 +106,7 @@ export interface Testimonial {
 }
 
 export interface Profile {
-  id: string; // UUID de auth.users sempre string
+  id: string;
   full_name: string | null;
   cpf_cnpj: string | null;
   gender: 'Masculino' | 'Feminino' | 'Outro' | 'Prefiro não informar' | null;
