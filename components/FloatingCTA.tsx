@@ -11,17 +11,15 @@ const FloatingCTA: React.FC<FloatingCTAProps> = ({ t }) => {
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
 
-  // Hide if already on the store page
   const isStorePage = location.pathname.startsWith('/loja');
 
   useEffect(() => {
-    // Appear after 1s or upon scroll
     const timer = setTimeout(() => {
       if (!isStorePage) setIsVisible(true);
-    }, 1000);
+    }, 1200);
 
     const handleScroll = () => {
-      if (window.scrollY > 200 && !isStorePage) {
+      if (window.scrollY > 300 && !isStorePage) {
         setIsVisible(true);
       }
     };
@@ -39,53 +37,47 @@ const FloatingCTA: React.FC<FloatingCTAProps> = ({ t }) => {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0, x: 100, scale: 0.9 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 100, scale: 0.9 }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 260, 
-            damping: 25,
-            delay: 0.2
-          }}
-          className="fixed top-28 right-6 lg:top-32 lg:right-10 z-[90]"
+          initial={{ opacity: 0, x: 50, y: 0 }}
+          animate={{ opacity: 1, x: 0, y: 0 }}
+          exit={{ opacity: 0, x: 50 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          className="fixed bottom-10 right-10 z-[90]"
         >
           <Link to="/loja" className="relative group flex items-center">
-            {/* Main Button - Compact & Fixed Width Reveal */}
             <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-3 bg-gradient-to-r from-blue-700 via-indigo-800 to-brand-navy rounded-full px-5 py-3 shadow-[0_15px_35px_rgba(37,99,235,0.3)] border border-white/10 cursor-pointer transition-all duration-300 backdrop-blur-md"
+              whileHover={{ scale: 1.05, x: -10 }}
+              className="flex items-center gap-4 bg-slate-900 dark:bg-blue-600 rounded-[2rem] px-8 py-5 shadow-[0_30px_60px_-15px_rgba(37,99,235,0.4)] border border-white/10 cursor-pointer transition-all duration-500 backdrop-blur-3xl"
             >
               <div className="flex-shrink-0 flex items-center justify-center text-white">
-                <svg className="w-5 h-5 group-hover:rotate-12 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-6 h-6 group-hover:rotate-12 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
               </div>
 
-              {/* Text fades in but button stays pill-shaped */}
-              <span className="whitespace-nowrap font-bold text-[10px] lg:text-xs uppercase tracking-[0.2em] text-white opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                {t.cta_portfolio || 'Nosso Portfólio'}
-              </span>
-            </motion.div>
-
-            {/* "Novo" Badge - Refined Pulsing */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 1.5, type: 'spring' }}
-              className="absolute -top-2 -right-1 flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-brand-gold to-yellow-500 rounded-full shadow-lg border border-white/20 z-10"
-            >
-              <div className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+              <div className="flex flex-col items-start pr-2">
+                <span className="text-white/50 text-[7px] font-black uppercase tracking-[0.4em] leading-none mb-1">Elite Hub</span>
+                <span className="whitespace-nowrap font-bold text-[11px] uppercase tracking-[0.25em] text-white">
+                  Vitrine de Ativos
+                </span>
               </div>
-              <span className="text-[7px] font-black uppercase tracking-widest text-brand-navy">
-                {t.badge_new || 'Novo'}
+            </motion.div>
+
+            <motion.div
+              initial={{ scale: 0, rotate: -45 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ delay: 1.8, type: 'spring' }}
+              className="absolute -top-3 -right-2 flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-brand-gold to-yellow-600 rounded-full shadow-2xl border border-white/20 z-10"
+            >
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+              </div>
+              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-brand-navy">
+                {t.badge_new || 'V10'}
               </span>
             </motion.div>
 
-            {/* Subtle glow effect */}
-            <div className="absolute inset-0 rounded-full bg-blue-600/10 blur-xl -z-10 group-hover:bg-blue-600/20 transition-colors duration-500"></div>
+            <div className="absolute inset-0 rounded-[2rem] bg-blue-600/20 blur-2xl -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
           </Link>
         </motion.div>
       )}
