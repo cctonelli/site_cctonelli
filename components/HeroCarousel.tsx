@@ -3,6 +3,7 @@ import React from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Autoplay, EffectFade } from 'swiper/modules';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { CarouselImage } from '../types';
 import ThreeGlobe from './ThreeGlobe';
 
@@ -30,9 +31,9 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
     const mainCtaText = resolveContent('hero_cta_text', t.btn_insights);
     const mainCtaUrl = resolveContent('hero_cta_link', '#insights');
 
-    // Botão Principal (Saiba Mais) redireciona para a URL do slide se existir
+    // Botão Principal (Saiba Mais) redireciona para a URL do slide se existir, senão para a página WIP
     const primaryCtaText = "SAIBA MAIS";
-    const primaryCtaUrl = slide?.cta_url || "#contact-form";
+    const primaryCtaUrl = slide?.cta_url || "/wip";
 
     const showSecondaryCta = slide ? (slideCtaText && slideCtaUrl) : (mainCtaText && mainCtaUrl);
 
@@ -56,13 +57,23 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
           </p>
           
           <div className="flex flex-wrap gap-4 lg:gap-6 pt-4 lg:pt-2 justify-center lg:justify-start">
-            <a 
-              href={primaryCtaUrl}
-              target={primaryCtaUrl.startsWith('http') ? "_blank" : "_self"}
-              className="bg-blue-600 text-white px-8 lg:px-12 py-4 lg:py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/30 active:scale-95 inline-block text-center"
-            >
-              {primaryCtaText}
-            </a>
+            {primaryCtaUrl.startsWith('/') ? (
+              <Link 
+                to={primaryCtaUrl}
+                className="bg-blue-600 text-white px-8 lg:px-12 py-4 lg:py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/30 active:scale-95 inline-block text-center"
+              >
+                {primaryCtaText}
+              </Link>
+            ) : (
+              <a 
+                href={primaryCtaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-blue-600 text-white px-8 lg:px-12 py-4 lg:py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/30 active:scale-95 inline-block text-center"
+              >
+                {primaryCtaText}
+              </a>
+            )}
 
             {showSecondaryCta && (
               <a 

@@ -11,6 +11,7 @@ import ClientPortal from './components/ClientPortal';
 import AuthModal from './components/AuthModal';
 import ArticlePage from './components/ArticlePage';
 import HeroCarousel from './components/HeroCarousel';
+import WorkInProgress from './components/WorkInProgress';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
@@ -19,8 +20,8 @@ import {
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// TAG DE CONTROLE DE DEPLOY - v6.8.7
-const APP_VERSION = "v6.8.7-PLATINUM-ULTRA";
+// TAG DE CONTROLE DE DEPLOY - v6.8.8
+const APP_VERSION = "v6.8.8-PLATINUM-ULTRA";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -227,6 +228,7 @@ const App: React.FC = () => {
             </main>
           } />
           <Route path="/insight/:id" element={<ArticlePage />} />
+          <Route path="/wip" element={<WorkInProgress />} />
         </Routes>
 
         <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center relative overflow-hidden">

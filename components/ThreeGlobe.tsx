@@ -14,7 +14,7 @@ const ThreeGlobe: React.FC = () => {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-    camera.position.z = 4;
+    camera.position.z = 5;
 
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true, 
@@ -38,22 +38,24 @@ const ThreeGlobe: React.FC = () => {
       color: accentColor,
       wireframe: true,
       transparent: true,
-      opacity: isDark ? 0.15 : 0.08,
+      opacity: isDark ? 0.15 : 0.1,
       blending: THREE.AdditiveBlending
     });
     const globeMesh = new THREE.Mesh(globeGeom, globeMat);
     mainGroup.add(globeMesh);
 
     // 3. Sistema de Fagulhas (Sparks Network)
-    const sparksCount = 10000;
+    const sparksCount = 12000;
     const positions = new Float32Array(sparksCount * 3);
     const originalPos = new Float32Array(sparksCount * 3);
     const speeds = new Float32Array(sparksCount);
+    const life = new Float32Array(sparksCount);
+    const randomness = new Float32Array(sparksCount * 3);
 
     for (let i = 0; i < sparksCount; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-      const dist = 2 + Math.random() * 0.5;
+      const dist = 2 + Math.random() * 0.8;
       
       const x = dist * Math.sin(phi) * Math.cos(theta);
       const y = dist * Math.sin(phi) * Math.sin(theta);
@@ -67,7 +69,12 @@ const ThreeGlobe: React.FC = () => {
       originalPos[i * 3 + 1] = y;
       originalPos[i * 3 + 2] = z;
 
-      speeds[i] = 0.5 + Math.random() * 2.5;
+      speeds[i] = 0.5 + Math.random() * 2;
+      life[i] = Math.random();
+      
+      randomness[i * 3] = (Math.random() - 0.5) * 0.5;
+      randomness[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
+      randomness[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
     }
 
     const pointsGeom = new THREE.BufferGeometry();
@@ -75,9 +82,9 @@ const ThreeGlobe: React.FC = () => {
 
     const pointsMat = new THREE.PointsMaterial({
       color: sparkColor,
-      size: 0.015,
+      size: 0.02,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.8,
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true
     });
@@ -86,7 +93,7 @@ const ThreeGlobe: React.FC = () => {
     mainGroup.add(sparks);
 
     // 4. Luz e Atmosfera
-    const pointLight = new THREE.PointLight(accentColor, 10, 30);
+    const pointLight = new THREE.PointLight(accentColor, 12, 35);
     pointLight.position.set(10, 10, 10);
     scene.add(pointLight);
 
@@ -97,20 +104,37 @@ const ThreeGlobe: React.FC = () => {
       const time = clock.getElapsedTime();
       animationId = requestAnimationFrame(animate);
       
-      mainGroup.rotation.y = time * 0.06;
-      mainGroup.rotation.x = Math.sin(time * 0.05) * 0.1;
+      mainGroup.rotation.y = time * 0.04;
+      mainGroup.rotation.x = Math.sin(time * 0.03) * 0.08;
 
-      // Dinâmica de pulsação orgânica
       const posArray = pointsGeom.attributes.position.array as Float32Array;
+      
       for (let i = 0; i < sparksCount; i++) {
         const i3 = i * 3;
-        const pulse = Math.sin(time * speeds[i] + i) * 0.04;
-        posArray[i3] = originalPos[i3] * (1 + pulse);
-        posArray[i3 + 1] = originalPos[i3 + 1] * ( pulse); // Movimento vertical sutil
-        posArray[i3 + 2] = originalPos[i3 + 2] * (1 + pulse);
+        
+        // Comportamento 1: Pulsação Base (Rede Orbital)
+        const pulse = Math.sin(time * speeds[i] + i) * 0.05;
+        
+        // Comportamento 2: Ejeção Aleatória (Fagulhas Soltas)
+        // Usamos o índice para criar um subconjunto de partículas mais erráticas
+        if (i % 15 === 0) {
+          life[i] += 0.01;
+          if (life[i] > 1) life[i] = 0;
+          
+          const ejectFactor = 1 + (life[i] * 1.5);
+          posArray[i3] = originalPos[i3] * ejectFactor + randomness[i3] * life[i];
+          posArray[i3 + 1] = originalPos[i3 + 1] * ejectFactor + randomness[i3 + 1] * life[i];
+          posArray[i3 + 2] = originalPos[i3 + 2] * ejectFactor + randomness[i3 + 2] * life[i];
+        } else {
+          // Movimento orbital padrão expandido
+          posArray[i3] = originalPos[i3] * (1.1 + pulse);
+          posArray[i3 + 1] = originalPos[i3 + 1] * (1.1 + pulse);
+          posArray[i3 + 2] = originalPos[i3 + 2] * (1.1 + pulse);
+        }
       }
+      
       pointsGeom.attributes.position.needsUpdate = true;
-      pointsMat.opacity = 0.5 + Math.sin(time * 1.5) * 0.3;
+      pointsMat.opacity = 0.6 + Math.sin(time * 2) * 0.2;
 
       renderer.render(scene, camera);
     };
@@ -134,6 +158,11 @@ const ThreeGlobe: React.FC = () => {
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }
+      // Cleanup de geometria e material
+      globeGeom.dispose();
+      globeMat.dispose();
+      pointsGeom.dispose();
+      pointsMat.dispose();
     };
   }, []);
 
