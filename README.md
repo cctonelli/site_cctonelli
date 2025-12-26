@@ -1,41 +1,43 @@
 # Claudio Tonelli Consultoria — Advisory Hub v9.0-ELITE
 
-Este repositório contém a plataforma global de elite da **Claudio Tonelli Consultoria**, operando agora no estágio **v9.0-ELITE**. O sistema foi transformado de um site institucional em uma infraestrutura completa de vendas digitais e entrega de ativos estratégicos.
+O ecossistema digital da **Claudio Tonelli Consultoria** atingiu seu estágio máximo de maturidade. Esta plataforma opera agora como uma **Máquina Global de Vendas de Ativos Digitais**, integrando consultoria de elite com automação de e-commerce.
 
-## 📊 Status de Integração da Loja (Protocolo v9.0)
+## 🚀 Status de Integração: Estágio Final (Deploy v9.0)
 
-A integração está em estágio **Operacional de Elite (100%)**. O fluxo completo revisado foi implementado e testado:
+O fluxo de vendas revisado está **100% operacional**, integrado via Supabase Core:
 
-| Etapa | Status | Descrição Técnica |
+1.  **Vitrine (/loja):** Grid premium consumindo `products` (is_active=true) ordenado por `featured`.
+2.  **Dynamic Canvas (/loja/[slug]):** Renderização modular de `product_content_blocks`.
+3.  **Checkout PIX:** Geração de QR Code e registro em `orders` com status `pending`.
+4.  **Protocolo de Aprovação:** Admin aprova pagamentos, gerando automaticamente acessos em `user_products`.
+5.  **Executive Hub:** Liberação via **Realtime Sync** de links FTP e downloads no portal do parceiro.
+
+---
+
+## 🔐 Auditoria de Segurança & Políticas RLS
+
+O sistema segue rigorosamente as políticas de **Row Level Security** do Supabase para garantir integridade total:
+
+| Tabela | Política RLS Ativa | Comportamento de Elite |
 | :--- | :--- | :--- |
-| **Vitrine (/loja)** | ✅ OK | Grid premium consumindo `products` (is_active=true) via RLS `public_read`. |
-| **Canvas (/loja/:slug)** | ✅ OK | Renderização dinâmica de `product_content_blocks` (Hero, Video, FAQ, Planos). |
-| **Checkout PIX** | ✅ OK | Geração de payload PIX estático, QR Code e `INSERT` em `orders`. |
-| **Auth Integration** | ✅ OK | Redirecionamento inteligente para login/cadastro mantendo o `variant_id`. |
-| **Aprovação Admin** | ✅ OK | Aba de Pedidos no Dashboard permitindo `UPDATE` em `orders` e `INSERT` em `user_products`. |
-| **Executive Hub** | ✅ OK | Portal de ativos com **Supabase Realtime** para liberação instantânea de downloads. |
+| `products` | `public_read_products` | Leitura pública do catálogo; Escrita apenas Admin. |
+| `product_variants` | `public_read_variants` | Preços e planos acessíveis globalmente. |
+| `orders` | `user_read_own_orders` | Clientes vêem apenas seus próprios pedidos; Admin tem `FULL_ACCESS`. |
+| `user_products` | `user_read_own_access` | Liberação de ativos via Realtime; Apenas o proprietário acessa. |
+| `profiles` | `auth.uid() = id` | Dados sensíveis (CPF/CNPJ, WhatsApp) protegidos por ID. |
+| `tools` | `public_read` | Toolkit estratégico disponível conforme nível de acesso. |
+| `contacts` | `public_insert` | Captação de leads aberta; leitura restrita ao Advisory Board. |
 
 ---
 
-## 🔐 Auditoria de Políticas RLS (Supabase)
+## 🛠️ Stack Tecnológica v9.0
 
-O código atual foi auditado e está em conformidade total com as políticas de segurança (Row Level Security) definidas no banco de dados:
-
-*   **Tabelas de Conteúdo (`carousel`, `insights`, `metrics`, `tools`):** Protegidas por `admin_full_access`. A leitura é pública (`public_read`), garantindo SEO e acessibilidade.
-*   **Pedidos (`orders`):** Integrado com `user_read_own_orders` (via `auth.uid() = user_id`). O componente `CheckoutPage` realiza o insert respeitando o RBAC.
-*   **Acesso a Ativos (`user_products`):** Conformidade total com `user_read_own_access`. O `ClientPortal` (Executive Hub) filtra apenas os ativos do usuário logado.
-*   **Perfis (`profiles`):** Uso rigoroso de `auth.uid() = id` para garantir que parceiros e clientes acessem apenas seus próprios dados sensíveis.
-
----
-
-## 🛠️ Tecnologias de Elite Empregadas
-
-*   **AI Advisory:** Integração nativa com **Gemini 3 Pro** para recomendações personalizadas no Hub.
-*   **Visualização 3D:** Globo de conexões globais em **Three.js** com performance otimizada.
-*   **Infraestrutura:** Supabase (Auth, DB, Realtime, Storage) + Vercel (Edge Runtime).
-*   **Estética:** McKinsey-style UI com Framer Motion e Noise Overlay para acabamento premium.
+*   **Intelligence:** Google Gemini 3 Pro (Thinking Model) para diagnósticos no Hub.
+*   **Engine:** Supabase (Auth, DB, Realtime, Storage).
+*   **Visuals:** Three.js (Conexões Globais) + McKinsey Aesthetic (Noise Overlay).
+*   **Deploy:** Vercel Edge Runtime com headers de segurança AES-256 (simulado).
 
 ---
 
 **Claudio Tonelli Consultoria**  
-*Excelência estratégica desenhada para a era digital.*
+*Excelência estratégica desenhada para a era digital de alto impacto.*

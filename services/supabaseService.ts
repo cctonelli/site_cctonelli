@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
@@ -7,6 +6,7 @@ import {
 
 /**
  * CONFIGURAÇÃO OFICIAL - CLAUDIO TONELLI ADVISORY CORE v9.0-ELITE
+ * Integrado com as políticas RLS auditadas em 26/12/2025.
  */
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
@@ -25,17 +25,21 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 const cleanTableName = (name: string) => name.replace('public.', '').trim();
 
+/**
+ * Diagnóstico de Erros Críticos v9.0-ELITE
+ */
 export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
     
+    // PGRST205: Cache de schema do PostgREST desatualizado
     const isMissingTable = code === '42P01' || message.includes('PGRST205');
     const isRlsError = code === '42501' || message.includes('row-level security');
     
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
-    const recoverySql = `-- REPARAÇÃO TOTAL (v9.0-ELITE)\nNOTIFY pgrst, 'reload schema';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;`.trim();
+    const recoverySql = `-- REPARAÇÃO DE ELITE\nNOTIFY pgrst, 'reload schema';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;`.trim();
     
     return { isError: true, message, code, suggestedSql: recoverySql, isMissingTable, isRlsError };
   }
