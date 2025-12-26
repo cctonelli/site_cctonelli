@@ -31,7 +31,6 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
     const mainCtaText = resolveContent('hero_cta_text', t.btn_insights);
     const mainCtaUrl = resolveContent('hero_cta_link', '#insights');
 
-    // Botão Principal (Saiba Mais) redireciona para a URL do slide se existir, senão para a página WIP
     const primaryCtaText = "SAIBA MAIS";
     const primaryCtaUrl = slide?.cta_url || "/wip";
 
@@ -78,8 +77,6 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
             {showSecondaryCta && (
               <a 
                 href={slide ? slideCtaUrl : mainCtaUrl} 
-                target={(slide ? slideCtaUrl : mainCtaUrl).startsWith('http') ? "_blank" : "_self"}
-                rel={(slide ? slideCtaUrl : mainCtaUrl).startsWith('http') ? "noopener noreferrer" : ""}
                 className="bg-white/10 dark:bg-white/5 backdrop-blur-md text-slate-900 dark:text-white border border-slate-200 dark:border-white/20 px-8 lg:px-12 py-4 lg:py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] lg:text-[11px] hover:bg-white dark:hover:bg-white hover:text-blue-600 transition-all active:scale-95 inline-block text-center"
               >
                 {slide ? slideCtaText : mainCtaText}
@@ -92,29 +89,37 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
   };
 
   return (
-    <section id="hero" className="relative h-[calc(100vh-6rem)] min-h-[550px] lg:h-[calc(100vh-6rem)] bg-white dark:bg-brand-navy overflow-hidden">
-      {/* O Globo sempre fica ao fundo como base imersiva */}
+    <section id="hero" className="relative h-[calc(100vh-6rem)] min-h-[550px] bg-white dark:bg-brand-navy overflow-hidden">
       <div className="absolute inset-0 z-0 transform scale-125 lg:scale-110 pointer-events-none">
         <ThreeGlobe />
       </div>
       
-      <div className="absolute inset-0 z-[1] bg-gradient-to-r from-white dark:from-brand-navy via-white/40 dark:via-brand-navy/30 to-transparent opacity-95 lg:opacity-90"></div>
+      <div className="absolute inset-0 z-[1] bg-gradient-to-r from-white dark:from-brand-navy via-white/40 dark:via-brand-navy/30 to-transparent opacity-95"></div>
       
       <div className="relative z-10 h-full w-full">
         <AnimatePresence mode="wait">
           {!isLive ? (
             <motion.div 
-              key="calibrating" 
+              key="thinking" 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }} 
-              className="h-full w-full flex items-center justify-center"
+              className="h-full w-full flex flex-col items-center justify-center space-y-8"
             >
+              <div className="relative">
+                <div className="w-24 h-24 border border-blue-600/20 rounded-full animate-ping absolute inset-0"></div>
+                <div className="w-24 h-24 border-t-2 border-blue-600 rounded-full animate-spin"></div>
+              </div>
+              <div className="text-center space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-blue-600 animate-pulse">Sincronizando Core Advisory</span>
+                <p className="text-slate-500 font-serif italic text-sm">Calibrando inteligência competitiva...</p>
+              </div>
             </motion.div>
           ) : !hasSlides ? (
             <motion.div 
               key="fallback-content"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 1 }}
               className="h-full w-full"
             >
               {renderContent()}
@@ -124,7 +129,6 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
               key="swiper-content"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 1 }}
               className="h-full w-full"
             >
               <Swiper
@@ -140,12 +144,10 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
                   <SwiperSlide key={slide.id}>
                     <div className="relative h-full w-full overflow-hidden">
                       <div className="absolute inset-0">
-                        {/* Imagem com opacidade aumentada para 50% para melhor visibilidade */}
                         <img 
                           src={slide.url} 
                           className="w-full h-full object-cover opacity-50 dark:opacity-60 transition-opacity duration-[2s] scale-105" 
                           alt="" 
-                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }}
                         />
                         <div className="absolute inset-0 bg-brand-navy/5 dark:bg-black/20"></div>
                       </div>

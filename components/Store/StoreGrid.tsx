@@ -15,21 +15,29 @@ interface StoreGridProps {
 const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [errorType, setErrorType] = useState<'none' | 'cache' | 'empty' | 'network'>('none');
 
   const load = async () => {
     setLoading(true);
-    setHasError(false);
+    setErrorType('none');
     try {
       const data = await fetchProducts(true);
       if (data.length === 0) {
-        // Verifica se há erro real de cache
         const { error } = await supabase.from('products').select('id').limit(1);
-        if (error) setHasError(true);
+        if (error) {
+           console.error("Store Fetch Error:", error);
+           if (error.code === 'PGRST205' || error.message.includes('cache')) {
+             setErrorType('cache');
+           } else {
+             setErrorType('network');
+           }
+        } else {
+           setErrorType('empty');
+        }
       }
       setProducts(data);
     } catch {
-      setHasError(true);
+      setErrorType('network');
     } finally {
       setLoading(false);
     }
@@ -43,7 +51,7 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4 pt-20">
       <div className="w-12 h-12 border-t-2 border-blue-600 rounded-full animate-spin"></div>
-      <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Sincronizando Ativos Corporativos...</span>
+      <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Arquitetando Portfólio de Soluções...</span>
     </div>
   );
 
@@ -55,27 +63,34 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
           <h1 className="text-5xl md:text-8xl font-serif dark:text-white text-slate-900 leading-tight italic">
             Hub de <br/>Excelência.
           </h1>
-          <p className="text-lg text-slate-500 dark:text-slate-400 font-light max-w-xl leading-relaxed italic border-l-2 border-blue-600/30 pl-8">
+          <p className="text-lg text-slate-500 dark:text-slate-400 font-light max-w-xl leading-relaxed italic border-l-2 border-blue-600/30 pl-8 transition-all">
             Ferramentas proprietárias arquitetadas para CEOs que buscam o rigor metodológico da Claudio Tonelli Consultoria.
           </p>
         </header>
 
-        {hasError ? (
-          <div className="py-24 text-center border-2 border-dashed border-red-500/20 rounded-[3rem] bg-red-500/5 space-y-8 max-w-4xl mx-auto">
-             <div className="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mx-auto text-red-500 animate-pulse">
+        {errorType !== 'none' && errorType !== 'empty' ? (
+          <div className="py-24 text-center border-2 border-dashed border-red-500/20 rounded-[3rem] bg-red-500/5 space-y-8 max-w-4xl mx-auto backdrop-blur-3xl">
+             <div className="w-20 h-20 bg-red-600/10 rounded-full flex items-center justify-center mx-auto text-red-500 animate-pulse border border-red-500/20">
                 <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
              </div>
-             <div className="space-y-2">
-               <h3 className="text-2xl font-serif text-white italic">Conexão de Dados Interrompida</h3>
-               <p className="text-slate-500 text-sm max-w-md mx-auto">O cache do servidor Advisory pode estar desatualizado (PGRST205). Solicite ao administrador um "Schema Reload".</p>
+             <div className="space-y-2 px-8">
+               <h3 className="text-2xl font-serif text-white italic">Protocolo de Dados Interrompido</h3>
+               <p className="text-slate-500 text-sm max-w-md mx-auto">
+                 {errorType === 'cache' 
+                   ? 'O cache do servidor PostgREST está desatualizado (PGRST205). O administrador precisa executar "reload schema".'
+                   : 'Não foi possível estabelecer conexão segura com o Advisory Core neste momento.'}
+               </p>
              </div>
-             <button onClick={load} className="px-10 py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20">
-               Tentar Nova Sincronia
-             </button>
+             <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
+               <button onClick={load} className="px-10 py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95">
+                 Nova Sincronização
+               </button>
+               <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-white transition-colors">Voltar para Dashboard</Link>
+             </div>
           </div>
         ) : products.length === 0 ? (
-          <div className="py-32 text-center text-slate-500 italic text-xl font-serif">
-            Nenhum ativo disponível para o seu perfil no momento.
+          <div className="py-32 text-center text-slate-500 italic text-xl font-serif border-t border-slate-100 dark:border-white/5">
+            Aguardando a liberação de novos ativos estratégicos para o seu perfil.
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
@@ -117,16 +132,16 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
                     <div className="flex flex-col">
                       <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Modelo Delivery</span>
                       <span className="text-[10px] font-bold dark:text-white text-slate-900 uppercase">
-                        {product.pricing_type === 'subscription' ? 'Acesso Contínuo' : 
-                        product.pricing_type === 'one_time' ? 'Ativo Perpétuo' :
-                        product.pricing_type === 'free' ? 'Recurso Aberto' : 'Sob Demanda'}
+                        {product.pricing_type === 'subscription' ? 'Executive Service' : 
+                        product.pricing_type === 'one_time' ? 'Strategic Asset' :
+                        product.pricing_type === 'free' ? 'Open Resource' : 'Under Demand'}
                       </span>
                     </div>
                     <Link 
                       to={`/loja/${product.slug}`}
                       className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest text-[9px] hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/10 active:scale-95"
                     >
-                      Detalhes
+                      Acessar
                     </Link>
                   </div>
                 </div>
