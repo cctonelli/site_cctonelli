@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { fetchProducts, supabase, logSupabaseError } from '../../services/supabaseService';
+import { supabase, logSupabaseError } from '../../services/supabaseService';
 import { Product } from '../../types';
 import { Language } from '../../services/i18nService';
 
@@ -79,7 +79,7 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
   );
 
   return (
-    <div className="min-h-screen bg-white dark:bg-brand-navy pt-32 pb-40 transition-colors duration-500">
+    <div className="min-h-screen bg-white dark:bg-brand-navy pt-32 pb-40 transition-colors duration-500 relative">
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/5 blur-[150px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
       
       <div className="container mx-auto px-6 relative z-10">
@@ -95,7 +95,7 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
               animate={{ opacity: 1, y: 0 }} 
               className="text-6xl md:text-9xl font-serif dark:text-white text-slate-900 leading-[0.85] italic tracking-tighter"
             >
-              Arquitetura de <br/><span className="text-blue-600">Soluções.</span>
+              Vitrine de <br/><span className="text-blue-600">Ativos.</span>
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0 }} 
@@ -103,7 +103,7 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
               transition={{ delay: 0.2 }} 
               className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 font-light max-w-3xl leading-relaxed italic border-l border-blue-600/20 pl-10"
             >
-              Metodologias exclusivas e ativos de automação desenhados para CEOs que exigem o rigor da Claudio Tonelli Consultoria.
+              Explore o ecossistema V8 MATRIX e outras metodologias desenhadas para o rigor da Claudio Tonelli Consultoria.
             </motion.p>
           </div>
         </header>
@@ -125,11 +125,11 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
                 </div>
                 
                 <div className="space-y-4">
-                  <h3 className="text-4xl font-serif dark:text-white text-slate-900 italic">Sincronização Necessária</h3>
+                  <h3 className="text-4xl font-serif dark:text-white text-slate-900 italic">Sincronização do Core Necessária</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-lg font-light italic max-w-lg mx-auto leading-relaxed">
                     {errorType === 'cache' 
-                      ? 'O catálogo de ativos está em processo de atualização no servidor central.'
-                      : `Houve uma interrupção na conexão com o Core Advisory: ${errorMessage || 'Unknown Error'}`}
+                      ? 'O cache do servidor PostgREST está desatualizado. Por favor, re-sincronize o schema.'
+                      : `Houve uma interrupção na conexão: ${errorMessage || 'Unknown Error'}`}
                   </p>
                 </div>
 
@@ -159,6 +159,7 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
               className="py-40 text-center border-t border-slate-100 dark:border-white/5"
             >
               <div className="text-slate-400 italic text-2xl font-serif opacity-40">Aguardando a liberação de novos ativos estratégicos...</div>
+              <p className="mt-8 text-[10px] uppercase tracking-widest text-blue-600/40">Dica: Rode o SQL de população do V8 no Supabase.</p>
             </motion.div>
           ) : (
             <motion.div 
@@ -167,65 +168,80 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
               animate={{ opacity: 1 }}
               className="grid md:grid-cols-2 lg:grid-cols-3 gap-16"
             >
-              {products.map((product, idx) => (
-                <motion.div 
-                  key={product.id} 
-                  initial={{ opacity: 0, y: 40 }} 
-                  whileInView={{ opacity: 1, y: 0 }} 
-                  viewport={{ once: true }} 
-                  transition={{ delay: idx * 0.1, duration: 0.8, ease: [0.16, 1, 0.3, 1] }} 
-                  className="group relative flex flex-col"
-                >
-                  <Link to={`/loja/${product.slug}`} className="block relative aspect-[4/5] rounded-[3.5rem] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 shadow-2xl transition-all duration-700 hover:shadow-blue-600/20 mb-10">
-                    {product.image_url ? (
-                      <img 
-                        src={product.image_url} 
-                        alt={product.title} 
-                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" 
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-900">
-                        <span className="text-9xl font-serif italic text-slate-200 dark:text-slate-800">CT</span>
+              {products.map((product, idx) => {
+                const isMatrix = product.slug.toLowerCase().includes('v8') || product.slug.toLowerCase().includes('matrix');
+                
+                return (
+                  <motion.div 
+                    key={product.id} 
+                    initial={{ opacity: 0, y: 40 }} 
+                    whileInView={{ opacity: 1, y: 0 }} 
+                    viewport={{ once: true }} 
+                    transition={{ delay: idx * 0.1, duration: 0.8, ease: [0.16, 1, 0.3, 1] }} 
+                    className={`group relative flex flex-col ${isMatrix ? 'md:col-span-2 lg:col-span-1' : ''}`}
+                  >
+                    <Link 
+                      to={`/loja/${product.slug}`} 
+                      className={`block relative aspect-[4/5] rounded-[3.5rem] overflow-hidden bg-slate-100 dark:bg-slate-900 border shadow-2xl transition-all duration-700 hover:shadow-blue-600/20 mb-10 ${isMatrix ? 'border-blue-600/40 shadow-blue-600/10' : 'border-slate-200 dark:border-white/5'}`}
+                    >
+                      {isMatrix && <div className="absolute inset-0 scanline opacity-30 z-10 pointer-events-none"></div>}
+                      
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.title} 
+                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" 
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-950">
+                          <span className={`text-9xl font-serif italic ${isMatrix ? 'text-blue-600/20 glitch-text' : 'text-slate-200 dark:text-slate-800'}`}>CT</span>
+                        </div>
+                      )}
+                      
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                      
+                      <div className="absolute bottom-12 left-12 right-12 translate-y-8 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
+                        <span className="inline-block bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[9px] shadow-2xl">
+                          Desbloquear Protocolo
+                        </span>
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                    
-                    <div className="absolute bottom-12 left-12 right-12 translate-y-8 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
-                      <span className="inline-block bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[9px] shadow-2xl">
-                        Explorar Ativo
-                      </span>
-                    </div>
 
-                    {product.featured && (
-                      <div className="absolute top-10 left-10 bg-blue-600 text-white text-[8px] font-black uppercase tracking-[0.4em] px-6 py-2.5 rounded-full shadow-2xl backdrop-blur-md">
-                        Strategic Asset
+                      {isMatrix && (
+                        <div className="absolute top-10 left-10 bg-blue-600 text-white text-[8px] font-black uppercase tracking-[0.4em] px-6 py-2.5 rounded-full shadow-2xl backdrop-blur-md z-30">
+                          MATRIX EDITION v10.5
+                        </div>
+                      )}
+                      {product.featured && !isMatrix && (
+                        <div className="absolute top-10 left-10 bg-brand-gold text-brand-navy text-[8px] font-black uppercase tracking-[0.4em] px-6 py-2.5 rounded-full shadow-2xl backdrop-blur-md z-30">
+                          Featured Asset
+                        </div>
+                      )}
+                    </Link>
+
+                    <div className="px-6 space-y-6">
+                      <div className="space-y-2">
+                        <div className={`font-black uppercase tracking-[0.3em] text-[8px] ${isMatrix ? 'text-blue-500' : 'text-slate-400'}`}>
+                          {product.pricing_type === 'subscription' ? 'Executive Service' : 'Digital License'}
+                        </div>
+                        <h3 className={`text-3xl font-serif italic leading-tight group-hover:text-blue-600 transition-colors ${isMatrix ? 'text-white' : 'dark:text-white text-slate-900'}`}>
+                          {resolveTranslation(product, 'title', '')}
+                        </h3>
                       </div>
-                    )}
-                  </Link>
+                      
+                      <p className="text-slate-500 dark:text-slate-400 text-sm font-light leading-relaxed line-clamp-2 italic">
+                        {resolveTranslation(product, 'subtitle', '')}
+                      </p>
 
-                  <div className="px-6 space-y-6">
-                    <div className="space-y-2">
-                      <div className="text-blue-500 font-black uppercase tracking-[0.3em] text-[8px]">
-                        {product.pricing_type === 'subscription' ? 'Executive Service' : 'Digital License'}
+                      <div className="pt-4 flex items-center justify-between">
+                         <Link to={`/loja/${product.slug}`} className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white group-hover:text-blue-600 transition-all border-b-2 border-slate-200 dark:border-white/5 group-hover:border-blue-600 pb-1">
+                            Acessar Canvas
+                         </Link>
+                         <div className={`w-10 h-[1px] ${isMatrix ? 'bg-blue-600' : 'bg-slate-200 dark:bg-white/10'}`}></div>
                       </div>
-                      <h3 className="text-3xl font-serif dark:text-white text-slate-900 italic leading-tight group-hover:text-blue-600 transition-colors">
-                        {resolveTranslation(product, 'title', '')}
-                      </h3>
                     </div>
-                    
-                    <p className="text-slate-500 dark:text-slate-400 text-sm font-light leading-relaxed line-clamp-2 italic">
-                      {resolveTranslation(product, 'subtitle', '')}
-                    </p>
-
-                    <div className="pt-4 flex items-center justify-between">
-                       <Link to={`/loja/${product.slug}`} className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white group-hover:text-blue-600 transition-all border-b-2 border-slate-200 dark:border-white/5 group-hover:border-blue-600 pb-1">
-                          Ver Detalhes
-                       </Link>
-                       <div className="w-10 h-[1px] bg-slate-200 dark:bg-white/10"></div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </motion.div>
           )}
         </AnimatePresence>

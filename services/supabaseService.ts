@@ -26,7 +26,7 @@ export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
-    const isMissingTable = code === '42P01' || message.includes('PGRST205');
+    const isMissingTable = code === '42P01' || message.includes('PGRST205') || message.includes('not find the table');
     const isRlsError = code === '42501' || message.includes('row-level security');
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     const recoverySql = `-- REPARAÇÃO DE ELITE\nNOTIFY pgrst, 'reload schema';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;`.trim();
@@ -42,11 +42,16 @@ export const fetchTools = async (): Promise<Tool[]> => {
 };
 
 export const fetchProducts = async (onlyActive = true): Promise<Product[]> => {
-  let query = supabase.from(cleanTableName('products')).select('*').order('featured', { ascending: false });
-  if (onlyActive) query = query.eq('is_active', true);
-  const { data, error } = await query;
-  if (logSupabaseError('fetchProducts', error).isError) return [];
-  return data || [];
+  try {
+    let query = supabase.from(cleanTableName('products')).select('*').order('featured', { ascending: false });
+    if (onlyActive) query = query.eq('is_active', true);
+    const { data, error } = await query;
+    if (logSupabaseError('fetchProducts', error).isError) return [];
+    return data || [];
+  } catch (err) {
+    console.error("[fetchProducts] Unexpected Failure:", err);
+    return [];
+  }
 };
 
 export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
@@ -62,9 +67,13 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
 };
 
 export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
-  const { data, error } = await supabase.from(cleanTableName('products')).select('*').eq('slug', slug).single();
-  if (logSupabaseError('fetchProductBySlug', error).isError) return null;
-  return data;
+  try {
+    const { data, error } = await supabase.from(cleanTableName('products')).select('*').eq('slug', slug).maybeSingle();
+    if (logSupabaseError('fetchProductBySlug', error).isError) return null;
+    return data;
+  } catch (err) {
+    return null;
+  }
 };
 
 export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
@@ -102,7 +111,7 @@ export const fetchAppVersions = async (): Promise<AppVersion[]> => {
 };
 
 export const fetchUsageByProduct = async (userProductId: string): Promise<V8MatrixUsage | null> => {
-  const { data, error } = await supabase.from(cleanTableName('v8_matrix_usage')).select('*').eq('user_product_id', userProductId).single();
+  const { data, error } = await supabase.from(cleanTableName('v8_matrix_usage')).select('*').eq('user_product_id', userProductId).maybeSingle();
   if (error) return null;
   return data;
 };
@@ -149,7 +158,7 @@ export const fetchGlobalTranslations = async (locale: string): Promise<Record<st
 };
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
-  const { data, error } = await supabase.from(cleanTableName('profiles')).select('*').eq('id', id).single();
+  const { data, error } = await supabase.from(cleanTableName('profiles')).select('*').eq('id', id).maybeSingle();
   if (error) return null;
   return data;
 };
@@ -192,7 +201,7 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
 };
 
 export const fetchInsightById = async (id: string | number): Promise<Insight | null> => {
-  const { data, error } = await supabase.from(cleanTableName('insights')).select('*').eq('id', id).single();
+  const { data, error } = await supabase.from(cleanTableName('insights')).select('*').eq('id', id).maybeSingle();
   if (logSupabaseError('fetchInsightById', error).isError) return null;
   return data;
 };
