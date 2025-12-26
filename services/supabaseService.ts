@@ -5,6 +5,7 @@ import {
   Testimonial, Profile, Contact, CarouselImage
 } from '../types';
 
+// CONFIGURAÇÃO OFICIAL - CLAUDIO TONELLI ADVISORY CORE
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
@@ -14,23 +15,27 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: window.localStorage
+  },
+  global: {
+    headers: { 'x-application-name': 'ct-advisory-v6' }
   }
 });
 
 const cleanTableName = (name: string) => name.replace('public.', '').trim();
 
+// Fix: Added isMissingTable detection and property to the return object to satisfy AdminCrudSection.tsx types
 export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
-    
-    const isCacheError = code === 'PGRST205' || message.includes('schema cache') || message.includes('404');
-    const isMissingTable = isCacheError || code === '42P01' || message.includes('not found');
+    // Logic to detect if the table or relation is missing (Postgres error 42P01 or message containing relation/exist)
+    const isMissingTable = code === '42P01' || (message && message.toLowerCase().includes('relation') && message.toLowerCase().includes('does not exist'));
     
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
+    // Script de reparo sugerido para o administrador rodar no SQL Editor caso nada funcione
     const recoverySql = `
--- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.8.9)
+-- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.9.0)
 NOTIFY pgrst, 'reload schema';
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
@@ -41,12 +46,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authentic
       isError: true,
       message,
       code,
-      isMissingTable,
-      isCacheError,
-      suggestedSql: recoverySql
+      suggestedSql: recoverySql,
+      isMissingTable
     };
   }
-  return { isError: false };
+  return { isError: false, isMissingTable: false };
 };
 
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
@@ -143,17 +147,16 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 };
 
 export const signIn = async (email: string, password?: string) => {
+  const cleanEmail = email.trim();
   return password 
-    ? await supabase.auth.signInWithPassword({ email, password })
-    : await supabase.auth.signInWithOtp({ email });
+    ? await supabase.auth.signInWithPassword({ email: cleanEmail, password })
+    : await supabase.auth.signInWithOtp({ email: cleanEmail });
 };
 
 export const signUp = async (email: string, password: string, metadata: any) => {
-  // O Supabase Auth cria o usuário, mas precisamos garantir que o perfil seja criado
-  // Se houver um trigger no banco, o metadado é passado. 
-  // Se não houver, fazemos o insert manual no AuthModal.
+  const cleanEmail = email.trim();
   return await supabase.auth.signUp({
-    email, 
+    email: cleanEmail, 
     password, 
     options: { 
       data: metadata,
@@ -164,12 +167,14 @@ export const signUp = async (email: string, password: string, metadata: any) => 
 
 export const createProfile = async (profile: Profile) => {
   try {
+    // Usamos upsert para evitar erro 409 caso o trigger de DB já tenha criado o perfil
     const { error } = await supabase
       .from(cleanTableName('profiles'))
-      .insert([profile]);
+      .upsert(profile, { onConflict: 'id' });
     return logSupabaseError('createProfile', error);
   } catch (err) {
-    return { isError: true, message: 'Falha crítica ao criar perfil.' };
+    // Fix: Added isMissingTable to catch block for return consistency
+    return { isError: true, message: 'Falha crítica ao persistir perfil no banco.', isMissingTable: false };
   }
 };
 

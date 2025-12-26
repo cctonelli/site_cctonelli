@@ -26,41 +26,51 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
     setIsLoading(true);
     setError(null);
 
+    // Sanitização rigorosa contra erros de validação de e-mail
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = fullName.trim();
+    const cleanTaxId = taxId.trim();
+    const cleanWhatsapp = whatsapp.trim();
+
     try {
       if (mode === 'login') {
-        const { data, error: signInError } = await signIn(email, password);
+        const { error: signInError } = await signIn(cleanEmail, password);
         if (signInError) throw signInError;
         
-        console.debug("[Auth Modal] Login efetuado com sucesso.");
         onSuccess();
         onClose();
       } else {
-        // 1. Criar o usuário no Supabase Auth
-        const { data, error: signUpError } = await signUp(email, password, {
-          full_name: fullName,
-          cpf_cnpj: taxId,
-          whatsapp: whatsapp,
+        // Registro no Auth
+        const { data, error: signUpError } = await signUp(cleanEmail, password, {
+          full_name: cleanName,
+          cpf_cnpj: cleanTaxId,
+          whatsapp: cleanWhatsapp,
           gender: gender,
         });
         
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+          // Tratamento específico para o erro do usuário
+          if (signUpError.message.includes('invalid') && signUpError.message.includes('email')) {
+            throw new Error(`O endereço "${cleanEmail}" foi rejeitado pelo sistema de segurança. Certifique-se de que não há espaços ou caracteres invisíveis.`);
+          }
+          throw signUpError;
+        }
 
         if (data.user) {
-          // 2. Tentar criar o perfil manualmente na tabela public.profiles
-          // Isso garante que os dados sejam salvos mesmo que o trigger falhe ou demore
+          // Gravação manual do Perfil via UPSERT (Resiliência)
           const profilePayload: Profile = {
             id: data.user.id,
-            full_name: fullName,
-            cpf_cnpj: taxId,
-            whatsapp: whatsapp,
+            full_name: cleanName,
+            cpf_cnpj: cleanTaxId,
+            whatsapp: cleanWhatsapp,
             gender: gender,
-            user_type: 'client' // Padrão para novos registros via site
+            user_type: 'client'
           };
 
           const profileResult = await createProfile(profilePayload);
           
           if (profileResult.isError) {
-            console.warn("[Auth Modal] Perfil não foi criado via API (possível trigger duplicado ou RLS), mas o Auth prosseguiu.");
+            console.warn("[Auth Modal] Aviso: Perfil já existente ou gravação via trigger de banco delegada.");
           }
 
           if (!data.session) {
@@ -132,7 +142,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             {error && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] text-red-500 font-bold uppercase tracking-widest text-center animate-shake">{error}</div>}
 
             <button disabled={isLoading} className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50">
-              {isLoading ? 'Acessando Core...' : (mode === 'login' ? 'Entrar Agora' : 'Finalizar Registro')}
+              {isLoading ? 'Conectando ao Core...' : (mode === 'login' ? 'Entrar Agora' : 'Finalizar Registro')}
             </button>
           </form>
 
