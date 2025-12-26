@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import AdminCrudSection from './AdminCrudSection';
 import { Profile, Order } from '../types';
-import { fetchAllOrders, updateOrder } from '../services/supabaseService';
+import { fetchAllOrders, updateOrder, createUserProduct } from '../services/supabaseService';
 
 type TabType = 'carousel' | 'insights' | 'products' | 'variants' | 'canvas' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'orders' | 'tools';
 
-const ADMIN_VERSION = "v8.5.0-PRO";
+const ADMIN_VERSION = "v9.0-ELITE";
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -31,19 +31,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     setLoadingOrders(false);
   };
 
-  const handleApproveOrder = async (orderId: string, currentDownloadLink: string) => {
-    const link = prompt("Insira o Link de Download / FTP para este ativo:", currentDownloadLink || "https://ftp.claudiotonelli.com.br/assets/");
+  const handleApproveOrder = async (order: Order) => {
+    const link = prompt("Insira o Link de Download / FTP para este ativo:", order.download_link || "https://ftp.claudiotonelli.com.br/assets/");
     if (link === null) return;
 
-    const res = await updateOrder(orderId, { 
+    // 1. Atualiza Pedido
+    const resOrder = await updateOrder(order.id, { 
       status: 'approved', 
       approved_by_admin: true,
       download_link: link 
     });
 
-    if (!res.isError) {
-      alert("Pedido aprovado e ativo liberado!");
-      loadOrders();
+    if (!resOrder.isError) {
+      // 2. Insere em User Products (Liberação definitiva)
+      const resAsset = await createUserProduct({
+        user_id: order.user_id,
+        product_id: order.product_id,
+        variant_id: order.variant_id,
+        status: 'active',
+        approved_by_admin: true,
+        download_link: link
+      });
+
+      if (!resAsset.isError) {
+        alert("PROTOCOLO ELITE: Pedido aprovado e ativo liberado no Executive Hub!");
+        loadOrders();
+      } else {
+        alert("Pedido aprovado, mas falha ao inserir em user_products. Verifique permissões RLS.");
+      }
     }
   };
 
@@ -120,7 +135,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                           <div className="space-y-3 flex-1">
                              <div className="flex items-center gap-4">
                                <span className="text-xl font-serif italic text-white">{order.profiles?.full_name || 'Desconhecido'}</span>
-                               <span className={`text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest ${order.status === 'approved' ? 'bg-green-600 text-white' : 'bg-amber-600 text-white'}`}>
+                               <span className={`text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-widest ${
+                                 order.status === 'approved' ? 'bg-green-600 text-white' : 
+                                 order.status === 'pending' ? 'bg-amber-600 text-white' : 'bg-red-600 text-white'
+                               }`}>
                                  {order.status}
                                </span>
                              </div>
@@ -128,13 +146,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                                 <div className="flex flex-col"><span className="text-blue-500">VALOR</span> R$ {order.amount.toLocaleString('pt-BR')}</div>
                                 <div className="flex flex-col"><span className="text-blue-500">WHATSAPP</span> {order.profiles?.whatsapp || 'N/A'}</div>
                                 <div className="flex flex-col"><span className="text-blue-500">CPF/CNPJ</span> {order.profiles?.cpf_cnpj || 'N/A'}</div>
-                                <div className="flex flex-col"><span className="text-blue-500">MÉTODO</span> {order.payment_method}</div>
+                                <div className="flex flex-col"><span className="text-blue-500">REF</span> {order.id.slice(0,8).toUpperCase()}</div>
                              </div>
                           </div>
                           <div className="flex gap-4">
                             {order.status !== 'approved' && (
                               <button 
-                                onClick={() => handleApproveOrder(order.id, order.download_link || '')}
+                                onClick={() => handleApproveOrder(order)}
                                 className="px-8 py-3 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20"
                               >
                                 Aprovar & Liberar

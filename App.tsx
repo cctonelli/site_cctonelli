@@ -26,7 +26,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v8.6.0-ELITE";
+const APP_VERSION = "v9.0-ELITE";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);

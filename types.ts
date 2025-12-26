@@ -92,7 +92,7 @@ export interface Order {
   approved_by_admin: boolean;
   download_link: string | null;
   created_at?: string;
-  profiles?: Profile; // Para joins no admin
+  profiles?: Profile;
 }
 
 export interface UserProduct {
@@ -104,6 +104,7 @@ export interface UserProduct {
   expires_at: string | null;
   access_token: string | null;
   approved_by_admin: boolean;
+  download_link?: string | null;
   created_at?: string;
 }
 
