@@ -6,6 +6,7 @@ import {
 } from '../types';
 
 // CONFIGURAÇÃO OFICIAL - CLAUDIO TONELLI ADVISORY CORE
+// URL e Anon Key validadas conforme especificações do usuário
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
@@ -23,19 +24,18 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 const cleanTableName = (name: string) => name.replace('public.', '').trim();
 
-// Fix: Added isMissingTable detection and property to the return object to satisfy AdminCrudSection.tsx types
 export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
-    // Logic to detect if the table or relation is missing (Postgres error 42P01 or message containing relation/exist)
+    
+    // Detecta se a tabela/relação está ausente no cache ou no banco
     const isMissingTable = code === '42P01' || (message && message.toLowerCase().includes('relation') && message.toLowerCase().includes('does not exist'));
     
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
-    // Script de reparo sugerido para o administrador rodar no SQL Editor caso nada funcione
     const recoverySql = `
--- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.9.0)
+-- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.9.1)
 NOTIFY pgrst, 'reload schema';
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
@@ -173,7 +173,6 @@ export const createProfile = async (profile: Profile) => {
       .upsert(profile, { onConflict: 'id' });
     return logSupabaseError('createProfile', error);
   } catch (err) {
-    // Fix: Added isMissingTable to catch block for return consistency
     return { isError: true, message: 'Falha crítica ao persistir perfil no banco.', isMissingTable: false };
   }
 };

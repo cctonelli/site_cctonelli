@@ -20,8 +20,8 @@ import {
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// TAG DE CONTROLE DE DEPLOY - v6.9.0
-const APP_VERSION = "v6.9.0-CORE-READY";
+// TAG DE CONTROLE DE DEPLOY - v6.9.1
+const APP_VERSION = "v6.9.1-DB-FIX-PRO";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);

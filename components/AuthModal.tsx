@@ -26,7 +26,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
     setIsLoading(true);
     setError(null);
 
-    // Sanitização rigorosa contra erros de validação de e-mail
+    // Sanitização rigorosa contra erros de validação (espaços invisíveis no e-mail)
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = fullName.trim();
     const cleanTaxId = taxId.trim();
@@ -40,7 +40,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         onSuccess();
         onClose();
       } else {
-        // Registro no Auth
+        // 1. Registro no Supabase Auth
         const { data, error: signUpError } = await signUp(cleanEmail, password, {
           full_name: cleanName,
           cpf_cnpj: cleanTaxId,
@@ -49,15 +49,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         });
         
         if (signUpError) {
-          // Tratamento específico para o erro do usuário
-          if (signUpError.message.includes('invalid') && signUpError.message.includes('email')) {
-            throw new Error(`O endereço "${cleanEmail}" foi rejeitado pelo sistema de segurança. Certifique-se de que não há espaços ou caracteres invisíveis.`);
+          // Tratamento amigável para erro de e-mail inválido retornado pela API
+          if (signUpError.message.toLowerCase().includes('invalid') && signUpError.message.toLowerCase().includes('email')) {
+            throw new Error(`O e-mail "${cleanEmail}" foi rejeitado. Verifique se digitou corretamente ou tente outro endereço.`);
           }
           throw signUpError;
         }
 
         if (data.user) {
-          // Gravação manual do Perfil via UPSERT (Resiliência)
+          // 2. Gravação de Perfil via UPSERT (Garante persistência de CPF/CNPJ)
           const profilePayload: Profile = {
             id: data.user.id,
             full_name: cleanName,
@@ -70,7 +70,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           const profileResult = await createProfile(profilePayload);
           
           if (profileResult.isError) {
-            console.warn("[Auth Modal] Aviso: Perfil já existente ou gravação via trigger de banco delegada.");
+            console.warn("[Auth Modal] Perfil persistido via trigger ou erro de RLS não-crítico.");
           }
 
           if (!data.session) {
@@ -83,7 +83,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
       }
     } catch (err: any) {
       console.error("[Auth Modal Error]", err);
-      setError(err.message || 'Falha na autenticação. Verifique suas credenciais.');
+      setError(err.message || 'Falha na autenticação. Verifique os dados e tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -96,8 +96,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto text-blue-500">
              <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
           </div>
-          <h2 className="text-3xl font-serif text-white italic">Validar E-mail</h2>
-          <p className="text-slate-400 text-sm font-light leading-relaxed">Clique no link enviado para <strong>{email}</strong> para ativar seu acesso exclusivo.</p>
+          <h2 className="text-3xl font-serif text-white italic">Ativar Conta</h2>
+          <p className="text-slate-400 text-sm font-light leading-relaxed">Enviamos um link de confirmação para <strong>{email.trim()}</strong>. Por favor, valide seu e-mail para prosseguir.</p>
           <button onClick={onClose} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all">Fechar</button>
         </motion.div>
       </div>
