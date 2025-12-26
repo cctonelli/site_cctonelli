@@ -1,17 +1,16 @@
 
 import React from 'react';
 import { Testimonial } from '../types';
-import { Language, translations } from '../services/i18nService';
+import { Language } from '../services/i18nService';
 
 interface TestimonialsSectionProps {
   testimonials: Testimonial[];
   language: Language;
-  resolveTranslation: (item: any, field: string, base: string) => string;
+  resolveTranslation: (item: any, field: string, fallbackKey: string) => string;
+  t: any;
 }
 
-const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonials, language, resolveTranslation }) => {
-  const t = translations[language];
-
+const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonials, language, resolveTranslation, t }) => {
   return (
     <section id="testimonials" className="py-40 bg-slate-50 dark:bg-[#030712] transition-colors duration-500">
       <div className="container mx-auto px-6">
@@ -34,7 +33,7 @@ const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonials,
                 </svg>
                 <div className="relative z-10 space-y-8">
                   <p className="text-xl text-slate-600 dark:text-slate-300 font-light italic leading-relaxed">
-                    "{resolveTranslation(test, 'quote', test.quote)}"
+                    "{resolveTranslation(test, 'quote', '')}"
                   </p>
                   <div className="flex items-center gap-5">
                     <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white text-xl">

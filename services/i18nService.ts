@@ -1,7 +1,11 @@
 
 export type Language = 'pt' | 'en' | 'es';
 
-export const translations = {
+export interface UIContent {
+  [key: string]: string;
+}
+
+export const staticTranslations: Record<Language, UIContent> = {
   pt: {
     nav_strategy: 'Estratégia',
     nav_insights: 'Insights',
@@ -101,7 +105,7 @@ export const translations = {
     testimonials_title: 'Lo que dicen los líderes',
     testimonials_subtitle: 'Relatos de transformación y excelencia.',
     contact_title: '¿Hablamos?',
-    contact_subtitle: '¿Dudas sobre nuestras mentorías o interesado en consultoría personalizada?',
+    contact_subtitle: '¿Dudas sobre nuestras mentorías ou interesado en consultoría personalizada?',
     contact_name: 'Nombre Completo',
     contact_email: 'E-mail Corporativo',
     contact_message: '¿Cómo podemos ayudar a su negocio?',

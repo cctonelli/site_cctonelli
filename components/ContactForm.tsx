@@ -1,14 +1,14 @@
 
 import React, { useState } from 'react';
 import { submitContact } from '../services/supabaseService';
-import { Language, translations } from '../services/i18nService';
+import { Language } from '../services/i18nService';
 
 interface ContactFormProps {
   language: Language;
+  t: any;
 }
 
-const ContactForm: React.FC<ContactFormProps> = ({ language }) => {
-  const t = translations[language];
+const ContactForm: React.FC<ContactFormProps> = ({ language, t }) => {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
@@ -50,17 +50,6 @@ const ContactForm: React.FC<ContactFormProps> = ({ language }) => {
                   <span className="dark:text-white text-slate-900 font-medium">contato@claudiotonelli.com.br</span>
                 </div>
               </div>
-              <div className="flex items-center gap-6 group">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Corporate HQ</div>
-                  <span className="dark:text-white text-slate-900 font-medium">São Paulo - SP, Brasil</span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -97,7 +86,6 @@ const ContactForm: React.FC<ContactFormProps> = ({ language }) => {
             >
               {status === 'loading' ? t.contact_sending : t.contact_send}
             </button>
-            {status === 'success' && <p className="text-green-500 text-center text-xs font-bold uppercase tracking-widest">Sent Successfully</p>}
           </form>
         </div>
       </div>

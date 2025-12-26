@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatBot from './components/ChatBot';
@@ -15,13 +15,13 @@ import WorkInProgress from './components/WorkInProgress';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
-  getProfile, signOut, subscribeToChanges, supabase
+  getProfile, signOut, subscribeToChanges, supabase, fetchGlobalTranslations
 } from './services/supabaseService';
-import { Language, translations } from './services/i18nService';
+import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// TAG DE CONTROLE DE DEPLOY - v7.0.0
-const APP_VERSION = "v7.0.0-NEXT-GEN";
+// TAG DE CONTROLE DE DEPLOY - v7.1.0-ULTRA-I18N
+const APP_VERSION = "v7.1.0-ULTRA-I18N";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -30,26 +30,33 @@ const App: React.FC = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
   const [dbContent, setDbContent] = useState<Record<string, any>>({});
+  const [dbTranslations, setDbTranslations] = useState<Record<string, string>>({});
   
   const [isLive, setIsLive] = useState(false);
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'pt');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system');
-  const t = translations[language];
   
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
+  // MOTOR DE TRADUÇÃO UNIFICADO (Hierarquia: DB Global -> Local Static)
+  const t = useMemo(() => {
+    const base = staticTranslations[language];
+    return { ...base, ...dbTranslations };
+  }, [language, dbTranslations]);
+
   const syncData = useCallback(async () => {
     try {
-      const [m, i, p, test, s, car] = await Promise.all([
+      const [m, i, p, test, s, car, translationsMap] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
         fetchProducts(),
         fetchTestimonials(),
         fetchSiteContent('home'),
-        fetchCarouselImages()
+        fetchCarouselImages(),
+        fetchGlobalTranslations(language)
       ]);
 
       setMetrics(Array.isArray(m) ? m : []);
@@ -58,13 +65,14 @@ const App: React.FC = () => {
       setTestimonials(Array.isArray(test) ? test : []);
       setDbContent(s || {});
       setCarouselImages(Array.isArray(car) ? car : []);
+      setDbTranslations(translationsMap || {});
       
       setIsLive(true);
     } catch (err) {
       console.error(`[App Core] Sync Failure:`, err);
       setIsLive(false);
     }
-  }, []);
+  }, [language]);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -98,7 +106,7 @@ const App: React.FC = () => {
       else setUserProfile(null);
     });
 
-    const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content'];
+    const tables = ['metrics', 'insights', 'products', 'testimonials', 'carousel_images', 'site_content', 'content_translations'];
     const subs = tables.map(table => subscribeToChanges(table, syncData));
     
     return () => {
@@ -115,18 +123,33 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const resolveTranslation = (item: any, field: string, fallback: string) => {
-    if (!item) return fallback;
-    if (language === 'pt') return item[field] || fallback;
-    return item[`${field}_${language}`] || item[field] || fallback;
-  };
+  // HELPER DE TRADUÇÃO HIERÁRQUICA PARA ENTIDADES (Tabela.coluna_lang -> Translation_Table -> Fallback)
+  const resolveTranslation = useCallback((item: any, field: string, fallbackKey: string) => {
+    if (!item) return t[fallbackKey] || '';
+    
+    // 1. Prioridade: Coluna de Idioma na Tabela Principal (ex: title_en)
+    if (language !== 'pt' && item[`${field}_${language}`]) {
+      return item[`${field}_${language}`];
+    }
+    
+    // 2. Se for PT ou não tiver coluna lang, usa o field original
+    if (item[field]) return item[field];
+    
+    // 3. Fallback Final: Bundle de Traduções (Global ou Estático)
+    return t[fallbackKey] || '';
+  }, [language, t]);
 
-  const resolveContent = (key: string, localFallback: string) => {
+  const resolveContent = useCallback((key: string, localFallback: string) => {
+    // 1. Tabela site_content (Hierárquico: value_en -> value -> i18n_bundle)
     const item = dbContent[key];
-    if (!item) return localFallback;
-    if (language === 'pt') return item.value || localFallback;
-    return item[`value_${language}`] || item.value || localFallback;
-  };
+    if (item) {
+      if (language !== 'pt' && item[`value_${language}`]) return item[`value_${language}`];
+      if (item.value) return item.value;
+    }
+    
+    // 2. Fallback i18n unificado (Global DB Translations + Static Bundle)
+    return t[key] || localFallback;
+  }, [language, dbContent, t]);
 
   return (
     <Router>
@@ -157,11 +180,11 @@ const App: React.FC = () => {
           theme={theme}
           setTheme={setTheme}
           labels={{
-            strategy: resolveContent('nav_strategy', t.nav_strategy),
-            insights: resolveContent('nav_insights', t.nav_insights),
-            performance: resolveContent('nav_performance', t.nav_performance),
-            connection: resolveContent('nav_connection', t.nav_connection),
-            client_area: resolveContent('nav_client_area', t.nav_client_area)
+            strategy: resolveContent('nav_strategy', 'Estratégia'),
+            insights: resolveContent('nav_insights', 'Insights'),
+            performance: resolveContent('nav_performance', 'Performance'),
+            connection: resolveContent('nav_connection', 'Conexão'),
+            client_area: resolveContent('nav_client_area', 'Área do Cliente')
           }}
         />
 
@@ -186,7 +209,7 @@ const App: React.FC = () => {
                     {metrics.length > 0 ? metrics.map(m => (
                       <div key={m.id} className="text-center group">
                         <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2">{m.value}</div>
-                        <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', m.label)}</div>
+                        <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', '')}</div>
                       </div>
                     )) : (
                       <div className="col-span-full text-center text-slate-400 text-[10px] uppercase tracking-[0.5em] animate-pulse py-10 italic">Initializing KPIs...</div>
@@ -199,10 +222,10 @@ const App: React.FC = () => {
                 <div className="container mx-auto px-6">
                   <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-4">
                     <div>
-                      <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{t.insights_badge}</div>
-                      <h2 className="text-4xl lg:text-5xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', t.insights_title)}</h2>
+                      <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{resolveContent('insights_badge', 'Conhecimento Estratégico')}</div>
+                      <h2 className="text-4xl lg:text-5xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', 'Insights')}</h2>
                     </div>
-                    <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{t.insights_all}</Link>
+                    <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{resolveContent('insights_all', 'Ver Todo o Acervo')}</Link>
                   </div>
                   <div className="grid md:grid-cols-3 gap-12">
                     {insights.length > 0 ? insights.map(insight => (
@@ -211,8 +234,8 @@ const App: React.FC = () => {
                           <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
                         </div>
                         <div className="space-y-3">
-                          <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{resolveTranslation(insight, 'title', insight.title)}</h3>
-                          <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light">{resolveTranslation(insight, 'excerpt', insight.excerpt || '')}</p>
+                          <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{resolveTranslation(insight, 'title', '')}</h3>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light">{resolveTranslation(insight, 'excerpt', '')}</p>
                         </div>
                       </Link>
                     )) : (
@@ -222,9 +245,9 @@ const App: React.FC = () => {
                 </div>
               </section>
 
-              <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} />
-              <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} />
-              <ContactForm language={language} />
+              <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />
+              <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} t={t} />
+              <ContactForm language={language} t={t} />
             </main>
           } />
           <Route path="/insight/:id" element={<ArticlePage />} />
@@ -237,7 +260,7 @@ const App: React.FC = () => {
             <div className="w-14 h-14 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white shadow-2xl">CT</div>
             <div className="space-y-4">
               <h4 className="text-xl font-serif dark:text-white italic">Claudio Tonelli Group</h4>
-              <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', '© 2025 Claudio Tonelli Group')}</p>
             </div>
           </div>
         </footer>

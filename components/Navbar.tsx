@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Profile } from '../types';
-import { Language, translations } from '../services/i18nService';
+// Corrected import to use staticTranslations as translations is not exported from i18nService
+import { Language, staticTranslations } from '../services/i18nService';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface NavbarProps {
@@ -34,7 +35,8 @@ const Navbar: React.FC<NavbarProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const t = translations[language];
+  // Updated to use staticTranslations
+  const t = staticTranslations[language];
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -136,10 +138,12 @@ const Navbar: React.FC<NavbarProps> = ({
             {userProfile && (
               <div className="absolute top-full right-0 mt-4 w-52 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[1.5rem] shadow-2xl opacity-0 invisible group-hover/user:opacity-100 group-hover/user:visible transition-all duration-300 backdrop-blur-3xl transform translate-y-2 group-hover/user:translate-y-0 z-[110]">
                 <button onClick={onAdminClick} className="w-full text-left px-6 py-4 text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
-                  {userProfile.user_type === 'admin' ? translations[language].nav_admin : translations[language].nav_portal}
+                  {/* Updated to use staticTranslations */}
+                  {userProfile.user_type === 'admin' ? staticTranslations[language].nav_admin : staticTranslations[language].nav_portal}
                 </button>
                 <button onClick={onLogout} className="w-full text-left px-6 py-4 text-[9px] font-black uppercase tracking-[0.2em] text-red-500 hover:bg-red-500/10 transition-all border-t border-slate-200 dark:border-white/5">
-                  {translations[language].nav_logout}
+                  {/* Updated to use staticTranslations */}
+                  {staticTranslations[language].nav_logout}
                 </button>
               </div>
             )}

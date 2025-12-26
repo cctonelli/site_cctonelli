@@ -1,18 +1,18 @@
 
+// Added React import to fix 'Cannot find namespace React' error
 import React from 'react';
 import { Product } from '../types';
 import { motion } from 'framer-motion';
-import { Language, translations } from '../services/i18nService';
+import { Language } from '../services/i18nService';
 
 interface ProductsSectionProps {
   products: Product[];
   language: Language;
-  resolveTranslation: (item: any, field: string, base: string) => string;
+  resolveTranslation: (item: any, field: string, fallbackKey: string) => string;
+  t: any;
 }
 
-const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, resolveTranslation }) => {
-  const t = translations[language];
-
+const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, resolveTranslation, t }) => {
   return (
     <section id="products" className="py-40 bg-white dark:bg-slate-950 relative overflow-hidden transition-colors duration-500">
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2"></div>
@@ -61,10 +61,10 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, r
                       </div>
                     </div>
                     <h3 className="text-2xl font-serif dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">
-                      {resolveTranslation(product, 'name', product.name)}
+                      {resolveTranslation(product, 'name', '')}
                     </h3>
                     <p className="text-slate-500 dark:text-slate-400 font-light text-sm leading-relaxed line-clamp-3">
-                      {resolveTranslation(product, 'description', product.description || '')}
+                      {resolveTranslation(product, 'description', '')}
                     </p>
                   </div>
                   
@@ -73,18 +73,13 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({ products, language, r
                       onClick={() => product.config?.url && window.open(product.config.url, '_blank')}
                       className="w-full bg-blue-600 dark:bg-white text-white dark:text-slate-950 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-blue-500 dark:hover:bg-blue-600 dark:hover:text-white transition-all shadow-xl shadow-blue-600/10 active:scale-95"
                     >
-                      {resolveTranslation(product.config, 'action_label', product.config?.action_label || t.products_buy)}
+                      {resolveTranslation(product.config, 'action_label', 'products_buy')}
                     </button>
                   </div>
                 </div>
               </div>
             </motion.div>
           ))}
-          {(!Array.isArray(products) || products.length === 0) && (
-             <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[3rem]">
-                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 animate-pulse">Sincronizando Catálogo...</span>
-             </div>
-          )}
         </div>
       </div>
     </section>
