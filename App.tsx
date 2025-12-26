@@ -19,7 +19,6 @@ import CheckoutPage from './components/Store/CheckoutPage';
 import ToolsGrid from './components/Store/ToolsGrid';
 import GlobalStrategyMap from './components/GlobalStrategyMap';
 
-// Removed subscribeToChanges from imports as it's not exported by supabaseService and not used in this file
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
@@ -28,7 +27,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v9.0-ELITE";
+const APP_VERSION = "v10.0-ELITE";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);

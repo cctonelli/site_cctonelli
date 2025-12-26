@@ -1,43 +1,51 @@
-# Claudio Tonelli Consultoria — Advisory Hub v9.0-ELITE
 
-O ecossistema digital da **Claudio Tonelli Consultoria** atingiu seu estágio máximo de maturidade. Esta plataforma opera agora como uma **Máquina Global de Vendas de Ativos Digitais**, integrando consultoria de elite com automação de e-commerce.
+# Claudio Tonelli Consultoria — Advisory Hub v10.0-ELITE
 
-## 🚀 Status de Integração: Estágio Final (Deploy v9.0)
+O ecossistema digital da **Claudio Tonelli Consultoria** atingiu sua maturidade máxima com o build **v10.0-ELITE**. Esta plataforma opera agora como uma **Plataforma Global de Vendas de Ativos Digitais de Elite**, integrando consultoria estratégica com uma infraestrutura de e-commerce indestrutível e server-side.
 
-O fluxo de vendas revisado está **100% operacional**, integrado via Supabase Core:
+## 🚀 Status de Integração: Estágio Final (Build v10.0-ELITE)
 
-1.  **Vitrine (/loja):** Grid premium consumindo `products` (is_active=true) ordenado por `featured`.
-2.  **Dynamic Canvas (/loja/[slug]):** Renderização modular de `product_content_blocks`.
-3.  **Checkout PIX:** Geração de QR Code e registro em `orders` com status `pending`.
-4.  **Protocolo de Aprovação:** Admin aprova pagamentos, gerando automaticamente acessos em `user_products`.
-5.  **Executive Hub:** Liberação via **Realtime Sync** de links FTP e downloads no portal do parceiro.
+O fluxo de operações para produtos como o **V8 MATRIX EDITION** está totalmente operacional e centralizado:
+
+1.  **Vitrine (/loja):** Grid premium consumindo `products` com tratamento de erros RLS.
+2.  **Matrix Canvas Builder:** Renderização dinâmica via `product_content_blocks` com estilos glitch, scanline e terminal.
+3.  **Checkout PIX v10:** Geração de QR Code dinâmico e registro de `orders` vinculado ao perfil do Partner.
+4.  **Protocolo de Aprovação Elite:** Administração centralizada que aprova pagamentos e provisiona automaticamente:
+    *   Registros em `user_products` (Ativos liberados).
+    *   Inicialização de `v8_matrix_usage` (Limites de disparos e threads server-side).
+5.  **Executive Hub:** Dashboard realtime para o cliente baixar executáveis e monitorar o consumo de seus ativos.
+6.  **Versionamento Forçado:** Controle total de versões via `app_versions`, garantindo que o cliente use sempre o protocolo mais recente.
 
 ---
 
-## 🔐 Auditoria de Segurança & Políticas RLS
+## 🔐 Auditoria de Segurança & Políticas RLS (v10.0-ELITE Verified)
 
-O sistema segue rigorosamente as políticas de **Row Level Security** do Supabase para garantir integridade total:
+O sistema segue rigorosamente as políticas de **Row Level Security** (RLS) para garantir que cada Partner acesse exclusivamente o que lhe foi provisionado.
 
-| Tabela | Política RLS Ativa | Comportamento de Elite |
+| Tabela | Política RLS Ativa | Descrição Técnica |
 | :--- | :--- | :--- |
-| `products` | `public_read_products` | Leitura pública do catálogo; Escrita apenas Admin. |
-| `product_variants` | `public_read_variants` | Preços e planos acessíveis globalmente. |
-| `orders` | `user_read_own_orders` | Clientes vêem apenas seus próprios pedidos; Admin tem `FULL_ACCESS`. |
-| `user_products` | `user_read_own_access` | Liberação de ativos via Realtime; Apenas o proprietário acessa. |
-| `profiles` | `auth.uid() = id` | Dados sensíveis (CPF/CNPJ, WhatsApp) protegidos por ID. |
-| `tools` | `public_read` | Toolkit estratégico disponível conforme nível de acesso. |
-| `contacts` | `public_insert` | Captação de leads aberta; leitura restrita ao Advisory Board. |
+| `app_versions` | `public_read_app_versions` | Leitura pública para updates; CRUD exclusivo Admin. |
+| `carousel_images` | `public_read` | Visibilidade pública do Hero; Edição restrita ao Admin. |
+| `contacts` | `public_insert_contacts` | Inserção livre para leads; Leitura bloqueada (Admin only). |
+| `content_translations`| `public_read` | Localização i18n acessível globalmente. |
+| `orders` | `user_read_own_orders` | Clientes vêem apenas seus pedidos; Admin faz o CRUD. |
+| `product_content_blocks`| `public_read_content_blocks`| Renderização pública do Canvas dinâmico. |
+| `product_variants` | `public_read_variants` | Listagem de planos e preços disponível para todos. |
+| `products` | `public_read_products` | Catálogo de ativos visível publicamente. |
+| `profiles` | `auth.uid() = id` | Proteção de dados sensíveis (CPF/CNPJ, WhatsApp). |
+| `user_products` | `user_read_own_access` | Liberação de ativos via Realtime Sync para o proprietário. |
+| `v8_matrix_usage` | `user_read_own_usage` | **Server-side Usage:** App consulta e atualiza apenas o uso do dono. |
 
 ---
 
-## 🛠️ Stack Tecnológica v9.0
+## 🛠️ Stack Tecnológica ELITE
 
-*   **Intelligence:** Google Gemini 3 Pro (Thinking Model) para diagnósticos no Hub.
-*   **Engine:** Supabase (Auth, DB, Realtime, Storage).
-*   **Visuals:** Three.js (Conexões Globais) + McKinsey Aesthetic (Noise Overlay).
-*   **Deploy:** Vercel Edge Runtime com headers de segurança AES-256 (simulado).
+*   **Core:** React 19 + Framer Motion (UI Fluida).
+*   **Intelligence:** Google Gemini 3 Pro (Thinking Budget p/ Recomendações).
+*   **Security:** Supabase RLS + JWT + AES-256 (Simulado no Checkout).
+*   **Visuals:** Matrix Edition CSS (Glitch & Scanline) + Three.js Globe.
 
 ---
 
 **Claudio Tonelli Consultoria**  
-*Excelência estratégica desenhada para a era digital de alto impacto.*
+*Onde o rigor da elite consultiva encontra a potência da automação disruptiva.*
