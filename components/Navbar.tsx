@@ -44,7 +44,6 @@ const Navbar: React.FC<NavbarProps> = ({
 
   const scrollToSection = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
-    // Se não estivermos na home, primeiro navegamos para ela
     if (location.pathname !== '/') {
       navigate('/');
       setTimeout(() => {
@@ -78,12 +77,16 @@ const Navbar: React.FC<NavbarProps> = ({
   return (
     <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-700 ${isScrolled ? 'bg-white/95 dark:bg-slate-950/90 backdrop-blur-2xl py-3 border-b border-slate-200 dark:border-white/5 shadow-2xl' : 'bg-transparent py-8'}`}>
       <div className="container mx-auto px-6 flex justify-between items-center gap-4">
+        
         {/* Brand/Logo */}
         <div className="flex items-center gap-3 cursor-pointer group shrink-0" onClick={(e) => scrollToSection(e, 'hero')}>
           <div className="w-12 h-12 lg:w-14 lg:h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-xl lg:text-2xl text-white shadow-xl shadow-blue-600/30 group-hover:scale-105 transition-transform duration-500">CT</div>
           <div className="flex flex-col">
             <span className="text-lg lg:text-xl font-bold tracking-tighter leading-none dark:text-white text-slate-900 uppercase">Claudio Tonelli</span>
-            <span className="text-[7px] lg:text-[9px] uppercase tracking-[0.4em] text-slate-500 font-black mt-1">Executive Advisory</span>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[7px] lg:text-[8px] uppercase tracking-[0.4em] text-slate-500 font-black">Executive Advisory</span>
+              <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.5)]"></div>
+            </div>
           </div>
         </div>
         
@@ -97,7 +100,6 @@ const Navbar: React.FC<NavbarProps> = ({
 
         {/* Actions - Right Side */}
         <div className="flex items-center gap-3 lg:gap-6 shrink-0">
-          {/* Active Language Switcher - More Compact */}
           <div className="hidden sm:flex items-center bg-slate-100 dark:bg-white/5 rounded-full p-1 border border-slate-200 dark:border-white/10 shadow-inner">
             {languages.map(lang => (
               <button 
@@ -125,8 +127,8 @@ const Navbar: React.FC<NavbarProps> = ({
             >
               {userProfile ? (
                 <>
-                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                  <span className="max-w-[80px] truncate">{userProfile.full_name?.split(' ')[0] || 'Executivo'}</span>
+                  <svg className="h-3 w-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                  <span className="max-w-[80px] truncate">{userProfile.full_name?.split(' ')[0] || 'Partner'}</span>
                 </>
               ) : labels.client_area}
             </button>

@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, logSupabaseError } from '../services/supabaseService';
+import RichTextEditor from './RichTextEditor';
 
 interface Field {
   key: string;
   label: string;
-  type?: 'text' | 'textarea' | 'image' | 'toggle' | 'number' | 'json';
+  type?: 'text' | 'textarea' | 'image' | 'toggle' | 'number' | 'json' | 'rich-text';
 }
 
 interface AdminCrudSectionProps {
@@ -54,7 +55,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         });
         setStatus({ 
           text: errorInfo.isMissingTable 
-            ? `SCHEMA LOCK: Acesso à tabela '${tableName}' negado ou cache travado.` 
+            ? `SCHEMA LOCK: Acesso à tabela '${tableName}' negado.` 
             : errorInfo.isRlsError 
             ? `RLS BLOCK: Permissão de leitura negada na tabela '${tableName}'.`
             : `FALHA DB: ${errorInfo.code}`, 
@@ -130,7 +131,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
       if (error) throw error;
 
-      setStatus({ text: 'Sucesso: Sincronia de Ativo completa!', type: 'success' });
+      setStatus({ text: 'Sucesso: Ativo sincronizado!', type: 'success' });
       setFormData({});
       setEditingId(null);
       await loadData();
@@ -181,7 +182,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
             onClick={() => {
               if (errorDetails.sql) {
                 navigator.clipboard.writeText(errorDetails.sql);
-                alert('Script de Reparo Copiado! Rode no SQL Editor do Supabase para corrigir as permissões (incluindo perfis de usuários).');
+                alert('Script de Reparo Copiado! Rode no SQL Editor do Supabase.');
               }
             }}
             className="w-full bg-red-600 text-white py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
@@ -203,7 +204,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
         <div className="grid md:grid-cols-2 gap-8">
           {(fields || []).map(f => (
-            <div key={f.key} className={f.type === 'textarea' || f.type === 'json' ? 'md:col-span-2' : ''}>
+            <div key={f.key} className={f.type === 'textarea' || f.type === 'json' || f.type === 'rich-text' ? 'md:col-span-2' : ''}>
               <div className="flex justify-between items-center mb-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600">{f.label}</label>
                 {f.type === 'json' && (
@@ -215,7 +216,14 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
                   </button>
                 )}
               </div>
-              {f.type === 'textarea' || f.type === 'json' ? (
+              
+              {f.type === 'rich-text' ? (
+                <RichTextEditor 
+                  key={`${editingId}-${f.key}`}
+                  content={formData[f.key] || ''} 
+                  onChange={(html) => setFormData({...formData, [f.key]: html})} 
+                />
+              ) : f.type === 'textarea' || f.type === 'json' ? (
                 <textarea 
                   placeholder={f.type === 'json' ? '{"image_url": "...", "url": "..."}' : ''}
                   className="w-full bg-black border border-white/5 rounded-2xl p-6 text-sm text-slate-300 focus:border-blue-500/50 outline-none h-40 font-mono transition-all"
@@ -247,7 +255,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
             disabled={loading || errorDetails?.isMissing} 
             className="flex-1 bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.4em] text-[10px] hover:bg-blue-500 transition-all active:scale-[0.98] disabled:opacity-20 shadow-2xl shadow-blue-600/20"
           >
-            {editingId ? 'Atualizar Ativo' : 'Publicar no Core'}
+            {editingId ? 'Atualizar Registro' : 'Publicar no Core'}
           </button>
           {editingId && (
             <button onClick={() => { setEditingId(null); setFormData({}); }} className="px-10 bg-white/5 text-slate-600 py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] hover:bg-white/10 transition-all">
@@ -286,7 +294,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         )) : !loading && (
           <div className="text-center py-20 bg-slate-950/20 border border-dashed border-white/5 rounded-[3rem]">
             <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-800 italic animate-pulse">
-              Banco de dados inacessível ou vazio.
+              Banco de dados vazio ou inacessível.
             </span>
           </div>
         )}

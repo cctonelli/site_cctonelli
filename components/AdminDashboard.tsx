@@ -5,7 +5,7 @@ import { Profile } from '../types';
 
 type TabType = 'carousel' | 'insights' | 'products' | 'metrics' | 'testimonials' | 'content' | 'leads' | 'translations';
 
-const ADMIN_VERSION = "v6.8.7-HARD-SYNC";
+const ADMIN_VERSION = "v7.0.0-NEXT-GEN";
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -19,7 +19,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     const sql = "NOTIFY pgrst, 'reload schema';";
     if (navigator.clipboard) {
       navigator.clipboard.writeText(sql);
-      alert("🛠️ TERMINAL DE REPARO\n\n1. O comando de pulso SQL foi copiado.\n2. No SQL Editor do Supabase, rode o comando.\n\nSe o erro 404 persistir, use o botão de 'Reset de Permissões' que aparecerá no card de erro da seção.");
+      alert("🛠️ TERMINAL DE REPARO\n\nComando de pulso SQL copiado. Execute no SQL Editor do Supabase.");
     } else {
       alert("Execute no SQL Editor: " + sql);
     }
@@ -45,8 +45,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           <div className="flex items-center gap-4 mb-0 lg:mb-12 min-w-fit">
             <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center font-bold text-white text-2xl shadow-xl shadow-blue-600/20">CT</div>
             <div className="flex flex-col">
-              <span className="font-black text-[11px] uppercase tracking-[0.6em] text-white">Management</span>
-              <span className="text-[7px] uppercase tracking-[0.3em] text-blue-500 font-bold mt-1">Terminal {ADMIN_VERSION}</span>
+              <span className="font-black text-[11px] uppercase tracking-[0.6em] text-white">Advisory Admin</span>
+              <span className="text-[7px] uppercase tracking-[0.3em] text-blue-500 font-bold mt-1">CORE ENGINE {ADMIN_VERSION}</span>
             </div>
           </div>
           
@@ -59,7 +59,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               { id: 'testimonials', label: 'Social Proof' },
               { id: 'content', label: 'Copywriting' },
               { id: 'translations', label: 'Traduções (i18n)' },
-              { id: 'leads', label: 'Lead CRM' }
+              { id: 'leads', label: 'CRM Leads' }
             ].map(tab => (
               <button 
                 key={tab.id} 
@@ -86,17 +86,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
         <div className="flex-1 overflow-y-auto p-8 lg:p-20 bg-grid relative custom-scrollbar">
           <div className="max-w-4xl mx-auto pb-32">
             <header className="mb-16">
-               <h2 className="text-4xl lg:text-5xl font-serif text-white italic mb-4">Módulo {activeTab}</h2>
+               <h2 className="text-4xl lg:text-5xl font-serif text-white italic mb-4">Gerenciamento de {activeTab}</h2>
                <div className="w-20 h-1 bg-blue-600"></div>
             </header>
 
             <div key={activeTab}>
-              {activeTab === 'carousel' && <AdminCrudSection tableName="carousel_images" title="Slide do Carrossel" fields={[{ key: 'url', label: 'URL da Imagem', type: 'image' }, { key: 'title', label: 'Título' }, { key: 'subtitle', label: 'Subtítulo' }, { key: 'cta_url', label: 'Link do Botão (Saiba Mais)' }, { key: 'display_order', label: 'Ordem', type: 'number' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['url', 'title', 'is_active']} />}
-              {activeTab === 'insights' && <AdminCrudSection tableName="insights" title="Insight Estratégico" fields={[{ key: 'title', label: 'Título' }, { key: 'excerpt', label: 'Resumo', type: 'textarea' }, { key: 'image_url', label: 'Capa (URL)', type: 'image' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['image_url', 'title', 'is_active']} />}
+              {activeTab === 'carousel' && <AdminCrudSection tableName="carousel_images" title="Slide do Carrossel" fields={[{ key: 'url', label: 'URL da Imagem', type: 'image' }, { key: 'title', label: 'Título' }, { key: 'subtitle', label: 'Subtítulo' }, { key: 'cta_url', label: 'Link do Botão' }, { key: 'display_order', label: 'Ordem', type: 'number' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['url', 'title', 'is_active']} />}
+              {activeTab === 'insights' && <AdminCrudSection tableName="insights" title="Insight Estratégico" fields={[{ key: 'title', label: 'Título' }, { key: 'excerpt', label: 'Resumo (Card)', type: 'textarea' }, { key: 'content', label: 'Conteúdo do Artigo', type: 'rich-text' }, { key: 'image_url', label: 'Capa (URL)', type: 'image' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['image_url', 'title', 'is_active']} />}
               {activeTab === 'products' && <AdminCrudSection tableName="products" title="Solução" fields={[{ key: 'name', label: 'Nome' }, { key: 'description', label: 'Descrição', type: 'textarea' }, { key: 'price', label: 'Preço', type: 'number' }, { key: 'type', label: 'Tipo' }, { key: 'config', label: 'Config (JSON)', type: 'json' }]} displayColumns={['name', 'price', 'type']} />}
               {activeTab === 'metrics' && <AdminCrudSection tableName="metrics" title="KPI" fields={[{ key: 'value', label: 'Valor' }, { key: 'label', label: 'Rótulo' }, { key: 'is_active', label: 'Ativo', type: 'toggle' }]} displayColumns={['value', 'label', 'is_active']} />}
               {activeTab === 'testimonials' && <AdminCrudSection tableName="testimonials" title="Social Proof" fields={[{ key: 'name', label: 'Nome' }, { key: 'company', label: 'Empresa' }, { key: 'quote', label: 'Citação', type: 'textarea' }, { key: 'approved', label: 'Aprovado', type: 'toggle' }]} displayColumns={['name', 'company', 'approved']} />}
-              {activeTab === 'content' && <AdminCrudSection tableName="site_content" title="Copywriting" idColumn="key" fields={[{ key: 'key', label: 'Chave ID' }, { key: 'value', label: 'Conteúdo', type: 'textarea' }, { key: 'page', label: 'Página' }]} displayColumns={['key', 'value', 'page']} />}
+              {activeTab === 'content' && <AdminCrudSection tableName="site_content" title="Copywriting" idColumn="key" fields={[{ key: 'key', label: 'Chave ID' }, { key: 'value', label: 'Conteúdo Dinâmico', type: 'rich-text' }, { key: 'page', label: 'Página' }]} displayColumns={['key', 'value', 'page']} />}
               {activeTab === 'translations' && <AdminCrudSection tableName="content_translations" title="Tradução" fields={[{ key: 'entity_type', label: 'Tipo' }, { key: 'field', label: 'Campo' }, { key: 'locale', label: 'Idioma' }, { key: 'value', label: 'Tradução', type: 'textarea' }]} displayColumns={['entity_type', 'field', 'locale']} />}
               {activeTab === 'leads' && <AdminCrudSection tableName="contacts" title="CRM Leads" fields={[{ key: 'name', label: 'Prospect' }, { key: 'email', label: 'E-mail' }, { key: 'message', label: 'Mensagem', type: 'textarea' }]} displayColumns={['name', 'email', 'created_at']} />}
             </div>
