@@ -16,6 +16,7 @@ import StoreGrid from './components/Store/StoreGrid';
 import ProductPage from './components/Store/ProductPage';
 import CheckoutPage from './components/Store/CheckoutPage';
 import ToolsGrid from './components/Store/ToolsGrid';
+import GlobalStrategyMap from './components/GlobalStrategyMap';
 
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
@@ -25,7 +26,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v8.5.0-PRO";
+const APP_VERSION = "v8.6.0-ELITE";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -118,7 +119,7 @@ const App: React.FC = () => {
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">ADVISORY ENGINE {isLive ? 'ACTIVE' : 'SYNCING'}</span>
+            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">ADVISORY CORE {isLive ? 'ACTIVE' : 'SYNCING'}</span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
           </div>
@@ -153,7 +154,7 @@ const App: React.FC = () => {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
                     {metrics.map(m => (
                       <div key={m.id} className="text-center group">
-                        <div className="text-5xl lg:text-6xl font-serif font-bold text-blue-600 mb-2">{m.value}</div>
+                        <div className="text-5xl lg:text-7xl font-serif font-bold text-blue-600 mb-2 transition-transform group-hover:scale-110 duration-500">{m.value}</div>
                         <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', '')}</div>
                       </div>
                     ))}
@@ -166,7 +167,7 @@ const App: React.FC = () => {
                   <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-4">
                     <div>
                       <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
-                      <h2 className="text-4xl lg:text-5xl font-serif italic dark:text-white text-slate-900">{resolveContent('insights_title', t.insights_title)}</h2>
+                      <h2 className="text-4xl lg:text-7xl font-serif italic dark:text-white text-slate-900 leading-[1.1]">{resolveContent('insights_title', t.insights_title)}</h2>
                     </div>
                     <Link to="/wip" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{resolveContent('insights_all', t.insights_all)}</Link>
                   </div>
@@ -178,7 +179,7 @@ const App: React.FC = () => {
                         </div>
                         <div className="space-y-3">
                           <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors">{resolveTranslation(insight, 'title', '')}</h3>
-                          <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light">{resolveTranslation(insight, 'excerpt', '')}</p>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light leading-relaxed">{resolveTranslation(insight, 'excerpt', '')}</p>
                         </div>
                       </Link>
                     ))}
@@ -187,6 +188,7 @@ const App: React.FC = () => {
               </section>
 
               <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />
+              <GlobalStrategyMap />
               <ToolsGrid />
               <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} t={t} />
               <ContactForm language={language} t={t} />

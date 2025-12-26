@@ -6,7 +6,7 @@ import {
 } from '../types';
 
 /**
- * CONFIGURAÇÃO OFICIAL - CLAUDIO TONELLI ADVISORY CORE
+ * CONFIGURAÇÃO OFICIAL - CLAUDIO TONELLI ADVISORY CORE v8.5.0-PRO
  */
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
@@ -19,22 +19,28 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: window.localStorage
   },
   global: {
-    headers: { 'x-application-name': 'ct-advisory-v7' }
+    headers: { 'x-application-name': 'ct-advisory-pro' }
   }
 });
 
+/**
+ * Normaliza o nome da tabela para evitar erros de cache PGRST205
+ */
 const cleanTableName = (name: string) => name.replace('public.', '').trim();
 
 export const logSupabaseError = (context: string, error: any) => {
   if (error) {
     const message = error.message || 'Unknown Error';
     const code = error.code || 'N/A';
-    const isMissingTable = code === '42P01' || (message && message.toLowerCase().includes('relation') && message.toLowerCase().includes('does not exist'));
+    const hint = error.hint || '';
+    
+    // Detecção específica de erros de cache de schema ou RLS
+    const isMissingTable = code === '42P01' || message.includes('PGRST205') || message.toLowerCase().includes('relation') && message.toLowerCase().includes('does not exist');
     const isRlsError = code === '42501' || message.includes('row-level security');
     
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
-    const recoverySql = `-- REPARAÇÃO TOTAL (v8.0.0)\nNOTIFY pgrst, 'reload schema';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;`.trim();
+    const recoverySql = `-- REPARAÇÃO TOTAL DE SCHEMA E PERMISSÕES (v8.5.0-PRO)\nNOTIFY pgrst, 'reload schema';\nNOTIFY pgrst, 'reload config';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;\nGRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;`.trim();
     
     return { isError: true, message, code, suggestedSql: recoverySql, isMissingTable, isRlsError };
   }
@@ -43,7 +49,7 @@ export const logSupabaseError = (context: string, error: any) => {
 
 export const fetchTools = async (): Promise<Tool[]> => {
   try {
-    const { data, error } = await supabase.from('tools').select('*').eq('is_active', true);
+    const { data, error } = await supabase.from(cleanTableName('tools')).select('*').eq('is_active', true);
     if (logSupabaseError('fetchTools', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -51,7 +57,7 @@ export const fetchTools = async (): Promise<Tool[]> => {
 
 export const fetchProducts = async (onlyActive = true): Promise<Product[]> => {
   try {
-    let query = supabase.from('products').select('*').order('featured', { ascending: false });
+    let query = supabase.from(cleanTableName('products')).select('*').order('featured', { ascending: false });
     if (onlyActive) query = query.eq('is_active', true);
     const { data, error } = await query;
     if (logSupabaseError('fetchProducts', error).isError) return [];
@@ -62,7 +68,7 @@ export const fetchProducts = async (onlyActive = true): Promise<Product[]> => {
 export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
   try {
     const { data, error } = await supabase
-      .from('orders')
+      .from(cleanTableName('orders'))
       .select('*, profiles(*)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
@@ -74,7 +80,7 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
 export const fetchAllOrders = async (): Promise<Order[]> => {
   try {
     const { data, error } = await supabase
-      .from('orders')
+      .from(cleanTableName('orders'))
       .select('*, profiles(*)')
       .order('created_at', { ascending: false });
     if (logSupabaseError('fetchAllOrders', error).isError) return [];
@@ -84,7 +90,7 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
 
 export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
   try {
-    const { data, error } = await supabase.from('products').select('*').eq('slug', slug).single();
+    const { data, error } = await supabase.from(cleanTableName('products')).select('*').eq('slug', slug).single();
     if (logSupabaseError('fetchProductBySlug', error).isError) return null;
     return data;
   } catch { return null; }
@@ -92,7 +98,7 @@ export const fetchProductBySlug = async (slug: string): Promise<Product | null> 
 
 export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
   try {
-    const { data, error } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('order_index');
+    const { data, error } = await supabase.from(cleanTableName('product_variants')).select('*').eq('product_id', productId).order('order_index');
     if (logSupabaseError('fetchProductVariants', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -100,7 +106,7 @@ export const fetchProductVariants = async (productId: string): Promise<ProductVa
 
 export const fetchProductContentBlocks = async (productId: string): Promise<ProductContentBlock[]> => {
   try {
-    const { data, error } = await supabase.from('product_content_blocks').select('*').eq('product_id', productId).order('order');
+    const { data, error } = await supabase.from(cleanTableName('product_content_blocks')).select('*').eq('product_id', productId).order('order');
     if (logSupabaseError('fetchProductContentBlocks', error).isError) return [];
     return data || [];
   } catch { return []; }
@@ -108,7 +114,7 @@ export const fetchProductContentBlocks = async (productId: string): Promise<Prod
 
 export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
   try {
-    const { data, error } = await supabase.from('orders').insert([order]).select().single();
+    const { data, error } = await supabase.from(cleanTableName('orders')).insert([order]).select().single();
     if (logSupabaseError('createOrder', error).isError) return null;
     return data;
   } catch { return null; }
@@ -116,7 +122,7 @@ export const createOrder = async (order: Partial<Order>): Promise<Order | null> 
 
 export const updateOrder = async (id: string, updates: Partial<Order>) => {
   try {
-    const { error } = await supabase.from('orders').update(updates).eq('id', id);
+    const { error } = await supabase.from(cleanTableName('orders')).update(updates).eq('id', id);
     return logSupabaseError('updateOrder', error);
   } catch (err) { return { isError: true }; }
 };
@@ -183,7 +189,7 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
 export const fetchGlobalTranslations = async (locale: string): Promise<Record<string, string>> => {
   try {
     const { data, error } = await supabase
-      .from('content_translations')
+      .from(cleanTableName('content_translations'))
       .select('field, value')
       .eq('locale', locale);
     if (error) return {};
@@ -213,7 +219,7 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 
 export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
   try {
-    const { data, error } = await supabase.from('user_products').select('*').eq('user_id', userId);
+    const { data, error } = await supabase.from(cleanTableName('user_products')).select('*').eq('user_id', userId);
     if (logSupabaseError('fetchUserProducts', error).isError) return [];
     return data || [];
   } catch { return []; }
