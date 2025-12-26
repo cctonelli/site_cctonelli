@@ -45,15 +45,15 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
     <div className="min-h-screen bg-brand-navy flex flex-col items-center justify-center space-y-6 pt-20 transition-colors">
       <div className="w-20 h-20 border-t-2 border-blue-600 rounded-full animate-spin"></div>
       <div className="text-center space-y-2">
-        <span className="text-[10px] uppercase tracking-[0.5em] text-blue-600 font-black animate-pulse">Acessando Camada Matricial...</span>
-        <p className="text-slate-500 font-serif italic text-sm">Protocolo v10.0-ELITE em execução.</p>
+        <span className="text-[10px] uppercase tracking-[0.5em] text-blue-600 font-black animate-pulse">Iniciando Protocolo Matrix...</span>
+        <p className="text-slate-500 font-serif italic text-sm">Descriptografando ativos de elite.</p>
       </div>
     </div>
   );
 
   const renderBlock = (block: ProductContentBlock) => {
     const { content } = block;
-    const isMatrix = content.style?.includes('matrix') || content.style?.includes('glitch');
+    const isMatrix = content.style?.includes('matrix') || content.style?.includes('glitch') || block.product_id === '1549b854-3c86-4961-bc05-866609fe8d8e';
 
     switch (block.block_type) {
       case 'hero':
@@ -111,7 +111,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
-                  className="mt-24 aspect-video max-w-6xl mx-auto rounded-[3.5rem] overflow-hidden shadow-[0_60px_120px_-30px_rgba(37,99,235,0.3)] border border-blue-600/20 relative bg-black group"
+                  className={`mt-24 aspect-video max-w-6xl mx-auto rounded-[3.5rem] overflow-hidden shadow-[0_60px_120px_-30px_rgba(37,99,235,0.3)] border relative bg-black group ${isMatrix ? 'border-blue-600/30 shadow-blue-600/50' : 'border-white/10 shadow-2xl'}`}
                 >
                   <iframe 
                     src={content.video_url} 
@@ -120,7 +120,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                     allowFullScreen
                   />
-                  <div className="absolute inset-0 pointer-events-none border-[20px] border-black/50 rounded-[3.5rem] z-10"></div>
+                  {isMatrix && <div className="absolute inset-0 scanline opacity-10 pointer-events-none"></div>}
                 </motion.div>
               )}
             </div>
@@ -129,22 +129,22 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
 
       case 'features':
         return (
-          <section key={block.id} className={`py-40 ${isMatrix ? 'bg-[#010309] border-y border-white/5' : ''}`}>
+          <section key={block.id} className={`py-40 ${isMatrix ? 'bg-[#010309] border-y border-white/5' : 'bg-white dark:bg-slate-950'}`}>
             <div className="container mx-auto px-6">
               <div className="text-center mb-32 space-y-6">
-                <div className="text-blue-600 font-black uppercase tracking-[0.5em] text-[10px]">{content.overlay_text || 'Core Capabilities'}</div>
-                <h3 className="text-5xl md:text-7xl font-serif italic text-white tracking-tight">{content.title || 'Vantagem Algorítmica'}</h3>
+                <div className="text-blue-600 font-black uppercase tracking-[0.5em] text-[10px]">{content.overlay_text || 'Advanced Matrix Tech'}</div>
+                <h3 className="text-5xl md:text-7xl font-serif italic dark:text-white text-slate-900 tracking-tight">{content.title || 'Recursos de Elite'}</h3>
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
+              <div className={`grid md:grid-cols-2 lg:grid-cols-4 gap-10 ${content.style === 'glitch_grid' ? 'matrix-grid' : ''}`}>
                 {content.items?.map((item: any, i: number) => (
                   <motion.div 
                     key={i} 
                     whileHover={{ scale: 1.05, y: -10 }}
-                    className="bg-slate-900/40 p-12 rounded-[3rem] border border-white/5 hover:border-blue-600/40 transition-all group relative overflow-hidden"
+                    className="bg-slate-900/40 p-12 rounded-[3rem] border border-white/5 hover:border-blue-600/40 transition-all group relative overflow-hidden backdrop-blur-3xl"
                   >
                     <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                     <div className="w-16 h-16 rounded-2xl bg-blue-600/10 flex items-center justify-center text-3xl mb-8 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-xl">
-                      {item.icon === 'brain' ? '🧠' : item.icon === 'shield' ? '🛡️' : item.icon === 'zap' ? '⚡' : item.icon === 'lock' ? '🔒' : '💎'}
+                      {item.icon === 'brain' ? '🧠' : item.icon === 'shield' ? '🛡️' : item.icon === 'zap' ? '⚡' : item.icon === 'lock' ? '🔒' : '🤖'}
                     </div>
                     <p className="text-slate-300 text-lg font-light italic leading-relaxed group-hover:text-white transition-colors">
                       {item.text}
@@ -158,10 +158,10 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
 
       case 'image_gallery':
         return (
-          <section key={block.id} className="py-40 bg-black">
+          <section key={block.id} className={`py-40 ${content.style === 'matrix_scanline' ? 'bg-black' : ''}`}>
             <div className="container mx-auto px-6 space-y-20">
               <div className="text-center space-y-4">
-                <h3 className="text-4xl font-serif italic text-white">{content.title || 'Interface Visual'}</h3>
+                <h3 className="text-4xl font-serif italic text-white">{content.title || 'Capturas de Tela'}</h3>
                 <div className="w-24 h-1 bg-blue-600 mx-auto"></div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -172,7 +172,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                     className="relative rounded-[3rem] overflow-hidden shadow-2xl aspect-[16/10] border border-white/10 group bg-slate-900"
                   >
                     <img src={typeof img === 'string' ? img : img.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all duration-[2s]" alt="" />
-                    {isMatrix && <div className="absolute inset-0 scanline opacity-10 pointer-events-none"></div>}
+                    {isMatrix && <div className="absolute inset-0 scanline opacity-20 pointer-events-none"></div>}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
                     {img.caption && (
                       <div className="absolute bottom-10 left-10 text-xs font-black uppercase tracking-[0.4em] text-blue-500 bg-black/80 px-4 py-2 rounded-xl border border-white/10">
@@ -188,7 +188,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
 
       case 'comparison':
         return (
-          <section key={block.id} id="pricing" className={`py-48 relative overflow-hidden bg-black`}>
+          <section key={block.id} id="pricing" className={`py-48 relative overflow-hidden ${content.style === 'terminal_matrix' ? 'bg-black' : 'bg-slate-50 dark:bg-brand-navy'}`}>
             <div className="absolute inset-0 bg-grid opacity-10 pointer-events-none"></div>
             <div className="container mx-auto px-6 relative z-10">
               <header className="max-w-4xl mx-auto text-center mb-32 space-y-8">
@@ -232,7 +232,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                     </div>
                     <Link 
                       to={`/loja/${product.slug}/checkout?variant_id=${variant.id}`}
-                      className={`w-full py-7 rounded-[2rem] font-black uppercase tracking-[0.5em] text-[10px] transition-all text-center mt-20 shadow-2xl active:scale-95 ${variant.is_most_popular ? 'bg-white text-blue-600 hover:bg-slate-100' : 'bg-blue-600 text-white hover:bg-blue-500'}`}
+                      className={`w-full py-7 rounded-[2rem] font-black uppercase tracking-[0.5em] text-[10px] transition-all text-center mt-20 shadow-2xl active:scale-95 ${variant.is_most_popular ? 'bg-white text-blue-600 hover:bg-slate-100' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/20'}`}
                     >
                       ATIVAR PROTOCOLO
                     </Link>
@@ -245,13 +245,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
 
       case 'cta':
         return (
-          <section key={block.id} className={`py-60 text-center relative overflow-hidden ${isMatrix ? 'bg-black' : ''}`}>
+          <section key={block.id} className={`py-60 text-center relative overflow-hidden ${isMatrix ? 'bg-black' : 'bg-white dark:bg-slate-950'}`}>
              {isMatrix && <div className="absolute inset-0 bg-blue-600/5 animate-pulse"></div>}
              <div className="container mx-auto px-6 relative z-10 space-y-16">
-                <h3 className="text-5xl md:text-8xl font-serif italic text-white tracking-tighter leading-tight max-w-4xl mx-auto">
-                  {content.title || 'O Futuro é uma escolha estratégica.'}
+                <h3 className={`text-5xl md:text-8xl font-serif italic tracking-tighter leading-tight max-w-4xl mx-auto ${isMatrix ? 'text-white' : 'dark:text-white text-slate-900'}`}>
+                  {content.title || 'A Transformação Começa Aqui.'}
                 </h3>
-                <Link to={content.button_link || '#pricing'} className="inline-block px-20 py-7 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-[0.6em] text-[10px] shadow-2xl shadow-blue-600/40 hover:bg-blue-500 transition-all active:scale-95 animate-bounce">
+                <Link to={content.button_link || '#pricing'} className={`inline-block px-20 py-7 rounded-[2rem] font-black uppercase tracking-[0.6em] text-[10px] transition-all active:scale-95 shadow-2xl ${isMatrix ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-600/40' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
                    {content.button_text || 'INICIAR AGORA'}
                 </Link>
              </div>
@@ -262,7 +262,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
         return (
           <section key={block.id} className="py-32 max-w-4xl mx-auto px-6">
              <div 
-               className="prose prose-2xl prose-blue dark:prose-invert font-light italic leading-loose text-slate-300 drop-shadow-sm"
+               className="prose prose-2xl prose-blue dark:prose-invert font-light italic leading-loose text-slate-700 dark:text-slate-300 drop-shadow-sm"
                dangerouslySetInnerHTML={{ __html: content.html }}
              />
           </section>
@@ -301,6 +301,10 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
         @keyframes scanline-scroll {
           from { background-position: 0 0; }
           to { background-position: 0 100%; }
+        }
+        .matrix-grid {
+          display: grid;
+          position: relative;
         }
       `}</style>
 
