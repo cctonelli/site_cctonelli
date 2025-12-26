@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { fetchProducts, supabase } from '../../services/supabaseService';
+import { fetchProducts, supabase, logSupabaseError } from '../../services/supabaseService';
 import { Product } from '../../types';
 import { Language } from '../../services/i18nService';
 
@@ -15,31 +15,39 @@ interface StoreGridProps {
 const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [errorType, setErrorType] = useState<'none' | 'cache' | 'empty' | 'network'>('none');
+  const [errorType, setErrorType] = useState<'none' | 'cache' | 'empty' | 'network' | 'rls'>('none');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     setErrorType('none');
+    setErrorMessage(null);
     try {
-      const data = await fetchProducts(true);
-      if (!data || data.length === 0) {
-        const { error } = await supabase.from('products').select('id').limit(1);
-        if (error) {
-           console.error("Store Fetch Error:", error);
-           if (error.code === 'PGRST205' || error.message.includes('cache') || error.message.includes('relation')) {
-             setErrorType('cache');
-           } else {
-             setErrorType('network');
-           }
+      // Direct check for connectivity/schema first to provide better diagnostic if empty
+      const { data, error } = await supabase.from('products').select('*').eq('is_active', true).order('featured', { ascending: false });
+      
+      const errorInfo = logSupabaseError('StoreGrid Load', error);
+      
+      if (errorInfo.isError) {
+        console.error("Store Fetch Error Detail:", errorInfo.message, errorInfo.code);
+        setErrorMessage(errorInfo.message);
+        
+        if (errorInfo.isMissingTable) {
+          setErrorType('cache');
+        } else if (errorInfo.isRlsError) {
+          setErrorType('rls');
         } else {
-           setErrorType('empty');
+          setErrorType('network');
         }
+      } else if (!data || data.length === 0) {
+        setErrorType('empty');
       } else {
         setProducts(data);
         setErrorType('none');
       }
-    } catch (err) {
-      console.error("Critical Store Error:", err);
+    } catch (err: any) {
+      console.error("Critical Store Error:", err.message || err);
+      setErrorMessage(err.message || String(err));
       setErrorType('network');
     } finally {
       setLoading(false);
@@ -109,7 +117,9 @@ const StoreGrid: React.FC<StoreGridProps> = ({ language, t, resolveTranslation }
                <p className="text-slate-500 text-sm max-w-md mx-auto font-light leading-relaxed">
                  {errorType === 'cache' 
                    ? 'O cache do servidor PostgREST exige sincronização manual (PGRST205). O administrador foi notificado para o Schema Reload.'
-                   : 'Não foi possível estabelecer conexão segura com o Advisory Core. Verifique sua conexão estratégica.'}
+                   : errorType === 'rls' 
+                   ? 'Bloqueio de Segurança: Acesso negado às políticas RLS da tabela de produtos.'
+                   : `Não foi possível estabelecer conexão segura com o Advisory Core: ${errorMessage || 'Erro de Rede'}`}
                </p>
              </div>
              <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
