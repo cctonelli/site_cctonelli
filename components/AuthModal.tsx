@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signIn, signUp } from '../services/supabaseService';
+import { signIn, signUp, createProfile } from '../services/supabaseService';
 import { Profile } from '../types';
 
 interface AuthModalProps {
@@ -35,6 +35,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         onSuccess();
         onClose();
       } else {
+        // 1. Criar o usuário no Supabase Auth
         const { data, error: signUpError } = await signUp(email, password, {
           full_name: fullName,
           cpf_cnpj: taxId,
@@ -44,11 +45,30 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         
         if (signUpError) throw signUpError;
 
-        if (data.user && !data.session) {
-          setNeedsConfirmation(true);
-        } else {
-          onSuccess();
-          onClose();
+        if (data.user) {
+          // 2. Tentar criar o perfil manualmente na tabela public.profiles
+          // Isso garante que os dados sejam salvos mesmo que o trigger falhe ou demore
+          const profilePayload: Profile = {
+            id: data.user.id,
+            full_name: fullName,
+            cpf_cnpj: taxId,
+            whatsapp: whatsapp,
+            gender: gender,
+            user_type: 'client' // Padrão para novos registros via site
+          };
+
+          const profileResult = await createProfile(profilePayload);
+          
+          if (profileResult.isError) {
+            console.warn("[Auth Modal] Perfil não foi criado via API (possível trigger duplicado ou RLS), mas o Auth prosseguiu.");
+          }
+
+          if (!data.session) {
+            setNeedsConfirmation(true);
+          } else {
+            onSuccess();
+            onClose();
+          }
         }
       }
     } catch (err: any) {

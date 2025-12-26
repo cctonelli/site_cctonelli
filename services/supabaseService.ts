@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, 
@@ -29,11 +30,11 @@ export const logSupabaseError = (context: string, error: any) => {
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
     const recoverySql = `
--- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.8.1)
+-- REPARAÇÃO TOTAL DE INFRAESTRUTURA (v6.8.9)
 NOTIFY pgrst, 'reload schema';
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
     `.trim();
     
     return {
@@ -133,7 +134,10 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
       .select('*')
       .eq('id', id)
       .single();
-    if (logSupabaseError('getProfile', error).isError) return null;
+    if (error) {
+      logSupabaseError('getProfile', error);
+      return null;
+    }
     return data;
   } catch { return null; }
 };
@@ -145,9 +149,28 @@ export const signIn = async (email: string, password?: string) => {
 };
 
 export const signUp = async (email: string, password: string, metadata: any) => {
+  // O Supabase Auth cria o usuário, mas precisamos garantir que o perfil seja criado
+  // Se houver um trigger no banco, o metadado é passado. 
+  // Se não houver, fazemos o insert manual no AuthModal.
   return await supabase.auth.signUp({
-    email, password, options: { data: metadata }
+    email, 
+    password, 
+    options: { 
+      data: metadata,
+      emailRedirectTo: window.location.origin
+    }
   });
+};
+
+export const createProfile = async (profile: Profile) => {
+  try {
+    const { error } = await supabase
+      .from(cleanTableName('profiles'))
+      .insert([profile]);
+    return logSupabaseError('createProfile', error);
+  } catch (err) {
+    return { isError: true, message: 'Falha crítica ao criar perfil.' };
+  }
 };
 
 export const signOut = async () => {
