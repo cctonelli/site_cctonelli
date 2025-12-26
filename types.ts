@@ -108,6 +108,26 @@ export interface UserProduct {
   created_at?: string;
 }
 
+export interface AppVersion {
+  id: string;
+  app_name: string;
+  version_code: string;
+  download_url: string;
+  is_forced: boolean;
+  release_notes: string | null;
+  created_at?: string;
+}
+
+export interface V8MatrixUsage {
+  id: string;
+  user_product_id: string;
+  remaining_disparos: number;
+  threads: number;
+  daily_count: number;
+  total_count: number;
+  last_reset: string;
+}
+
 export interface Testimonial {
   id: string | number;
   name: string;
