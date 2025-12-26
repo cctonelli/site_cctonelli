@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
-  Testimonial, Profile, Contact, CarouselImage
+  Testimonial, Profile, Contact, CarouselImage, Tool
 } from '../types';
 
 /**
@@ -41,33 +41,43 @@ export const logSupabaseError = (context: string, error: any) => {
   return { isError: false, isMissingTable: false, isRlsError: false };
 };
 
-// --- NOVOS MÉTODOS DE TRADUÇÃO ---
-
-export const fetchGlobalTranslations = async (locale: string): Promise<Record<string, string>> => {
+export const fetchTools = async (): Promise<Tool[]> => {
   try {
-    const { data, error } = await supabase
-      .from('content_translations')
-      .select('field, value')
-      .eq('locale', locale);
-    
-    if (error) return {};
-    
-    return (data || []).reduce((acc: any, curr: any) => ({
-      ...acc,
-      [curr.field]: curr.value
-    }), {});
-  } catch { return {}; }
+    const { data, error } = await supabase.from('tools').select('*').eq('is_active', true);
+    if (logSupabaseError('fetchTools', error).isError) return [];
+    return data || [];
+  } catch { return []; }
 };
 
-// --- MÉTODOS DE LOJA E PRODUTOS (v8.0.0) ---
-
-// Fixed fetchProducts to correctly handle the query execution
 export const fetchProducts = async (onlyActive = true): Promise<Product[]> => {
   try {
     let query = supabase.from('products').select('*').order('featured', { ascending: false });
     if (onlyActive) query = query.eq('is_active', true);
     const { data, error } = await query;
     if (logSupabaseError('fetchProducts', error).isError) return [];
+    return data || [];
+  } catch { return []; }
+};
+
+export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*, profiles(*)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (logSupabaseError('fetchUserOrders', error).isError) return [];
+    return data || [];
+  } catch { return []; }
+};
+
+export const fetchAllOrders = async (): Promise<Order[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*, profiles(*)')
+      .order('created_at', { ascending: false });
+    if (logSupabaseError('fetchAllOrders', error).isError) return [];
     return data || [];
   } catch { return []; }
 };
@@ -104,23 +114,12 @@ export const createOrder = async (order: Partial<Order>): Promise<Order | null> 
   } catch { return null; }
 };
 
-export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
+export const updateOrder = async (id: string, updates: Partial<Order>) => {
   try {
-    const { data, error } = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-    if (logSupabaseError('fetchUserOrders', error).isError) return [];
-    return data || [];
-  } catch { return []; }
+    const { error } = await supabase.from('orders').update(updates).eq('id', id);
+    return logSupabaseError('updateOrder', error);
+  } catch (err) { return { isError: true }; }
 };
-
-export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
-  try {
-    const { data, error } = await supabase.from('user_products').select('*').eq('user_id', userId);
-    if (logSupabaseError('fetchUserProducts', error).isError) return [];
-    return data || [];
-  } catch { return []; }
-};
-
-// --- MÉTODOS EXISTENTES ---
 
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
@@ -158,7 +157,6 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   } catch { return []; }
 };
 
-// Added fetchTestimonials to resolve the missing export error in App.tsx
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data, error } = await supabase
@@ -182,6 +180,17 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
   } catch { return {}; }
 };
 
+export const fetchGlobalTranslations = async (locale: string): Promise<Record<string, string>> => {
+  try {
+    const { data, error } = await supabase
+      .from('content_translations')
+      .select('field, value')
+      .eq('locale', locale);
+    if (error) return {};
+    return (data || []).reduce((acc: any, curr: any) => ({ ...acc, [curr.field]: curr.value }), {});
+  } catch { return {}; }
+};
+
 export const subscribeToChanges = (table: string, callback: () => void) => {
   const tableToWatch = cleanTableName(table);
   return supabase
@@ -197,12 +206,17 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
       .select('*')
       .eq('id', id)
       .single();
-    if (error) {
-      logSupabaseError('getProfile', error);
-      return null;
-    }
+    if (error) return null;
     return data;
   } catch { return null; }
+};
+
+export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
+  try {
+    const { data, error } = await supabase.from('user_products').select('*').eq('user_id', userId);
+    if (logSupabaseError('fetchUserProducts', error).isError) return [];
+    return data || [];
+  } catch { return []; }
 };
 
 export const signIn = async (email: string, password?: string) => {

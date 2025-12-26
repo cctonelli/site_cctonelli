@@ -34,6 +34,16 @@ export interface Insight {
   category?: string;
 }
 
+export interface Tool {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  access_level: 'public' | 'client' | 'admin';
+  is_active: boolean;
+  external_url?: string;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -82,6 +92,7 @@ export interface Order {
   approved_by_admin: boolean;
   download_link: string | null;
   created_at?: string;
+  profiles?: Profile; // Para joins no admin
 }
 
 export interface UserProduct {
