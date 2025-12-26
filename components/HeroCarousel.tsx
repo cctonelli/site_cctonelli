@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Autoplay, EffectFade } from 'swiper/modules';
@@ -89,7 +88,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
   };
 
   return (
-    <section id="hero" className="relative h-[calc(100vh-6rem)] min-h-[550px] bg-white dark:bg-brand-navy overflow-hidden">
+    <section id="hero" className="relative h-[calc(100vh-6rem)] min-h-[550px] bg-white dark:bg-brand-navy overflow-hidden transition-colors duration-500">
       <div className="absolute inset-0 z-0 transform scale-125 lg:scale-110 pointer-events-none">
         <ThreeGlobe />
       </div>

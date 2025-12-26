@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
@@ -6,7 +5,7 @@ import {
 } from '../types';
 
 /**
- * CONFIGURAÇÃO OFICIAL - CLAUDIO TONELLI ADVISORY CORE v8.5.0-PRO
+ * CONFIGURAÇÃO OFICIAL - CLAUDIO TONELLI ADVISORY CORE v8.6.0-PRO
  */
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
@@ -35,12 +34,12 @@ export const logSupabaseError = (context: string, error: any) => {
     const hint = error.hint || '';
     
     // Detecção específica de erros de cache de schema ou RLS
-    const isMissingTable = code === '42P01' || message.includes('PGRST205') || message.toLowerCase().includes('relation') && message.toLowerCase().includes('does not exist');
+    const isMissingTable = code === '42P01' || message.includes('PGRST205') || (message.toLowerCase().includes('relation') && message.toLowerCase().includes('does not exist'));
     const isRlsError = code === '42501' || message.includes('row-level security');
     
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
     
-    const recoverySql = `-- REPARAÇÃO TOTAL DE SCHEMA E PERMISSÕES (v8.5.0-PRO)\nNOTIFY pgrst, 'reload schema';\nNOTIFY pgrst, 'reload config';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;\nGRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;`.trim();
+    const recoverySql = `-- REPARAÇÃO TOTAL DE SCHEMA E PERMISSÕES (v8.6.0-PRO)\nNOTIFY pgrst, 'reload schema';\nNOTIFY pgrst, 'reload config';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;\nGRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;`.trim();
     
     return { isError: true, message, code, suggestedSql: recoverySql, isMissingTable, isRlsError };
   }
