@@ -50,12 +50,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
     switch (block.block_type) {
       case 'hero':
         return (
-          <section key={block.id} className="py-24 space-y-12">
-            <div className="max-w-4xl mx-auto text-center space-y-8">
+          <section key={block.id} className="py-24 space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            <div className="max-w-4xl mx-auto text-center space-y-8 px-6">
                <h2 className="text-5xl md:text-7xl font-serif dark:text-white text-slate-900 leading-tight italic">
                  {content.title || product.title}
                </h2>
-               <p className="text-xl text-slate-500 dark:text-slate-400 font-light italic leading-relaxed max-w-2xl mx-auto border-l-2 border-blue-600/30 pl-8">
+               <p className="text-xl text-slate-500 dark:text-slate-400 font-light italic leading-relaxed max-w-2xl mx-auto border-l-2 border-blue-600/30 pl-8 text-left">
                  {content.subtitle || product.subtitle}
                </p>
             </div>
@@ -81,14 +81,47 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
              />
           </section>
         );
+      case 'video':
+        return (
+          <section key={block.id} className="py-24 container mx-auto px-6">
+             <div className="max-w-4xl mx-auto text-center mb-16 space-y-4">
+               <h3 className="text-3xl font-serif italic dark:text-white">{content.label || 'Demonstração Executiva'}</h3>
+               <div className="w-20 h-1 bg-blue-600 mx-auto"></div>
+             </div>
+             <div className="aspect-video max-w-5xl mx-auto rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 bg-black">
+                <iframe src={content.url} className="w-full h-full" allowFullScreen />
+             </div>
+          </section>
+        );
       case 'image_gallery':
         return (
           <section key={block.id} className="py-24 container mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {content.images?.map((img: string, i: number) => (
-              <div key={i} className="rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/3] border border-white/5 bg-slate-900">
-                <img src={img} className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity duration-700 hover:scale-105 transition-transform" />
+              <div key={i} className="rounded-[2.5rem] overflow-hidden shadow-2xl aspect-[4/3] border border-white/5 bg-slate-900 group">
+                <img src={img} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-700 group-hover:scale-105 transition-transform" />
               </div>
             ))}
+          </section>
+        );
+      case 'faq':
+        return (
+          <section key={block.id} className="py-24 max-w-4xl mx-auto px-6 space-y-12">
+            <h3 className="text-4xl font-serif italic dark:text-white text-center">Dúvidas Estratégicas</h3>
+            <div className="grid gap-6">
+              {content.items?.map((item: any, i: number) => (
+                <details key={i} className="group bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-[2rem] overflow-hidden transition-all">
+                  <summary className="p-8 cursor-pointer list-none flex justify-between items-center font-serif text-xl italic dark:text-white">
+                    {item.question}
+                    <span className="text-blue-500 group-open:rotate-180 transition-transform">
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                  </summary>
+                  <div className="p-8 pt-0 text-slate-500 dark:text-slate-400 font-light leading-relaxed border-t border-slate-200 dark:border-white/5 italic">
+                    {item.answer}
+                  </div>
+                </details>
+              ))}
+            </div>
           </section>
         );
       case 'comparison':
@@ -111,7 +144,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                         <div className="flex items-baseline gap-2">
                            <span className="text-4xl font-bold">R$ {variant.price.toLocaleString('pt-BR')}</span>
                            <span className={`text-[10px] uppercase font-bold tracking-widest opacity-60`}>
-                             {variant.interval === 'month' ? '/mês' : variant.interval === 'semester' ? '/semestre' : variant.interval === 'year' ? '/ano' : '/lista'}
+                             {variant.interval === 'month' ? '/mês' : variant.interval === 'semester' ? '/semestre' : variant.interval === 'year' ? '/ano' : '/unidade'}
                            </span>
                         </div>
                       </div>
@@ -154,42 +187,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
         {blocks.length > 0 ? (
           blocks.map(renderBlock)
         ) : (
-          <section className="py-24 space-y-12 animate-in fade-in duration-1000">
-            <div className="max-w-4xl mx-auto text-center space-y-8">
-               <div className="text-blue-500 font-black uppercase tracking-[0.4em] text-[10px]">Product Overview</div>
-               <h2 className="text-5xl md:text-7xl font-serif dark:text-white text-slate-900 leading-tight italic">
-                 {product.title}
-               </h2>
-               <p className="text-xl text-slate-500 dark:text-slate-400 font-light italic leading-relaxed max-w-2xl mx-auto border-l-2 border-blue-600/30 pl-8">
-                 {product.subtitle}
-               </p>
-               <div className="pt-12">
-                 <a href="#pricing" className="bg-blue-600 text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95">Ver Opções de Investimento</a>
-               </div>
+          <div className="max-w-4xl mx-auto text-center py-32 space-y-12">
+            <h2 className="text-6xl font-serif italic dark:text-white">{product.title}</h2>
+            <p className="text-xl text-slate-500 font-light italic">{product.subtitle}</p>
+            <div className="pt-12">
+              <a href="#pricing" className="bg-blue-600 text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl">Visualizar Planos</a>
             </div>
-            
-            <section id="pricing" className="pt-32">
-               <div className="container mx-auto px-6 grid md:grid-cols-3 gap-8">
-                  {variants.map(variant => (
-                     <div key={variant.id} className="p-10 rounded-[2.5rem] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/5 space-y-8 flex flex-col justify-between">
-                        <div className="space-y-6">
-                           <h4 className="text-xl font-serif italic dark:text-white text-slate-900">{variant.name}</h4>
-                           <div className="text-4xl font-bold dark:text-white text-slate-900">R$ {variant.price.toLocaleString('pt-BR')}</div>
-                           <ul className="space-y-4">
-                              {variant.features?.map((f, i) => (
-                                 <li key={i} className="flex items-center gap-3 text-sm text-slate-500 font-light">
-                                    <svg className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                    {f}
-                                 </li>
-                              ))}
-                           </ul>
-                        </div>
-                        <Link to={`/loja/${product.slug}/checkout?variant_id=${variant.id}`} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] text-center shadow-xl shadow-blue-600/10 hover:bg-blue-500 transition-all active:scale-95">Aderir Agora</Link>
-                     </div>
-                  ))}
-               </div>
-            </section>
-          </section>
+          </div>
         )}
       </main>
     </div>
