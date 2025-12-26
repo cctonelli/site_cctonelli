@@ -1,49 +1,38 @@
 
-# Claudio Tonelli Consultoria — Advisory Hub v10.0-ELITE
+# Claudio Tonelli Consultoria — Advisory Hub v11.0-ULTIMATE
 
-O ecossistema digital da **Claudio Tonelli Consultoria** atingiu sua maturidade máxima com o build **v10.0-ELITE**. Esta plataforma opera agora como uma **Plataforma Global de Vendas de Ativos Digitais de Elite**, integrando consultoria estratégica com uma infraestrutura de e-commerce indestrutível e server-side.
+O ecossistema digital da **Claudio Tonelli Consultoria** atingiu o estágio de **Lançamento Imediato**. Esta plataforma opera agora como um motor de vendas de ativos digitais de alta performance, com foco total no **V8 MATRIX EDITION**.
 
-## 🚀 Status de Integração da Loja: Estágio v10.0-ELITE
+## 🚀 Status de Integração: Estágio v11.0-ULTIMATE (Produção)
 
-A integração entre o Frontend e o Advisory Core (Supabase) está consolidada. Abaixo o resumo do progresso:
+A integração está **concluída e funcional**. O frontend agora possui redundância contra falhas de cache do PostgREST e renderização forçada para produtos de elite.
 
-1.  **Vitrine de Ativos (/loja):** Grid premium operacional. Detectamos que o erro `PGRST205` ocorre devido ao cache do Supabase (Schema Cache). O frontend agora possui tratamento de exceção para guiar o administrador na sincronização.
-2.  **V8 MATRIX EDITION:** Página de produto dedicada implementada com Canvas dinâmico, efeitos glitch e scanlines. Totalmente integrada aos blocos de conteúdo do banco de dados.
-3.  **Fluxo de Checkout PIX:** Integrado com geração de QR Code e registro na tabela `orders`.
-4.  **Gestão de Uso (V8 Usage):** Tabelas `v8_matrix_usage` e `app_versions` preparadas para controle de disparos e atualizações forçadas do software Python.
-5.  **Executive Hub:** Dashboard do cliente funcional para download de ativos e monitoramento de saldo de disparos.
+1.  **Vitrine de Ativos:** Operacional com detecção automática de slugs MATRIX.
+2.  **Canvas Builder:** Motor de renderização suporta todos os 6 blocos (Hero, Features, Gallery, Comparison, Video, CTA) com estilos CSS imersivos injetados dinamicamente.
+3.  **Fluxo de Dados:** Sincronia Realtime ativada para pedidos e aprovações.
+4.  **Resiliência:** Tratamento de erros PGRST205 integrado com guia de reparo para o administrador.
 
 ---
 
-## 🔐 Auditoria de Políticas RLS do SUPABASE
+## 🔐 Auditoria de Segurança RLS (Critical Update)
 
-Verificamos e validamos que a comunicação Frontend ↔ Supabase respeita as seguintes políticas de segurança implementadas:
+Validamos as políticas do Supabase e identificamos pontos de atenção para o Administrador:
 
-| Tabela | Política RLS | Descrição |
+| Tabela | Status RLS | Alerta de Segurança |
 | :--- | :--- | :--- |
-| `app_versions` | `public_read_app_versions` | Leitura pública permitida para checagem de updates. |
-| `carousel_images` | `public_read` | Imagens do hero visíveis para todos. |
-| `contacts` | `public_insert_contacts` | Leads podem enviar mensagens sem autenticação. |
-| `orders` | `user_read_own_orders` | Clientes vêm apenas seus pedidos; Admin tem acesso total. |
-| `product_content_blocks`| `public_read_content_blocks`| Blocos de design Matrix visíveis publicamente. |
-| `product_variants` | `public_read_variants` | Preços e planos visíveis para todos. |
-| `products` | `public_read_products` | Catálogo visível publicamente. |
-| `profiles` | `auth.uid() = id` | Dados de perfil protegidos por ID do usuário. |
-| `user_products` | `user_read_own_access` | Liberação de download apenas para quem comprou. |
-| `v8_matrix_usage` | `user_read_own_usage` | Saldo de disparos privado do proprietário do ativo. |
-
-**Nota de Reparo:** Caso a loja apresente erro de "Tabela não encontrada", execute `NOTIFY pgrst, 'reload schema';` no SQL Editor do Supabase para limpar o cache do PostgREST.
+| `products` | ✅ OK | Leitura pública protegida por `is_active`. |
+| `user_products` | ⚠️ RISCO | **CUIDADO:** A política `user_insert_own_user_products` permite inserção manual por usuários. **Recomendação:** Remover e permitir INSERT apenas para Admins. |
+| `v8_matrix_usage`| ⚠️ RISCO | **CUIDADO:** A política `user_update_own_usage` permite que usuários editem seu próprio saldo de disparos. **Recomendação:** Restringir UPDATE para Admins/Service Role. |
+| `profiles` | ✅ OK | Proteção mútua via `auth.uid()`. |
+| `orders` | ✅ OK | Usuários podem criar pedidos, mas apenas Admins aprovam. |
 
 ---
 
-## 🛠️ Stack Tecnológica ELITE
+## 🛠️ Resumo Técnico v11.0
 
-*   **Core:** React 19 + Framer Motion (UI Fluida).
-*   **Intelligence:** Google Gemini 3 Pro (Thinking Budget p/ Recomendações).
-*   **Security:** Supabase RLS + PostgREST (Realtime Sync).
-*   **Visuals:** Matrix Edition CSS + 3D Three.js Globe.
-
----
+*   **Motor de Renderização:** `ProductPage.tsx` agora atua como um compilador de canvas, injetando animações de glitch e scanlines baseadas nos metadados do bloco.
+*   **Segurança de Dados:** Transições de estado de 'pending' para 'active' automatizadas no `AdminDashboard.tsx`.
+*   **IA de Elite:** Gemini 3 Pro configurado para prover insights focados em ROI direto no portal do cliente.
 
 **Claudio Tonelli Consultoria**  
 *Onde o rigor da elite consultiva encontra a potência da automação disruptiva.*

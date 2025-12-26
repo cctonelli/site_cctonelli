@@ -100,6 +100,7 @@ export const updateOrder = async (id: string, updates: Partial<Order>) => {
 };
 
 export const createUserProduct = async (userProduct: Partial<UserProduct>): Promise<{ data: UserProduct | null, error: any }> => {
+  // Nota: A política user_insert_own_user_products deve ser removida para maior segurança
   const { data, error } = await supabase.from(cleanTableName('user_products')).insert([userProduct]).select().single();
   return { data, error: logSupabaseError('createUserProduct', error) };
 };
