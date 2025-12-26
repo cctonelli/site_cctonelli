@@ -19,8 +19,8 @@ import {
 import { Language, translations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-// TAG DE CONTROLE DE DEPLOY - v6.8.4
-const APP_VERSION = "v6.8.4-PLATINUM-FIX";
+// TAG DE CONTROLE DE DEPLOY - v6.8.5
+const APP_VERSION = "v6.8.5-PLATINUM-SYNC";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -90,7 +90,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     refreshUser();
-    const timer = setTimeout(() => syncData(), 800);
+    const timer = setTimeout(() => syncData(), 500);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) refreshUser();
@@ -136,7 +136,7 @@ const App: React.FC = () => {
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></div>
             <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-              {isLive ? 'Pulse: Synchronized' : 'Pulse: Calibrating'}
+              {isLive ? 'Pulse: Synchronized' : 'Pulse: Initializing'}
             </span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
@@ -171,7 +171,13 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={
             <main>
-              <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} />
+              <HeroCarousel 
+                slides={carouselImages} 
+                t={t} 
+                resolveContent={resolveContent} 
+                language={language} 
+                isLive={isLive} 
+              />
 
               <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5 transition-colors">
                 <div className="container mx-auto px-6">
