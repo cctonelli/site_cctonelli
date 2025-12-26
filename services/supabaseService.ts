@@ -29,7 +29,10 @@ export const logSupabaseError = (context: string, error: any) => {
     const isMissingTable = code === '42P01' || message.includes('PGRST205') || message.includes('not find the table');
     const isRlsError = code === '42501' || message.includes('row-level security');
     console.warn(`[DB DIAGNOSTIC - ${context}] ${message} (Code: ${code})`);
-    const recoverySql = `-- REPARAÇÃO DE ELITE\nNOTIFY pgrst, 'reload schema';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;`.trim();
+    
+    // Sugestão de script de reparo para o administrador
+    const recoverySql = `-- REPARAÇÃO DE ELITE\nNOTIFY pgrst, 'reload schema';\nGRANT USAGE ON SCHEMA public TO anon, authenticated;\nGRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;`.trim();
+    
     return { isError: true, message, code, suggestedSql: recoverySql, isMissingTable, isRlsError };
   }
   return { isError: false, isMissingTable: false, isRlsError: false };
@@ -100,7 +103,7 @@ export const updateOrder = async (id: string, updates: Partial<Order>) => {
 };
 
 export const createUserProduct = async (userProduct: Partial<UserProduct>): Promise<{ data: UserProduct | null, error: any }> => {
-  // Nota: A política user_insert_own_user_products deve ser removida para maior segurança
+  // Nota: Apenas Admins devem ter permissão de INSERT aqui via RLS no Supabase Dashboard.
   const { data, error } = await supabase.from(cleanTableName('user_products')).insert([userProduct]).select().single();
   return { data, error: logSupabaseError('createUserProduct', error) };
 };

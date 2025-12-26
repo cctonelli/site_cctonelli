@@ -5,34 +5,41 @@ O ecossistema digital da **Claudio Tonelli Consultoria** atingiu o estágio de *
 
 ## 🚀 Status de Integração: Estágio v11.0-ULTIMATE (Produção)
 
-A integração está **concluída e funcional**. O frontend agora possui redundância contra falhas de cache do PostgREST e renderização forçada para produtos de elite.
+A integração entre o Frontend e o Supabase está **concluída e funcional**, com as seguintes implementações ativas:
 
-1.  **Vitrine de Ativos:** Operacional com detecção automática de slugs MATRIX.
-2.  **Canvas Builder:** Motor de renderização suporta todos os 6 blocos (Hero, Features, Gallery, Comparison, Video, CTA) com estilos CSS imersivos injetados dinamicamente.
-3.  **Fluxo de Dados:** Sincronia Realtime ativada para pedidos e aprovações.
-4.  **Resiliência:** Tratamento de erros PGRST205 integrado com guia de reparo para o administrador.
-
----
-
-## 🔐 Auditoria de Segurança RLS (Critical Update)
-
-Validamos as políticas do Supabase e identificamos pontos de atenção para o Administrador:
-
-| Tabela | Status RLS | Alerta de Segurança |
-| :--- | :--- | :--- |
-| `products` | ✅ OK | Leitura pública protegida por `is_active`. |
-| `user_products` | ⚠️ RISCO | **CUIDADO:** A política `user_insert_own_user_products` permite inserção manual por usuários. **Recomendação:** Remover e permitir INSERT apenas para Admins. |
-| `v8_matrix_usage`| ⚠️ RISCO | **CUIDADO:** A política `user_update_own_usage` permite que usuários editem seu próprio saldo de disparos. **Recomendação:** Restringir UPDATE para Admins/Service Role. |
-| `profiles` | ✅ OK | Proteção mútua via `auth.uid()`. |
-| `orders` | ✅ OK | Usuários podem criar pedidos, mas apenas Admins aprovam. |
+1.  **Motor de Canvas MATRIX:** `ProductPage.tsx` atua como um compilador de blocos, injetando animações de glitch, scanlines e estética hacker automaticamente para o V8.
+2.  **Vitrine de Ativos:** O `StoreGrid.tsx` agora possui detecção de slugs "Elite" e badges dinâmicos.
+3.  **Fluxo de Pagamento PIX:** Integrado ao checkout com geração de QR Code dinâmico (simulado via Advisory Core).
+4.  **Resiliência PostgREST:** Tratamento de erro `PGRST205` (cache de schema) implementado com guia de reparo.
 
 ---
 
-## 🛠️ Resumo Técnico v11.0
+## 🔐 Auditoria de Segurança RLS (Row Level Security)
 
-*   **Motor de Renderização:** `ProductPage.tsx` agora atua como um compilador de canvas, injetando animações de glitch e scanlines baseadas nos metadados do bloco.
-*   **Segurança de Dados:** Transições de estado de 'pending' para 'active' automatizadas no `AdminDashboard.tsx`.
-*   **IA de Elite:** Gemini 3 Pro configurado para prover insights focados em ROI direto no portal do cliente.
+Analisamos as políticas vigentes e identificamos **2 falhas críticas** que precisam de ajuste manual no Dashboard do Supabase:
+
+| Tabela | Status | Risco Identificado | Ação Necessária |
+| :--- | :--- | :--- | :--- |
+| `user_products` | ❌ CRÍTICO | Política `user_insert_own_user_products` permite que usuários se concedam acesso a produtos sem pagar. | **Remover política de INSERT para 'authenticated'**. Apenas Admins devem inserir aqui. |
+| `v8_matrix_usage` | ❌ CRÍTICO | Política `user_update_own_usage` permite que o usuário resete seu próprio saldo de disparos via console/API. | **Remover permissão de UPDATE para usuários**. O uso deve ser controlado via Server/Admin. |
+| `products` | ✅ OK | Leitura pública garantida, escrita restrita a Admins. | Nenhuma. |
+| `orders` | ✅ OK | Usuário cria o pedido (pendente), mas apenas Admin aprova e libera o ativo. | Nenhuma. |
+
+---
+
+## 🛠️ Como Ativar a Loja Agora (Live Checklist)
+
+Para que o V8 apareça instantaneamente no site live, execute este comando no **SQL Editor** do seu Supabase:
+
+```sql
+-- 1. Forçar ativação do V8 MATRIX
+UPDATE public.products 
+SET is_active = true, featured = true
+WHERE slug ILIKE '%v8%' OR slug ILIKE '%matrix%';
+
+-- 2. Limpar cache do servidor (Opcional, mas recomendado)
+NOTIFY pgrst, 'reload schema';
+```
 
 **Claudio Tonelli Consultoria**  
 *Onde o rigor da elite consultiva encontra a potência da automação disruptiva.*
