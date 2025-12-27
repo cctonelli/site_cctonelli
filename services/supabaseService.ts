@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
@@ -11,31 +10,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- CONTEÚDO ESTRATÉGICO (FONTE ÚNICA: LOCAL_REGISTRY) ---
-
-export const fetchProducts = async (): Promise<Product[]> => {
-  return LOCAL_PRODUCTS;
-};
-
-export const fetchInsights = async (): Promise<Insight[]> => {
-  return LOCAL_INSIGHTS;
-};
-
-export const fetchInsightById = async (id: string): Promise<Insight | null> => {
-  return LOCAL_INSIGHTS.find(i => i.id === id) || null;
-};
-
-export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
-  return LOCAL_PRODUCTS.find(p => p.slug === slug) || null;
-};
-
-export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
-  return LOCAL_VARIANTS[productId] || [];
-};
-
-export const fetchProductContentBlocks = async (productId: string): Promise<ProductContentBlock[]> => {
-  return LOCAL_BLOCKS[productId] || [];
-};
+// --- KERNEL DE CONFIGURAÇÃO (SOBERANIA FRONTEND) ---
 
 export const fetchSiteConfig = () => {
   const localOverride = localStorage.getItem('CT_ADMIN_CONFIG_OVERRIDE');
@@ -49,33 +24,57 @@ export const fetchSiteConfig = () => {
   return SITE_CONFIG;
 };
 
-// --- GESTÃO DE NEGÓCIOS E USUÁRIOS (STILL SUPABASE) ---
+// --- CONTEÚDO HÍBRIDO (LOCAL + DB REDUNDANCY) ---
 
-// Fix: Added missing fetchCarouselImages export
-export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
-  const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
-  return data || [];
+export const fetchProducts = async (): Promise<Product[]> => {
+  try {
+    const { data } = await supabase.from('products').select('*').eq('is_active', true);
+    if (data && data.length > 0) return data;
+  } catch (e) { console.warn("Supabase Down: Usando Registry Local"); }
+  return LOCAL_PRODUCTS;
 };
 
-// Fix: Added missing fetchSiteContent export
-export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
-  const { data } = await supabase.from('site_content').select('*').eq('page', page);
-  const contentMap: Record<string, any> = {};
-  data?.forEach(item => {
-    contentMap[item.key] = item;
-  });
-  return contentMap;
+export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
+  try {
+    const { data } = await supabase.from('products').select('*').eq('slug', slug).maybeSingle();
+    if (data) return data;
+  } catch (e) {}
+  return LOCAL_PRODUCTS.find(p => p.slug === slug) || null;
 };
 
-// Fix: Added missing fetchGlobalTranslations export
-export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
-  const { data } = await supabase.from('translations').select('key, value').eq('language', lang);
-  const transMap: Record<string, string> = {};
-  data?.forEach(item => {
-    transMap[item.key] = item.value;
-  });
-  return transMap;
+export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
+  try {
+    const { data } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('order_index');
+    if (data && data.length > 0) return data;
+  } catch (e) {}
+  return LOCAL_VARIANTS[productId] || [];
 };
+
+export const fetchProductContentBlocks = async (productId: string): Promise<ProductContentBlock[]> => {
+  try {
+    const { data } = await supabase.from('product_content_blocks').select('*').eq('product_id', productId).order('order');
+    if (data && data.length > 0) return data;
+  } catch (e) {}
+  return LOCAL_BLOCKS[productId] || [];
+};
+
+export const fetchInsights = async (): Promise<Insight[]> => {
+  try {
+    const { data } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
+    if (data && data.length > 0) return data;
+  } catch (e) {}
+  return LOCAL_INSIGHTS;
+};
+
+export const fetchInsightById = async (id: string): Promise<Insight | null> => {
+  try {
+    const { data } = await supabase.from('insights').select('*').eq('id', id).maybeSingle();
+    if (data) return data;
+  } catch (e) {}
+  return LOCAL_INSIGHTS.find(i => i.id === id || String(i.id) === id) || null;
+};
+
+// --- GESTÃO DE NEGÓCIOS (SUPABASE ONLY) ---
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
   const { data } = await supabase.from('metrics').select('*').order('display_order');
@@ -87,16 +86,23 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   return data || [];
 };
 
-// Fix: Added missing fetchTools export
-export const fetchTools = async (): Promise<Tool[]> => {
-  const { data } = await supabase.from('tools').select('*').eq('is_active', true);
+export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
+  const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
   return data || [];
 };
 
-// Fix: Added missing submitContact export
-export const submitContact = async (contact: Contact): Promise<boolean> => {
-  const { error } = await supabase.from('contacts').insert([contact]);
-  return !error;
+export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
+  const { data } = await supabase.from('translations').select('key, value').eq('language', lang);
+  const transMap: Record<string, string> = {};
+  data?.forEach(item => { transMap[item.key] = item.value; });
+  return transMap;
+};
+
+export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
+  const { data } = await supabase.from('site_content').select('*').eq('page', page);
+  const contentMap: Record<string, any> = {};
+  data?.forEach(item => { contentMap[item.key] = item; });
+  return contentMap;
 };
 
 export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
@@ -104,7 +110,6 @@ export const createOrder = async (order: Partial<Order>): Promise<Order | null> 
   return data;
 };
 
-// Fix: Added missing updateOrder export
 export const updateOrder = async (id: string, updates: Partial<Order>): Promise<boolean> => {
   const { error } = await supabase.from('orders').update(updates).eq('id', id);
   return !error;
@@ -115,30 +120,11 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
   return data || [];
 };
 
-// Fix: Added missing fetchUserOrders export
-export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
-  const { data } = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-  return data || [];
-};
-
-// Fix: Added missing fetchUserProducts export
-export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
-  const { data } = await supabase.from('user_products').select('*').eq('user_id', userId);
-  return data || [];
-};
-
-// Fix: Added missing fetchUsageByProduct export
-export const fetchUsageByProduct = async (userProductId: string): Promise<V8MatrixUsage | null> => {
-  const { data } = await supabase.from('v8_matrix_usage').select('*').eq('user_product_id', userProductId).maybeSingle();
-  return data;
-};
-
 export const getProfile = async (id: string): Promise<Profile | null> => {
   const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
   return data;
 };
 
-// Fix: Added missing createProfile export
 export const createProfile = async (profile: Profile) => {
   return await supabase.from('profiles').upsert([profile]);
 };
@@ -149,7 +135,6 @@ export const signIn = async (email: string, password?: string) => {
     : await supabase.auth.signInWithOtp({ email: email.trim() });
 };
 
-// Fix: Added missing signUp export
 export const signUp = async (email: string, password?: string, metadata?: any) => {
   return await supabase.auth.signUp({ 
     email: email.trim(), 
@@ -163,18 +148,40 @@ export const signOut = async () => {
   localStorage.removeItem('supabase.auth.token');
 };
 
-// Fix: Updated logSupabaseError to return detailed error info required by Admin panel
 export const logSupabaseError = (context: string, error: any) => {
-  const info = {
-    isError: !!error,
-    message: error?.message || '',
-    isMissingTable: error?.code === '42P01',
-    isRlsError: error?.code === '42501',
-    code: error?.code || '',
-    suggestedSql: error?.code === '42501' ? `ALTER TABLE ${context.split('-')[1]?.trim()} ENABLE ROW LEVEL SECURITY;` : null
+  if (!error) return { isError: false, message: '', isMissingTable: false, isRlsError: false, code: '', suggestedSql: null };
+  console.error(`[Supabase Error][${context}]`, error);
+  return { 
+    isError: true, 
+    message: error.message, 
+    code: error.code || '',
+    isMissingTable: error.code === '42P01', 
+    isRlsError: error.code === '42501',
+    suggestedSql: null
   };
-  if (error) {
-    console.error(`[Supabase Error][${context}]`, error);
-  }
-  return info;
+};
+
+export const fetchTools = async (): Promise<Tool[]> => {
+  const { data } = await supabase.from('tools').select('*').eq('is_active', true);
+  return data || [];
+};
+
+export const submitContact = async (contact: Contact): Promise<boolean> => {
+  const { error } = await supabase.from('contacts').insert([contact]);
+  return !error;
+};
+
+export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
+  const { data } = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+  return data || [];
+};
+
+export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
+  const { data } = await supabase.from('user_products').select('*').eq('user_id', userId);
+  return data || [];
+};
+
+export const fetchUsageByProduct = async (userProductId: string): Promise<V8MatrixUsage | null> => {
+  const { data } = await supabase.from('v8_matrix_usage').select('*').eq('user_product_id', userProductId).maybeSingle();
+  return data;
 };

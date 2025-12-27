@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -27,7 +26,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v12.5-COMMAND";
+const APP_VERSION = "v12.5-SOVEREIGN";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -47,7 +46,8 @@ const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  const config = useMemo(() => fetchSiteConfig(), []);
+  // KERNEL CONFIGURATION
+  const siteConfig = useMemo(() => fetchSiteConfig(), []);
 
   const t = useMemo(() => {
     const base = staticTranslations[language] || staticTranslations['pt'];
@@ -77,7 +77,7 @@ const App: React.FC = () => {
       setIsLive(true);
     } catch (err) {
       console.error(`[App Core] Sync Failure:`, err);
-      setIsLive(true); // Content fallback ensures it's always "live"
+      setIsLive(true);
     }
   }, [language]);
 
@@ -99,11 +99,11 @@ const App: React.FC = () => {
     refreshUser(); 
     syncData();
     
-    // Injeção de cores do Command Center
+    // INJETAR CONFIGURAÇÃO DO KERNEL
     const root = document.documentElement;
-    root.style.setProperty('--accent-blue', config.theme.primary);
-    root.style.setProperty('--brand-gold', config.theme.secondary);
-  }, [syncData, refreshUser, config]);
+    root.style.setProperty('--accent-blue', siteConfig.theme.primary);
+    root.style.setProperty('--brand-gold', siteConfig.theme.secondary);
+  }, [syncData, refreshUser, siteConfig]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -130,7 +130,7 @@ const App: React.FC = () => {
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">CORE {isLive ? 'MASTER' : 'SYNC'}</span>
+            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">KERNAL {isLive ? 'ACTIVE' : 'SYNC'}</span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
           </div>

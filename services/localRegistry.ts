@@ -1,9 +1,8 @@
-
 import { Product, ProductVariant, ProductContentBlock, Insight } from '../types';
 
 export type Language = 'pt' | 'en' | 'es';
 
-// --- CONFIGURAÇÃO VISUAL E DE DESIGN (O CORAÇÃO ESTÉTICO) ---
+// --- KERNEL VISUAL E ESTRUTURAL ---
 export const SITE_CONFIG = {
   theme: {
     primary: '#2563eb', // Azul Tonelli
@@ -11,15 +10,12 @@ export const SITE_CONFIG = {
     bg_dark: '#010309',
     bg_light: '#ffffff',
     font_family_serif: "'Playfair Display', serif",
-    font_family_sans: "'Inter', sans-serif",
-    font_size_base: '16px',
-    border_radius: '2.5rem',
-    container_width: '1280px'
+    font_family_sans: "'Inter', sans-serif"
   },
   menus: {
     nav_strategy: { pt: 'Estratégia', en: 'Strategy', es: 'Estrategia' },
     nav_insights: { pt: 'Insights', en: 'Insights', es: 'Insights' },
-    nav_performance: { pt: 'Performance', en: 'Performance', es: 'Rendimiento' },
+    nav_performance: { pt: 'Performance', en: 'Performance', es: 'Rendimento' },
     nav_connection: { pt: 'Conexão', en: 'Connection', es: 'Conexión' },
     nav_client_area: { pt: 'Área do Cliente', en: 'Client Area', es: 'Área del Cliente' }
   },
@@ -46,7 +42,7 @@ export const LOCAL_INSIGHTS: Insight[] = [
   }
 ];
 
-// --- REPOSITÓRIO DE PRODUTOS ---
+// --- REPOSITÓRIO DE PRODUTOS (BACKUP DE ELITE) ---
 export const LOCAL_PRODUCTS: Product[] = [
   {
     id: 'v8-matrix-id',
@@ -93,6 +89,21 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
         subtitle: 'A ferramenta que as grandes consultorias usam para dominar o tráfego orgânico e direto.',
         overlay_text: 'PROTOCOL_V11_ACTIVE',
         video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+      }
+    },
+    {
+      id: 'b2',
+      product_id: 'v8-matrix-id',
+      block_type: 'features',
+      order: 1,
+      content: {
+        title: 'Arquitetura de Ativos',
+        items: [
+          { icon: 'brain', text: 'Inteligência de Engajamento' },
+          { icon: 'shield', text: 'Proteção Anti-Ban High-Level' },
+          { icon: 'zap', text: 'Disparos Multithread' },
+          { icon: 'robot', text: 'Automação de Respostas IA' }
+        ]
       }
     }
   ]
