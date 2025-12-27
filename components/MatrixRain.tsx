@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 
 interface MatrixRainProps {
@@ -6,6 +7,7 @@ interface MatrixRainProps {
   opacity?: number;
   fontSize?: number;
   density?: number; // 0.1 to 1
+  intensity?: 'normal' | 'high' | 'ultra';
 }
 
 const MatrixRain: React.FC<MatrixRainProps> = ({ 
@@ -13,9 +15,13 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
   speed = 1.5, 
   opacity = 0.15,
   fontSize = 14,
-  density = 0.98
+  density = 0.98,
+  intensity = 'normal'
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Níveis de densidade baseados na intensidade - moved outside useEffect to fix 'Cannot find name actualDensity' in dependency array
+  const actualDensity = intensity === 'ultra' ? 0.995 : intensity === 'high' ? 0.99 : density;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -27,14 +33,13 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
     let width = canvas.width = window.innerWidth;
     let height = canvas.height = window.innerHeight;
 
-    // Conjunto de caracteres do V8 Matrix Edition (Katakana + Alpha + Special)
+    // Katakana + Alpha + Special (V8 Matrix Signature)
     const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネハヒフヘホマミムメモヤユヨラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?";
     const charArray = chars.split("");
 
     const columns = Math.floor(width / fontSize);
     const drops: number[] = [];
 
-    // Inicialização aleatória dos pingos
     for (let i = 0; i < columns; i++) {
       drops[i] = Math.floor(Math.random() * -height / fontSize);
     }
@@ -43,14 +48,15 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
     let frameCount = 0;
 
     const draw = () => {
-      // Controle de cadência (Dayparting visual)
       frameCount++;
-      if (frameCount % (speed < 1 ? 2 : 1) !== 0) {
+      // Ajuste de frame skipping para velocidade
+      const skipFrames = speed < 0.5 ? 4 : speed < 1 ? 2 : 1;
+      if (frameCount % skipFrames !== 0) {
         animationId = requestAnimationFrame(draw);
         return;
       }
 
-      // Efeito de rastro (Persistence Layer)
+      // Rastro persistente
       ctx.fillStyle = `rgba(1, 3, 9, ${0.1 * (1/speed)})`;
       ctx.fillRect(0, 0, width, height);
 
@@ -61,14 +67,17 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
       for (let i = 0; i < drops.length; i++) {
         const text = charArray[Math.floor(Math.random() * charArray.length)];
         
-        // Glow FX de alta performance
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = color;
+        // Glow dinâmico baseado na intensidade
+        if (intensity !== 'normal') {
+          ctx.shadowBlur = intensity === 'ultra' ? 12 : 6;
+          ctx.shadowColor = color;
+        }
+
         ctx.fillText(text, i * fontSize, drops[i] * fontSize);
         ctx.shadowBlur = 0;
 
-        // Reset do pingo com probabilidade baseada na densidade
-        if (drops[i] * fontSize > height && Math.random() > density) {
+        // Reset dos pingos
+        if (drops[i] * fontSize > height && Math.random() > actualDensity) {
           drops[i] = 0;
         }
 
@@ -96,7 +105,7 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [color, speed, fontSize, density]);
+  }, [color, speed, fontSize, actualDensity, intensity]);
 
   return (
     <canvas 
