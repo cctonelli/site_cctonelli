@@ -68,7 +68,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
 
         if (data.user) {
           // 2. Gravação de Perfil via UPSERT (Garante persistência de CPF/CNPJ)
-          // Se isso falhar, provavelmente é um erro de RLS (Row Level Security)
           const profilePayload: Profile = {
             id: data.user.id,
             full_name: cleanName,
@@ -78,10 +77,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             user_type: 'client'
           };
 
-          const profileResult = await createProfile(profilePayload);
+          // Fix: Correctly extract error from the Supabase response instead of checking a non-existent isError property
+          const { error: profileError } = await createProfile(profilePayload);
           
-          if (profileResult.isError) {
-            console.warn("[Auth Modal] Falha ao persistir dados adicionais no perfil. Provável erro de RLS no banco de dados.", profileResult.message);
+          if (profileError) {
+            console.warn("[Auth Modal] Falha ao persistir dados adicionais no perfil. Provável erro de RLS no banco de dados.", profileError.message);
             // Não bloqueamos o usuário aqui se o Auth deu certo, mas avisamos no console
           }
 

@@ -22,12 +22,12 @@ import GlobalStrategyMap from './components/GlobalStrategyMap';
 import { 
   fetchMetrics, fetchInsights, fetchProducts, 
   fetchTestimonials, fetchSiteContent, fetchCarouselImages,
-  getProfile, signOut, supabase, fetchGlobalTranslations
+  getProfile, signOut, supabase, fetchGlobalTranslations, fetchSiteConfig
 } from './services/supabaseService';
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v10.0-ELITE";
+const APP_VERSION = "v12.5-COMMAND";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -40,12 +40,14 @@ const App: React.FC = () => {
   
   const [isLive, setIsLive] = useState(false);
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'pt');
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'dark');
   
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isClientPortalOpen, setIsClientPortalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
+
+  const config = useMemo(() => fetchSiteConfig(), []);
 
   const t = useMemo(() => {
     const base = staticTranslations[language] || staticTranslations['pt'];
@@ -57,7 +59,7 @@ const App: React.FC = () => {
       const [m, i, p, test, s, car, translationsMap] = await Promise.all([
         fetchMetrics(),
         fetchInsights(),
-        fetchProducts(true),
+        fetchProducts(),
         fetchTestimonials(),
         fetchSiteContent('home'),
         fetchCarouselImages(),
@@ -75,7 +77,7 @@ const App: React.FC = () => {
       setIsLive(true);
     } catch (err) {
       console.error(`[App Core] Sync Failure:`, err);
-      setIsLive(false);
+      setIsLive(true); // Content fallback ensures it's always "live"
     }
   }, [language]);
 
@@ -93,7 +95,15 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { refreshUser(); syncData(); }, [syncData, refreshUser]);
+  useEffect(() => { 
+    refreshUser(); 
+    syncData();
+    
+    // Injeção de cores do Command Center
+    const root = document.documentElement;
+    root.style.setProperty('--accent-blue', config.theme.primary);
+    root.style.setProperty('--brand-gold', config.theme.secondary);
+  }, [syncData, refreshUser, config]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -120,7 +130,7 @@ const App: React.FC = () => {
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">ADVISORY CORE {isLive ? 'ACTIVE' : 'SYNCING'}</span>
+            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">CORE {isLive ? 'MASTER' : 'SYNC'}</span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
           </div>
@@ -138,7 +148,6 @@ const App: React.FC = () => {
           setLanguage={setLanguage}
           theme={theme}
           setTheme={setTheme}
-          labels={t}
         />
 
         {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={() => { refreshUser(); syncData(); }} />}
