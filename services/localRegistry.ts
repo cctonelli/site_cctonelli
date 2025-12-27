@@ -14,6 +14,8 @@ export const SITE_CONFIG = {
   },
   ux: {
     matrix_mode: true,
+    matrix_speed: 1.5, // 0.5 a 3.0
+    matrix_opacity: 0.15,
     scanline_opacity: 0.05,
     glow_intensity: '0.4',
     border_radius_global: '2.5rem',
