@@ -5,13 +5,15 @@ interface MatrixRainProps {
   speed?: number;
   opacity?: number;
   fontSize?: number;
+  density?: number; // 0.1 to 1
 }
 
 const MatrixRain: React.FC<MatrixRainProps> = ({ 
   color = '#2563eb', 
-  speed = 1, 
+  speed = 1.5, 
   opacity = 0.15,
-  fontSize = 14 
+  fontSize = 14,
+  density = 0.98
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -25,13 +27,14 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
     let width = canvas.width = window.innerWidth;
     let height = canvas.height = window.innerHeight;
 
-    // Caracteres extraídos do seu script Python V8 MATRIX
-    const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネハヒフヘホマミムメモヤユヨラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()";
+    // Conjunto de caracteres do V8 Matrix Edition (Katakana + Alpha + Special)
+    const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネハヒフヘホマミムメモヤユヨラリルレロワヲンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?";
     const charArray = chars.split("");
 
     const columns = Math.floor(width / fontSize);
     const drops: number[] = [];
 
+    // Inicialização aleatória dos pingos
     for (let i = 0; i < columns; i++) {
       drops[i] = Math.floor(Math.random() * -height / fontSize);
     }
@@ -40,14 +43,14 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
     let frameCount = 0;
 
     const draw = () => {
-      // Ajuste de velocidade baseado no parâmetro speed
+      // Controle de cadência (Dayparting visual)
       frameCount++;
       if (frameCount % (speed < 1 ? 2 : 1) !== 0) {
         animationId = requestAnimationFrame(draw);
         return;
       }
 
-      // Efeito de fade
+      // Efeito de rastro (Persistence Layer)
       ctx.fillStyle = `rgba(1, 3, 9, ${0.1 * (1/speed)})`;
       ctx.fillRect(0, 0, width, height);
 
@@ -58,13 +61,14 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
       for (let i = 0; i < drops.length; i++) {
         const text = charArray[Math.floor(Math.random() * charArray.length)];
         
-        // Desenha a letra com glow sutil
-        ctx.shadowBlur = 5;
+        // Glow FX de alta performance
+        ctx.shadowBlur = 4;
         ctx.shadowColor = color;
         ctx.fillText(text, i * fontSize, drops[i] * fontSize);
         ctx.shadowBlur = 0;
 
-        if (drops[i] * fontSize > height && Math.random() > 0.975) {
+        // Reset do pingo com probabilidade baseada na densidade
+        if (drops[i] * fontSize > height && Math.random() > density) {
           drops[i] = 0;
         }
 
@@ -92,7 +96,7 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [color, speed, fontSize]);
+  }, [color, speed, fontSize, density]);
 
   return (
     <canvas 

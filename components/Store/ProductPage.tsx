@@ -55,11 +55,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
     </div>
   );
 
-  const isV8Matrix = slug?.toLowerCase().includes('v8') || slug?.toLowerCase().includes('matrix');
+  const isMatrixSlug = slug?.toLowerCase().includes('v8') || slug?.toLowerCase().includes('matrix') || slug?.toLowerCase().includes('pill');
 
   const renderBlock = (block: ProductContentBlock) => {
     const { content, block_type } = block;
-    const isMatrixStyle = isV8Matrix || content.style?.includes('matrix');
+    const isMatrixStyle = isMatrixSlug || content.style?.includes('matrix');
 
     switch (block_type) {
       case 'hero':
@@ -67,23 +67,27 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
           <section key={block.id} className="pt-48 pb-64 relative bg-black overflow-hidden border-b border-white/5 min-h-[80vh] flex items-center">
             {isMatrixStyle && (
               <>
-                <MatrixRain color={config.theme.primary} speed={config.ux.matrix_speed} opacity={config.ux.matrix_opacity} />
-                <div className="scanline"></div>
+                <MatrixRain 
+                  color={content.matrix_color || config.theme.primary} 
+                  speed={config.ux.matrix_speed} 
+                  opacity={config.ux.matrix_opacity} 
+                />
+                <div className="scanline" style={{ background: `linear-gradient(0deg, rgba(0,0,0,0) 0%, ${content.matrix_color || config.theme.primary}10 50%, rgba(0,0,0,0) 100%)` }}></div>
               </>
             )}
             <div className="container mx-auto px-6 relative z-10 text-center">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="inline-block px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.6em] bg-blue-600/10 border border-blue-600/30 text-blue-500 animate-pulse mb-16">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="inline-block px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.6em] bg-blue-600/10 border border-blue-600/30 text-blue-500 animate-pulse mb-16" style={{ borderColor: `${content.matrix_color || '#2563eb'}40`, color: content.matrix_color || '#2563eb' }}>
                 {content.overlay_text || 'ACTIVE PROTOCOL'}
               </motion.div>
               <h1 className={`text-6xl md:text-[11rem] font-serif leading-[0.8] italic tracking-tighter text-white mb-12 ${isMatrixStyle ? 'glitch-text' : ''}`} data-text={content.title || product.title}>
                 {content.title || product.title}
               </h1>
               {content.glitch_title && (
-                <div className="text-blue-500 font-mono text-2xl md:text-4xl font-black uppercase tracking-[0.8em] py-8 animate-pulse">{content.glitch_title}</div>
+                <div className="text-blue-500 font-mono text-2xl md:text-4xl font-black uppercase tracking-[0.8em] py-8 animate-pulse" style={{ color: content.matrix_color || '#2563eb' }}>{content.glitch_title}</div>
               )}
               <p className="text-2xl md:text-4xl text-slate-500 font-light italic leading-relaxed max-w-4xl mx-auto mb-20">{content.subtitle || product.subtitle}</p>
               <div className="flex justify-center gap-8">
-                  <a href="#pricing" className="bg-blue-600 text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl hover:bg-blue-500 transition-all">Ativar Agora</a>
+                  <a href="#pricing" className="bg-blue-600 text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl hover:bg-blue-500 transition-all" style={{ backgroundColor: content.matrix_color || '#2563eb' }}>Ativar Agora</a>
                   <Link to="/loja" className="bg-white/5 text-slate-500 border border-white/10 px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-white/10 hover:text-white transition-all">Outros Ativos</Link>
               </div>
             </div>
@@ -99,7 +103,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
                 {content.items?.map((item: any, i: number) => (
                   <motion.div key={i} whileHover={{ y: -10 }} className="p-12 rounded-[3.5rem] bg-slate-900/60 border border-white/5 hover:border-blue-600/40 transition-all group backdrop-blur-xl">
-                    <div className="w-20 h-20 rounded-[1.8rem] bg-blue-600/10 flex items-center justify-center text-4xl mb-10 group-hover:bg-blue-600 transition-all group-hover:scale-110 duration-500">
+                    <div className="w-20 h-20 rounded-[1.8rem] bg-blue-600/10 flex items-center justify-center text-4xl mb-10 group-hover:bg-blue-600 transition-all group-hover:scale-110 duration-500" style={{ backgroundColor: `${content.matrix_color || '#2563eb'}20` }}>
                       {item.icon === 'brain' ? '🧠' : item.icon === 'shield' ? '🛡️' : item.icon === 'zap' ? '⚡' : '🤖'}
                     </div>
                     <p className="text-slate-400 text-xl font-light italic leading-relaxed">{item.text}</p>
@@ -113,14 +117,14 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
       case 'comparison':
         return (
           <section key={block.id} id="pricing" className="py-64 bg-black relative border-y border-white/5">
-             {isMatrixStyle && <MatrixRain color={config.theme.primary} speed={0.5} opacity={0.05} fontSize={10} />}
+             {isMatrixStyle && <MatrixRain color={content.matrix_color || config.theme.primary} speed={0.5} opacity={0.05} fontSize={10} />}
             <div className="container mx-auto px-6 relative z-10">
               <h3 className="text-center text-7xl md:text-[8rem] font-serif italic text-white tracking-tighter mb-40 glitch-text" data-text={content.title || 'Níveis de Poder'}>
                 {content.title || 'Níveis de Poder'}
               </h3>
               <div className="grid lg:grid-cols-3 gap-16 max-w-7xl mx-auto">
                 {variants.map((v) => (
-                  <div key={v.id} className={`p-16 rounded-[4.5rem] border flex flex-col justify-between transition-all duration-700 backdrop-blur-2xl ${v.is_most_popular ? 'bg-blue-600/90 border-blue-400 text-white shadow-2xl scale-105 z-10' : 'bg-slate-900/40 border-white/5 text-slate-400 hover:border-blue-600/30'}`}>
+                  <div key={v.id} className={`p-16 rounded-[4.5rem] border flex flex-col justify-between transition-all duration-700 backdrop-blur-2xl ${v.is_most_popular ? 'bg-blue-600/90 border-blue-400 text-white shadow-2xl scale-105 z-10' : 'bg-slate-900/40 border-white/5 text-slate-400 hover:border-blue-600/30'}`} style={v.is_most_popular ? { backgroundColor: `${content.matrix_color || '#2563eb'}ee` } : {}}>
                     <div className="space-y-12">
                       <div className="space-y-4">
                         <h4 className="text-4xl font-serif italic text-white">{v.name}</h4>
@@ -129,13 +133,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                       <ul className="space-y-6">
                         {v.features?.map((f, fi) => (
                           <li key={fi} className="flex gap-4 text-sm font-light italic">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${v.is_most_popular ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>✓</div>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${v.is_most_popular ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`} style={v.is_most_popular ? { color: content.matrix_color || '#2563eb' } : { backgroundColor: content.matrix_color || '#2563eb' }}>✓</div>
                             {f}
                           </li>
                         ))}
                       </ul>
                     </div>
-                    <Link to={`/loja/${product.slug}/checkout?variant_id=${v.id}`} className={`w-full py-8 mt-24 rounded-3xl font-black uppercase tracking-[0.6em] text-[11px] text-center transition-all ${v.is_most_popular ? 'bg-white text-blue-600 shadow-2xl hover:scale-105' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
+                    <Link to={`/loja/${product.slug}/checkout?variant_id=${v.id}`} className={`w-full py-8 mt-24 rounded-3xl font-black uppercase tracking-[0.6em] text-[11px] text-center transition-all ${v.is_most_popular ? 'bg-white text-blue-600 shadow-2xl hover:scale-105' : 'bg-blue-600 text-white hover:bg-blue-500'}`} style={v.is_most_popular ? { color: content.matrix_color || '#2563eb' } : { backgroundColor: content.matrix_color || '#2563eb' }}>
                       ATIVAR PROTOCOLO
                     </Link>
                   </div>
