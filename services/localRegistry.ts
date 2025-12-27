@@ -78,7 +78,7 @@ export const LOCAL_PRODUCTS: Product[] = [
 export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
   '1549b854-3c86-4961-bc05-866609fe8d8e': [
     {
-      id: 'v8-variant-free',
+      id: 'v8-free',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       name: 'Versão Free (Demo)',
       price: 0.00,
@@ -87,18 +87,17 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       quantity_limit: 50,
       features: [
         "50 disparos totais",
-        "Máximo 10 disparos por dia",
+        "Máximo 10 disparos/dia",
         "Validade de 7 dias",
         "Suporte básico via WhatsApp",
-        "Humanização padrão",
-        "Envio de texto e imagem"
+        "Humanização padrão"
       ],
       is_most_popular: false,
       is_free: true,
       order_index: 0
     },
     {
-      id: 'v8-variant-mensal',
+      id: 'v8-mensal',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       name: 'Plano Mensal',
       price: 299.00,
@@ -107,10 +106,9 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       quantity_limit: 2400,
       features: [
         "2.400 disparos por mês",
-        "Humanização avançada com erros simulados",
-        "Suporte prioritário (resposta em até 12h)",
-        "Envio de todos os tipos (vídeo, áudio, documento, enquete)",
-        "Atualizações mensais garantidas",
+        "Humanização avançada",
+        "Suporte prioritário 12h",
+        "Envio de todas as mídias",
         "1 thread de disparo"
       ],
       is_most_popular: false,
@@ -118,7 +116,7 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       order_index: 1
     },
     {
-      id: 'v8-variant-semestral',
+      id: 'v8-semestral',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       name: 'Plano Semestral',
       price: 599.00,
@@ -127,20 +125,17 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       quantity_limit: 12800,
       features: [
         "12.800 disparos em 6 meses",
-        "Desconto especial: era R$999, agora R$599",
-        "Duas threads de disparo simultâneas",
-        "Suporte VIP 24h (prioridade máxima)",
-        "Acesso antecipado a novas funcionalidades",
-        "Humanização premium com perfis de digitação variados",
-        "Badge Mais Vendido",
-        "Envio ilimitado de todos os tipos de mídia"
+        "Desconto promocional ativo",
+        "2 threads simultâneas",
+        "Suporte VIP 24h",
+        "Humanização Premium"
       ],
       is_most_popular: true,
       is_free: false,
       order_index: 2
     },
     {
-      id: 'v8-variant-anual',
+      id: 'v8-anual',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       name: 'Plano Anual',
       price: 1199.00,
@@ -149,14 +144,10 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       quantity_limit: 32000,
       features: [
         "32.000 disparos em 12 meses",
-        "Melhor custo-benefício do mercado",
-        "Desconto de 66% vs mensal",
-        "Três threads de disparo simultâneas",
-        "Suporte VIP exclusivo (canal dedicado)",
-        "Licença vitalícia de atualizações",
-        "Acesso beta a versões futuras",
-        "Humanização extrema com cadência por horário do dia",
-        "Prioridade máxima em suporte técnico"
+        "Melhor custo-benefício",
+        "3 threads simultâneas",
+        "Licença Vitalícia Atualizações",
+        "Prioridade Máxima"
       ],
       is_most_popular: false,
       is_free: false,
@@ -168,91 +159,65 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
 export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
   '1549b854-3c86-4961-bc05-866609fe8d8e': [
     {
-      id: 'block-hero',
+      id: 'b1',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       block_type: 'hero',
       order: 1,
       content: {
-        title: "Disparador de WhatsApp V8 MATRIX EDITION",
-        subtitle: "A ferramenta mais poderosa e indetectável do Brasil",
-        video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Exemplo
-        cta_text: "Ver Planos",
-        cta_link: "#precos",
+        title: "V8 MATRIX EDITION",
+        subtitle: "A ferramenta indetectável que escala sua operação estratégica no WhatsApp.",
         overlay_text: "SYSTEM_SOVEREIGN_V6",
-        glitch_title: "PROTOCOL_ACTIVE"
+        glitch_title: "PROTOCOL_ACTIVE",
+        cta_text: "Ver Planos",
+        cta_link: "#precos"
       }
     },
     {
-      id: 'block-text',
+      id: 'b2',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       block_type: 'text',
       order: 2,
       content: {
-        title: "Tecnologia de elite para resultados reais",
-        subtitle: "Humanização extrema com digitação simulada, erros intencionais e pausas naturais por horário do dia. 100% indetectável pelo WhatsApp desde 2023. Envio de texto, imagem, vídeo, áudio, documentos, figurinhas, enquetes e eventos."
+        title: "Tecnologia de Elite",
+        subtitle: "Humanização extrema com digitação simulada e algoritmos anti-banimento testados desde 2023."
       }
     },
     {
-      id: 'block-gallery',
+      id: 'b3',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
-      block_type: 'image_gallery',
+      block_type: 'features',
       order: 3,
       content: {
-        title: "Interface intuitiva e poderosa",
-        images: [
-          "https://images.unsplash.com/photo-1551288049-bbbda536639a?auto=format&fit=crop&q=80&w=800",
-          "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800",
-          "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?auto=format&fit=crop&q=80&w=800"
+        title: "Arquitetura de Ativos",
+        items: [
+          { icon: "brain", text: "Humanização Premium" },
+          { icon: "zap", text: "Velocidade Adaptativa" },
+          { icon: "shield", text: "Algoritmo Anti-Ban v6.0" },
+          { icon: "robot", text: "Multi-threading Escalonável" }
         ]
       }
     },
     {
-      id: 'block-comparison',
+      id: 'b4',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       block_type: 'comparison',
       order: 4,
       content: {
-        title: "Compare os planos e escolha o ideal",
-        subtitle: "Todos os planos incluem atualizações gratuitas e suporte técnico"
+        title: "Níveis de Poder",
+        subtitle: "Escolha o protocolo ideal para sua escala corporativa."
       }
     },
     {
-      id: 'block-cta-upsell',
-      product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
-      block_type: 'cta',
-      order: 5,
-      content: {
-        title: "Precisa de mais disparos?",
-        subtitle: "Adquira pacotes extras a qualquer momento no seu Executive Hub",
-        button_text: "Ver Pacotes Extras",
-        button_link: "/wip"
-      }
-    },
-    {
-      id: 'block-faq',
+      id: 'b5',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       block_type: 'faq',
-      order: 6,
+      order: 5,
       content: {
-        title: "Perguntas Frequentes",
+        title: "FAQ",
         items: [
-          {"question": "É seguro usar o V8 MATRIX?", "answer": "Sim. Utilizamos técnicas comprovadas de humanização desde 2023, com zero relatos de bloqueio quando usado corretamente."},
-          {"question": "Posso comprar pacotes extras depois?", "answer": "Sim! No seu portal do cliente, você pode adquirir mais disparos a qualquer momento."},
-          {"question": "Como recebo o aplicativo?", "answer": "Após aprovação do pagamento, o link de download aparece imediatamente no seu Executive Hub."},
-          {"question": "Existe garantia?", "answer": "Sim, 7 dias de garantia total ou seu dinheiro de volta."}
+          { question: "É seguro?", answer: "Sim. 100% focado em humanização e segurança." },
+          { question: "Como recebo?", answer: "Acesso imediato no Hub após aprovação do PIX." }
         ]
-      }
-    },
-    {
-      id: 'block-cta-final',
-      product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
-      block_type: 'cta',
-      order: 7,
-      content: {
-        title: "Pronto para dominar o WhatsApp Marketing?",
-        subtitle: "Escolha seu plano e comece a escalar suas vendas hoje",
-        button_text: "Comprar Agora",
-        button_link: "#precos"
       }
     }
   ]
