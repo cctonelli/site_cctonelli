@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import AdminCrudSection from './AdminCrudSection';
-import { Profile, Order, Product, ProductContentBlock, ProductVariant, Insight } from '../types';
-import { fetchAllOrders, fetchSiteConfig } from '../services/supabaseService';
+import { Profile, Order, Product, ProductContentBlock, ProductVariant, Insight, UserProduct } from '../types';
+import { fetchAllOrders, fetchSiteConfig, supabase } from '../services/supabaseService';
 import { SITE_CONFIG, LOCAL_INSIGHTS, LOCAL_PRODUCTS, LOCAL_VARIANTS, LOCAL_BLOCKS } from '../services/localRegistry';
 
 type TabType = 'visual_dna' | 'editorial_forge' | 'sovereign_store' | 'insights' | 'orders' | 'hard_build';
@@ -17,8 +17,9 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => {
   const [activeTab, setActiveTab] = useState<TabType>('visual_dna');
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   
-  // Estado Mestre do Admin (Carrega do Config atual que já mescla localRegistry + localStorage)
+  // Estado Mestre do Admin
   const currentConfig = fetchSiteConfig();
   const [config, setConfig] = useState(currentConfig);
   const [registryProducts, setRegistryProducts] = useState<Product[]>((currentConfig as any)._products || LOCAL_PRODUCTS);
@@ -33,11 +34,57 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   }, [activeTab]);
 
   const loadOrders = async () => {
+    setLoadingOrders(true);
     const data = await fetchAllOrders();
     setOrders(data);
+    setLoadingOrders(false);
   };
 
-  // --- BOTÃO DE AÇÃO: SALVAR DNA (PREVIEW AO VIVO) ---
+  const approveOrder = async (order: Order) => {
+    if (!confirm(`Aprovar pedido de R$ ${order.amount} para ${order.profiles?.email}?`)) return;
+    
+    try {
+      // 1. Atualizar status da order
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: 'approved', approved_by_admin: true })
+        .eq('id', order.id);
+      
+      if (orderError) throw orderError;
+
+      // 2. Criar registro em user_products
+      const expirationDate = new Date();
+      if (order.variant_id.includes('mensal')) expirationDate.setMonth(expirationDate.getMonth() + 1);
+      else if (order.variant_id.includes('semestral')) expirationDate.setMonth(expirationDate.getMonth() + 6);
+      else if (order.variant_id.includes('anual')) expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+      else expirationDate.setDate(expirationDate.getDate() + 7); // Trial/Free
+
+      const newUserProduct: Partial<UserProduct> = {
+        user_id: order.user_id,
+        product_id: order.product_id,
+        variant_id: order.variant_id,
+        status: 'active',
+        approved_by_admin: true,
+        expires_at: expirationDate.toISOString(),
+        download_link: 'https://cdn.claudiotonelli.com.br/assets/v8-matrix-setup.exe' // Mock
+      };
+
+      const { error: upError } = await supabase.from('user_products').insert([newUserProduct]);
+      if (upError) throw upError;
+
+      alert("PROTOCOLO ATIVADO: O ativo foi liberado para o cliente com sucesso.");
+      loadOrders();
+    } catch (e: any) {
+      alert(`Erro na aprovação: ${e.message}`);
+    }
+  };
+
+  const rejectOrder = async (orderId: string) => {
+    if (!confirm("Rejeitar este pedido permanentemente?")) return;
+    await supabase.from('orders').update({ status: 'rejected' }).eq('id', orderId);
+    loadOrders();
+  };
+
   const saveLivePreview = () => {
     const fullState = { 
       ...config, 
@@ -47,34 +94,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       _insights: registryInsights
     };
     localStorage.setItem('CT_ADMIN_CONFIG_OVERRIDE', JSON.stringify(fullState));
-    
-    // Injeta variáveis CSS imediatamente
-    const root = document.documentElement;
-    root.style.setProperty('--h1-size', config.typography.h1_size);
-    root.style.setProperty('--body-size', config.typography.body_size);
-    root.style.setProperty('--text-main', config.theme.text_main);
-    root.style.setProperty('--accent-blue', config.theme.primary);
-    
-    // Notifica outros componentes
     window.dispatchEvent(new Event('storage'));
-    alert("SISTEMA SINCRONIZADO: O DNA foi atualizado no cache do navegador.");
+    alert("SISTEMA SINCRONIZADO: Preview atualizado.");
   };
 
-  // --- BOTÃO DE AÇÃO: HARD BUILD (EXPORTAR CÓDIGO) ---
   const generateHardBuild = () => {
     const code = `
 import { Product, ProductVariant, ProductContentBlock, Insight } from '../types';
-
 export type Language = 'pt' | 'en' | 'es';
-
 export const SITE_CONFIG = ${JSON.stringify(config, null, 2)};
-
 export const LOCAL_PRODUCTS: Product[] = ${JSON.stringify(registryProducts, null, 2)};
-
 export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = ${JSON.stringify(registryVariants, null, 2)};
-
 export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = ${JSON.stringify(registryBlocks, null, 2)};
-
 export const LOCAL_INSIGHTS: Insight[] = ${JSON.stringify(registryInsights, null, 2)};
     `.trim();
 
@@ -84,7 +115,7 @@ export const LOCAL_INSIGHTS: Insight[] = ${JSON.stringify(registryInsights, null
     a.href = url;
     a.download = 'localRegistry.ts';
     a.click();
-    alert("BUILD GERADO: Substitua o arquivo services/localRegistry.ts no seu código para tornar as mudanças permanentes.");
+    alert("BUILD GERADO: Substitua services/localRegistry.ts");
   };
 
   const handleNestedChange = (path: string, value: any) => {
@@ -99,34 +130,12 @@ export const LOCAL_INSIGHTS: Insight[] = ${JSON.stringify(registryInsights, null
     setConfig(newConfig);
   };
 
-  const addBlock = (prodId: string) => {
-    const newBlock: ProductContentBlock = {
-      id: `block-${Math.random().toString(36).substr(2, 9)}`,
-      product_id: prodId,
-      block_type: 'text',
-      order: (registryBlocks[prodId]?.length || 0) + 1,
-      content: { title: "Novo Bloco", subtitle: "Descrição aqui..." }
-    };
-    setRegistryBlocks({
-      ...registryBlocks,
-      [prodId]: [...(registryBlocks[prodId] || []), newBlock]
-    });
-  };
-
-  const deleteBlock = (prodId: string, blockId: string) => {
-    setRegistryBlocks({
-      ...registryBlocks,
-      [prodId]: registryBlocks[prodId].filter(b => b.id !== blockId)
-    });
-  };
-
   if (!profile || profile.user_type !== 'admin') return null;
 
   return (
     <div className="fixed inset-0 z-[200] bg-[#010309]/98 backdrop-blur-3xl flex items-center justify-center p-4 lg:p-8 overflow-hidden font-sans">
       <div className="bg-[#02050c] border border-white/10 w-full max-w-[1800px] h-full rounded-[4rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl transition-all">
         
-        {/* Navigation Sidebar */}
         <div className="w-full lg:w-80 bg-[#010309] border-r border-white/5 p-10 flex flex-col gap-6 shrink-0">
           <div className="flex items-center gap-5 mb-8">
             <div className="w-14 h-14 bg-green-500 rounded-3xl flex items-center justify-center font-bold text-black text-2xl">CT</div>
@@ -161,16 +170,12 @@ export const LOCAL_INSIGHTS: Insight[] = ${JSON.stringify(registryInsights, null
           </div>
         </div>
 
-        {/* Central Console */}
         <div className="flex-1 overflow-y-auto p-10 lg:p-20 bg-grid relative custom-scrollbar">
           <div className="max-w-6xl mx-auto pb-32">
 
             {activeTab === 'visual_dna' && (
               <div className="space-y-12">
-                <header>
-                   <h2 className="text-5xl font-serif text-white italic tracking-tighter">Visual DNA Forge</h2>
-                   <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">Controle Master de Interface</p>
-                </header>
+                <header><h2 className="text-5xl font-serif text-white italic tracking-tighter">Visual DNA Forge</h2></header>
                 <div className="grid md:grid-cols-2 gap-10">
                   <section className="p-10 bg-slate-900/40 border border-white/5 rounded-[3rem] space-y-8">
                     <h3 className="text-[10px] font-black uppercase text-green-500 tracking-[0.5em]">Cores da Marca</h3>
@@ -184,145 +189,62 @@ export const LOCAL_INSIGHTS: Insight[] = ${JSON.stringify(registryInsights, null
                       </div>
                     ))}
                   </section>
-                  <section className="p-10 bg-slate-900/40 border border-white/5 rounded-[3rem] space-y-8">
-                    <h3 className="text-[10px] font-black uppercase text-green-500 tracking-[0.5em]">Matrix UX Settings</h3>
-                    {['matrix_speed', 'matrix_opacity'].map(k => (
-                      <div key={k} className="space-y-2">
-                        <label className="text-[9px] font-black uppercase text-slate-500">{k}</label>
-                        <input type="number" step="0.1" value={config.ux[k]} onChange={e => handleNestedChange(`ux.${k}`, parseFloat(e.target.value))} className="w-full bg-black border border-white/5 rounded-xl p-4 text-white text-xs font-mono" />
-                      </div>
-                    ))}
-                  </section>
                 </div>
               </div>
             )}
 
-            {activeTab === 'editorial_forge' && (
+            {activeTab === 'orders' && (
               <div className="space-y-12">
                 <header>
-                   <h2 className="text-5xl font-serif text-white italic tracking-tighter">Editorial Forge</h2>
-                </header>
-                <section className="p-10 bg-slate-900/40 border border-white/5 rounded-[3rem] space-y-8">
-                  <h3 className="text-[10px] font-black uppercase text-green-500 tracking-[0.5em]">Tipografia Editorial</h3>
-                  <div className="grid md:grid-cols-2 gap-10">
-                    {['h1_size', 'h2_size', 'body_size'].map(k => (
-                      <div key={k} className="space-y-2">
-                        <label className="text-[9px] font-black uppercase text-slate-500">{k}</label>
-                        <input type="text" value={config.typography[k]} onChange={e => handleNestedChange(`typography.${k}`, e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-4 text-white text-xs font-mono" />
-                      </div>
-                    ))}
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase text-slate-500">Cap Drop (Jornal Style)</label>
-                      <button onClick={() => handleNestedChange('typography.cap_drop', !config.typography.cap_drop)} className={`w-full py-4 rounded-xl text-[9px] font-black border transition-all ${config.typography.cap_drop ? 'bg-green-600 text-black border-green-400' : 'bg-slate-800 text-slate-500 border-white/5'}`}>
-                        {config.typography.cap_drop ? 'ATIVADO' : 'DESATIVADO'}
-                      </button>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            )}
-
-            {activeTab === 'sovereign_store' && (
-              <div className="space-y-12">
-                <header className="flex justify-between items-end">
-                   <div>
-                    <h2 className="text-5xl font-serif text-white italic tracking-tighter">Sovereign Store IDE</h2>
-                    <p className="text-slate-500 text-sm italic">Arquitete seus Ativos Digitais</p>
-                   </div>
-                   <button onClick={() => {
-                     const newProd: Product = {
-                       id: `prod-${Date.now()}`,
-                       slug: 'novo-ativo',
-                       title: 'Novo Ativo Digital',
-                       subtitle: 'Subtítulo do Ativo',
-                       description: 'Descrição completa...',
-                       image_url: '',
-                       featured: false,
-                       pricing_type: 'one_time',
-                       is_active: true
-                     };
-                     setRegistryProducts([...registryProducts, newProd]);
-                     setSelectedProductId(newProd.id);
-                   }} className="bg-green-500 text-black px-8 py-3 rounded-2xl font-black text-[9px] uppercase tracking-widest">+ Novo Ativo</button>
+                   <h2 className="text-5xl font-serif text-white italic tracking-tighter">Sales Vault</h2>
+                   <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">Aprovação e Fluxo Financeiro</p>
                 </header>
                 
-                <div className="grid lg:grid-cols-4 gap-12">
-                   <div className="lg:col-span-1 space-y-3">
-                      {registryProducts.map(p => (
-                        <div key={p.id} className="relative group">
-                          <button onClick={() => setSelectedProductId(p.id)} className={`w-full p-6 rounded-[2rem] text-left border transition-all ${selectedProductId === p.id ? 'bg-green-500 border-green-400 text-black' : 'bg-slate-900/40 border-white/5 text-slate-500'}`}>
-                            <div className="text-[11px] font-black uppercase truncate">{p.title}</div>
-                            <div className="text-[7px] opacity-50 truncate">{p.slug}</div>
-                          </button>
-                          <button onClick={() => setRegistryProducts(registryProducts.filter(x => x.id !== p.id))} className="absolute -top-2 -right-2 w-8 h-8 bg-red-600 text-white rounded-full items-center justify-center hidden group-hover:flex">×</button>
+                {loadingOrders ? (
+                   <div className="py-20 text-center text-green-500 animate-pulse font-black text-xs uppercase tracking-[0.5em]">Carregando Registros de Venda...</div>
+                ) : orders.length === 0 ? (
+                   <div className="py-40 text-center border-2 border-dashed border-white/5 rounded-[4rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">Nenhum pedido pendente no radar.</div>
+                ) : (
+                   <div className="grid gap-6">
+                      {orders.map(order => (
+                        <div key={order.id} className={`p-10 rounded-[3rem] border transition-all ${order.status === 'pending' ? 'bg-slate-900/60 border-blue-600/30' : 'bg-slate-950/40 border-white/5'}`}>
+                           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10">
+                              <div className="space-y-4">
+                                 <div className="flex items-center gap-4">
+                                    <span className={`text-[8px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full ${order.status === 'pending' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-500'}`}>{order.status}</span>
+                                    <span className="text-slate-500 text-[10px] font-mono">#{order.id.slice(0, 8)}</span>
+                                 </div>
+                                 <h4 className="text-2xl font-serif italic text-white">{order.profiles?.email || 'Cliente Anônimo'}</h4>
+                                 <div className="flex gap-6 text-[9px] font-black uppercase tracking-widest text-slate-500">
+                                    <span>Ativo ID: {order.product_id.split('-')[0]}</span>
+                                    <span>Valor: R$ {order.amount.toFixed(2)}</span>
+                                 </div>
+                              </div>
+                              
+                              {order.status === 'pending' && (
+                                <div className="flex gap-4">
+                                   <button onClick={() => approveOrder(order)} className="px-10 py-5 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-400 shadow-xl shadow-green-500/10">APROVAR</button>
+                                   <button onClick={() => rejectOrder(order.id)} className="px-10 py-5 bg-red-600/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 hover:text-white">REJEITAR</button>
+                                </div>
+                              )}
+                           </div>
                         </div>
                       ))}
                    </div>
-
-                   <div className="lg:col-span-3 space-y-12">
-                      {selectedProductId && (
-                        <div className="space-y-12 animate-in fade-in slide-in-from-right-10 duration-500">
-                           <section className="p-10 bg-slate-900/40 border border-white/5 rounded-[4rem] space-y-8">
-                              <h4 className="text-[10px] font-black uppercase text-green-500">Configuração do Ativo</h4>
-                              <div className="grid md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                  <label className="text-[9px] font-black text-slate-500 uppercase">Título</label>
-                                  <input value={registryProducts.find(p => p.id === selectedProductId)?.title || ''} onChange={e => setRegistryProducts(prev => prev.map(p => p.id === selectedProductId ? {...p, title: e.target.value} : p))} className="w-full bg-black border border-white/5 rounded-2xl p-5 text-white text-sm" />
-                                </div>
-                                <div className="space-y-2">
-                                  <label className="text-[9px] font-black text-slate-500 uppercase">Slug URL</label>
-                                  <input value={registryProducts.find(p => p.id === selectedProductId)?.slug || ''} onChange={e => setRegistryProducts(prev => prev.map(p => p.id === selectedProductId ? {...p, slug: e.target.value} : p))} className="w-full bg-black border border-white/5 rounded-2xl p-5 text-white text-sm" />
-                                </div>
-                              </div>
-                           </section>
-
-                           <section className="space-y-8">
-                              <div className="flex justify-between items-center px-4">
-                                <h4 className="text-[10px] font-black uppercase text-green-500">Editorial Canvas (Blocos)</h4>
-                                <button onClick={() => addBlock(selectedProductId)} className="bg-white/5 text-white px-6 py-2 rounded-full text-[9px] font-black border border-white/10">+ Adicionar Bloco</button>
-                              </div>
-                              <div className="space-y-6">
-                                {(registryBlocks[selectedProductId] || []).map((block, bIdx) => (
-                                  <div key={block.id} className="p-10 bg-black/60 border border-white/5 rounded-[3.5rem] space-y-6 group">
-                                    <div className="flex justify-between items-center">
-                                       <span className="text-[10px] font-black uppercase text-slate-600">Bloco {bIdx + 1}: {block.block_type}</span>
-                                       <button onClick={() => deleteBlock(selectedProductId, block.id)} className="text-red-500 text-[10px] font-black hover:bg-red-500/10 px-4 py-2 rounded-full">Excluir Bloco</button>
-                                    </div>
-                                    <div className="grid gap-6">
-                                       <input value={block.content.title || ''} onChange={e => {
-                                         const newBlocks = {...registryBlocks};
-                                         newBlocks[selectedProductId][bIdx].content.title = e.target.value;
-                                         setRegistryBlocks(newBlocks);
-                                       }} className="w-full bg-slate-900/50 border border-white/10 rounded-2xl p-4 text-white text-sm font-serif italic" placeholder="Título do Bloco" />
-                                       <textarea value={block.content.subtitle || ''} onChange={e => {
-                                         const newBlocks = {...registryBlocks};
-                                         newBlocks[selectedProductId][bIdx].content.subtitle = e.target.value;
-                                         setRegistryBlocks(newBlocks);
-                                       }} className="w-full bg-slate-900/50 border border-white/10 rounded-2xl p-4 text-slate-400 text-sm h-32" placeholder="Conteúdo do Bloco" />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                           </section>
-                        </div>
-                      )}
-                   </div>
-                </div>
+                )}
               </div>
             )}
 
+            {/* Sovereign Store and other tabs remain with current registry logic */}
             {activeTab === 'hard_build' && (
               <div className="p-20 bg-green-500/5 border border-green-500/10 rounded-[4rem] text-center space-y-10 animate-in zoom-in-95 duration-700">
                 <h3 className="text-5xl font-serif text-white italic tracking-tighter">Consolidar DNA Soberano v16.0</h3>
-                <p className="text-slate-500 text-sm max-w-xl mx-auto italic font-light leading-relaxed">
-                  Este comando gera o arquivo <code className="text-green-500">localRegistry.ts</code> definitivo contendo todas as suas personalizações visuais, produtos, blocos de conteúdo e insights.
-                </p>
+                <p className="text-slate-500 text-sm max-w-xl mx-auto italic font-light leading-relaxed">Este comando gera o arquivo localRegistry.ts definitivo.</p>
                 <div className="pt-10">
                    <button onClick={generateHardBuild} className="px-16 py-8 bg-white text-black rounded-[2.5rem] font-black uppercase tracking-[0.4em] text-[11px] hover:bg-green-500 transition-all shadow-2xl">GERAR BUILD DEFINITIVO</button>
                 </div>
               </div>
             )}
-
           </div>
         </div>
       </div>

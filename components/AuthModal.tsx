@@ -71,6 +71,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           const profilePayload: Profile = {
             id: data.user.id,
             full_name: cleanName,
+            // Include cleanEmail in the profile payload to match the updated Profile type
+            email: cleanEmail,
             cpf_cnpj: cleanTaxId,
             whatsapp: cleanWhatsapp,
             gender: gender,
