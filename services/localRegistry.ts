@@ -2,15 +2,25 @@ import { Product, ProductVariant, ProductContentBlock, Insight } from '../types'
 
 export type Language = 'pt' | 'en' | 'es';
 
-// --- KERNEL VISUAL & NARRATIVO TOTAL ---
+// --- KERNEL VISUAL & NARRATIVO TOTAL v15.5 ---
 export const SITE_CONFIG = {
   theme: {
-    primary: '#00ff41', // Verde Matrix Neon Original
-    secondary: '#b4975a', 
+    primary: '#00ff41', // Verde Matrix Neon
+    secondary: '#b4975a', // Dourado Advisory
     bg_dark: '#010309',
     bg_light: '#ffffff',
+    text_main: '#f8fafc',
+    text_secondary: '#94a3b8',
     font_family_serif: "'Playfair Display', serif",
     font_family_sans: "'Inter', sans-serif"
+  },
+  typography: {
+    h1_size: '9.5rem',
+    h2_size: '4.5rem',
+    body_size: '1.125rem',
+    line_height: '1.6',
+    letter_spacing: '-0.02em',
+    cap_drop: true // Estilo Jornal: Primeira letra grande
   },
   ux: {
     matrix_mode: true,
@@ -18,9 +28,7 @@ export const SITE_CONFIG = {
     matrix_opacity: 0.2,
     scanline_opacity: 0.08,
     glow_intensity: '0.6',
-    border_radius_global: '2.5rem',
-    font_size_base: '16px',
-    h1_size: '9.5rem'
+    border_radius_global: '2.5rem'
   },
   visibility: {
     hero: true,
@@ -53,7 +61,6 @@ export const SITE_CONFIG = {
   }
 };
 
-// --- REPOSITÓRIO DE ATIVOS (PRODUTOS) ---
 export const LOCAL_PRODUCTS: Product[] = [
   {
     id: 'v8-matrix-id',
@@ -64,17 +71,6 @@ export const LOCAL_PRODUCTS: Product[] = [
     image_url: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop',
     featured: true,
     pricing_type: 'subscription',
-    is_active: true
-  },
-  {
-    id: 'quantum-red-pill-id',
-    slug: 'quantum-red-pill',
-    title: 'QUANTUM RED PILL',
-    subtitle: 'Descriptografia de Mercado e Visão Executiva Nível 13.',
-    description: 'Sistema de monitoramento em tempo real de fluxos de capital e tendências disruptivas. Fuja da simulação corporativa com advisory de elite.',
-    image_url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop',
-    featured: false,
-    pricing_type: 'one_time',
     is_active: true
   }
 ];
@@ -89,29 +85,8 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       currency: 'BRL',
       interval: 'semester',
       quantity_limit: 1,
-      features: [
-        'Dayparting Inteligente', 
-        'Mouse Curves (Antiban)', 
-        'Multi-Thread v6 Core', 
-        'Suporte Executive +55 44 99732-8888',
-        'Licença Vitalícia para 2 Instâncias'
-      ],
+      features: ['Dayparting Inteligente', 'Mouse Curves (Antiban)', 'Multi-Thread v6 Core'],
       is_most_popular: true,
-      is_free: false,
-      order_index: 0
-    }
-  ],
-  'quantum-red-pill-id': [
-    {
-      id: 'quantum-one',
-      product_id: 'quantum-red-pill-id',
-      name: 'Visionary Access',
-      price: 4997.00,
-      currency: 'BRL',
-      interval: null,
-      quantity_limit: 1,
-      features: ['Deep Market Decryption', 'Anti-Fragility Framework', 'Monthly Executive Briefing'],
-      is_most_popular: false,
       is_free: false,
       order_index: 0
     }
@@ -132,61 +107,6 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
         subtitle: "Engenharia de disparos indetectável com alma humana.",
         glitch_title: "SYSTEM_SOVEREIGN_V6",
         overlay_text: "ACTIVE_PROTOCOL_NEON_GREEN"
-      }
-    },
-    {
-      id: 'b2-v8',
-      product_id: 'v8-matrix-id',
-      block_type: 'features',
-      order: 2,
-      content: {
-        title: "Arquitetura de Ativos v6.0",
-        matrix_color: "#00ff41",
-        style: "glitch_grid",
-        items: [
-          { icon: "brain", text: "Cadência por Período (Dayparting)" },
-          { icon: "shield", text: "Algoritmo Anti-Ban v6.0" },
-          { icon: "zap", text: "Multi-Thread de Alta Performance" },
-          { icon: "robot", text: "Simulação de Micro-interações" }
-        ]
-      }
-    },
-    {
-      id: 'b3-v8',
-      product_id: 'v8-matrix-id',
-      block_type: 'comparison',
-      order: 3,
-      content: {
-        title: "ESCOLHA SEU NÍVEL DE PODER",
-        style: "terminal_matrix",
-        matrix_color: "#00ff41"
-      }
-    }
-  ],
-  'quantum-red-pill-id': [
-    {
-      id: 'b1-red',
-      product_id: 'quantum-red-pill-id',
-      block_type: 'hero',
-      order: 1,
-      content: {
-        style: "matrix",
-        matrix_color: "#ef4444",
-        title: "RED PILL VISION",
-        subtitle: "A verdade crua do mercado corporativo revelada.",
-        glitch_title: "DECRYPT_REALITY",
-        overlay_text: "CORE_ACCESS_AUTHORIZED"
-      }
-    },
-    {
-      id: 'b2-red',
-      product_id: 'quantum-red-pill-id',
-      block_type: 'comparison',
-      order: 2,
-      content: {
-        title: "SAIA DA SIMULAÇÃO CORPORATIVA",
-        style: "terminal_matrix",
-        matrix_color: "#ef4444"
       }
     }
   ]

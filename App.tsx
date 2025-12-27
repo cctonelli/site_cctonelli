@@ -26,7 +26,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v13.0-SOVEREIGN";
+const APP_VERSION = "v15.5-EDITORIAL";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -46,7 +46,7 @@ const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  // KERNEL CONFIGURATION (DNA DO SITE)
+  // KERNEL CONFIGURATION
   const siteConfig = useMemo(() => fetchSiteConfig(), []);
 
   const t = useMemo(() => {
@@ -108,7 +108,13 @@ const App: React.FC = () => {
     root.style.setProperty('--glow-opacity', siteConfig.ux.glow_intensity);
     root.style.setProperty('--scanline-opacity', siteConfig.ux.scanline_opacity.toString());
     
-    // Atualizar Título da Página (SEO SOBERANO)
+    // Injeção de Tipografia Editorial Forge
+    root.style.setProperty('--h1-size', siteConfig.typography?.h1_size || '9.5rem');
+    root.style.setProperty('--h2-size', siteConfig.typography?.h2_size || '4.5rem');
+    root.style.setProperty('--body-size', siteConfig.typography?.body_size || '1.125rem');
+    root.style.setProperty('--text-main', siteConfig.theme?.text_main || '#f8fafc');
+    root.style.setProperty('--text-secondary', siteConfig.theme?.text_secondary || '#94a3b8');
+    
     document.title = siteConfig.seo.title[language] || siteConfig.seo.title['pt'];
   }, [syncData, refreshUser, siteConfig, language]);
 
@@ -132,15 +138,15 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
+      <div className="relative min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
         
-        {/* Status Protocol v13.0 */}
+        {/* Status Protocol v15.5 */}
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">SOVEREIGN CORE</span>
+            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">EDITORIAL COMMAND</span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
-            <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
+            <span className="text-[7px] font-mono text-green-500 font-bold">{APP_VERSION}</span>
           </div>
         </div>
 
@@ -173,7 +179,7 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
                       {metrics.map(m => (
                         <div key={m.id} className="text-center group">
-                          <div className="text-5xl lg:text-7xl font-serif font-bold text-blue-600 mb-2 transition-transform group-hover:scale-110 duration-500">{m.value}</div>
+                          <div className="text-5xl lg:text-7xl font-serif font-bold text-blue-600 dark:text-green-600 mb-2 transition-transform group-hover:scale-110 duration-500">{m.value}</div>
                           <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', '')}</div>
                         </div>
                       ))}
@@ -183,25 +189,27 @@ const App: React.FC = () => {
               )}
 
               {siteConfig.visibility.insights && (
-                <section id="insights" className="py-32 bg-white dark:bg-slate-950">
+                <section id="insights" className="py-32 bg-white dark:bg-[#010309]">
                   <div className="container mx-auto px-6">
-                    <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-4">
-                      <div>
-                        <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
-                        <h2 className="text-4xl lg:text-7xl font-serif italic dark:text-white text-slate-900 leading-[1.1]">{resolveContent('insights_title', t.insights_title)}</h2>
+                    <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-24 gap-4">
+                      <div className="space-y-4">
+                        <div className="text-blue-500 dark:text-green-500 font-black uppercase tracking-[0.5em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
+                        <h2 className="text-5xl md:text-[5rem] font-serif italic dark:text-white text-slate-900 leading-[0.9] tracking-tighter">{resolveContent('insights_title', t.insights_title)}</h2>
                       </div>
-                      <Link to="/wip" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{resolveContent('insights_all', t.insights_all)}</Link>
+                      <Link to="/wip" className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 dark:text-green-500 border-b-2 border-current pb-2 transition-all">Folhear Acervo</Link>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-12">
+                    <div className="grid md:grid-cols-3 gap-16">
                       {insights.map(insight => (
-                        <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-6">
-                          <div className="aspect-[4/5] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 relative shadow-xl" style={{ borderRadius: 'var(--global-radius)' }}>
+                        <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-8">
+                          <div className="aspect-[3/4] overflow-hidden bg-slate-900 border border-white/5 relative shadow-2xl" style={{ borderRadius: 'var(--global-radius)' }}>
                             <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                            <div className="absolute bottom-8 left-8 right-8 text-white">
+                               <div className="text-[9px] font-black uppercase tracking-widest text-green-500 mb-2">{insight.category || 'INSIGHT'}</div>
+                               <h3 className="text-3xl font-serif italic leading-tight">{resolveTranslation(insight, 'title', '')}</h3>
+                            </div>
                           </div>
-                          <div className="space-y-3">
-                            <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors">{resolveTranslation(insight, 'title', '')}</h3>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light leading-relaxed">{resolveTranslation(insight, 'excerpt', '')}</p>
-                          </div>
+                          <p className="text-slate-500 text-base font-light italic leading-relaxed line-clamp-2">{resolveTranslation(insight, 'excerpt', '')}</p>
                         </Link>
                       ))}
                     </div>
@@ -225,12 +233,12 @@ const App: React.FC = () => {
         </Routes>
 
         {siteConfig.visibility.footer && (
-          <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center">
+          <footer className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] text-center">
             <div className="container mx-auto px-6 space-y-12">
-              <div className="w-14 h-14 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white shadow-2xl">CT</div>
-              <div className="flex justify-center gap-8">
-                 <a href={siteConfig.contact.linkedin} className="text-slate-500 hover:text-blue-500 text-[10px] font-black uppercase tracking-widest">LinkedIn</a>
-                 <a href={siteConfig.contact.instagram} className="text-slate-500 hover:text-blue-500 text-[10px] font-black uppercase tracking-widest">Instagram</a>
+              <div className="w-14 h-14 bg-blue-600 dark:bg-green-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white dark:text-black shadow-2xl">CT</div>
+              <div className="flex justify-center gap-12">
+                 <a href={siteConfig.contact.linkedin} className="text-slate-500 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-colors">LinkedIn</a>
+                 <a href={siteConfig.contact.instagram} className="text-slate-500 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-colors">Instagram</a>
               </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
               <p className="text-[8px] text-slate-700 uppercase tracking-widest">{siteConfig.contact.address}</p>

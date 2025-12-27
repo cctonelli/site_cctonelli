@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { fetchInsightById } from '../services/supabaseService';
+import { fetchInsightById, fetchSiteConfig } from '../services/supabaseService';
 import { Insight } from '../types';
 import { Language } from '../services/i18nService';
 
@@ -10,6 +9,7 @@ const ArticlePage: React.FC = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const lang = (queryParams.get('lang') as Language) || 'pt';
+  const config = fetchSiteConfig();
 
   const [article, setArticle] = useState<Insight | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,99 +35,130 @@ const ArticlePage: React.FC = () => {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
-      <div className="w-12 h-12 border-t-2 border-blue-500 rounded-full animate-spin"></div>
-      <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Arquitetando Insight...</span>
+    <div className="min-h-screen bg-[#010309] flex flex-col items-center justify-center space-y-4">
+      <div className="w-12 h-12 border-t-2 border-green-500 rounded-full animate-spin"></div>
+      <span className="text-[10px] uppercase tracking-widest text-slate-500 font-black">Compondo Edição...</span>
     </div>
   );
 
   if (!article) return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-6 p-6 text-center">
-      <h1 className="text-4xl font-serif text-white italic">Insight indisponível</h1>
-      <p className="text-slate-500 max-w-md font-light">Este conteúdo estratégico não foi localizado no servidor.</p>
-      <Link to="/" className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs shadow-2xl shadow-blue-600/20 hover:bg-blue-500 transition-all">Voltar para Home</Link>
+    <div className="min-h-screen bg-[#010309] flex flex-col items-center justify-center space-y-6 p-6 text-center">
+      <h1 className="text-4xl font-serif text-white italic">Edição Não Encontrada</h1>
+      <Link to="/" className="bg-green-600 text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs">Voltar</Link>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-500">
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 py-6">
+    <div className="min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500 selection:bg-green-500 selection:text-black">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#010309]/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/5 py-6">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white text-xl shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">CT</div>
-            <span className="font-bold tracking-tighter dark:text-white text-slate-900 group-hover:text-blue-500 transition-colors">Claudio Tonelli</span>
+            <div className="w-10 h-10 bg-blue-600 dark:bg-green-600 rounded-xl flex items-center justify-center font-bold text-white dark:text-black text-xl shadow-lg transition-transform group-hover:scale-105">CT</div>
+            <span className="font-serif italic text-xl dark:text-white text-slate-900">The Tonelli Journal</span>
           </Link>
           <div className="flex items-center gap-6">
-             <div className="hidden md:block text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400">{article.category || 'ADVISORY'}</div>
-             <Link to="/" className="text-[10px] font-bold uppercase tracking-widest text-blue-500 hover:text-blue-400 transition-colors border-b border-transparent hover:border-blue-500 pb-1">Fechar Artigo</Link>
+             <div className="hidden md:block text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">Digital Intelligence Desk</div>
+             <Link to="/" className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-green-500 hover:opacity-70 transition-all border-b border-transparent hover:border-current pb-1">Sair do Insight</Link>
           </div>
         </div>
       </header>
 
-      <main className="pt-48 pb-32 container mx-auto px-6 max-w-4xl">
-        <article className="space-y-16">
-          <div className="space-y-8 text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
-            <div className="inline-block px-5 py-2 bg-blue-600/10 text-blue-500 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-500/20">
-               {article.category || 'ESTRATÉGIA CORPORATIVA'}
+      <main className="pt-48 pb-40 container mx-auto px-6 max-w-5xl">
+        <article className="space-y-20">
+          <div className="space-y-10 text-center animate-in fade-in slide-in-from-bottom-12 duration-1000">
+            <div className="inline-block px-8 py-2 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-full text-[9px] font-black uppercase tracking-[0.5em] border border-white/5">
+               {article.category || 'EXECUTIVE ADVISORY'}
             </div>
-            <h1 className="text-5xl md:text-8xl font-serif dark:text-white text-slate-900 leading-[1.1] italic">
+            <h1 
+                className="font-serif dark:text-white text-slate-900 leading-[1] italic tracking-tighter"
+                style={{ fontSize: `var(--h2-size, 4.5rem)` }}
+            >
               {resolve('title', article.title)}
             </h1>
             {article.excerpt && (
-              <p className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 font-light italic max-w-3xl mx-auto leading-relaxed border-l-2 border-blue-500/30 pl-8 text-left inline-block">
+              <p 
+                className="font-light italic max-w-4xl mx-auto leading-relaxed border-y border-slate-100 dark:border-white/5 py-10"
+                style={{ fontSize: '1.5rem', color: 'var(--text-secondary, #94a3b8)' }}
+              >
                 {resolve('excerpt', article.excerpt)}
               </p>
             )}
-            <div className="flex items-center justify-center gap-6 pt-6">
-               <div className="w-12 h-[1px] bg-slate-200 dark:bg-white/10"></div>
-               <div className="text-[10px] font-bold uppercase tracking-[0.5em] text-slate-500">
-                 {new Date(article.published_at).toLocaleDateString(lang === 'pt' ? 'pt-BR' : lang === 'en' ? 'en-US' : 'es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
+            <div className="flex items-center justify-center gap-6 pt-4">
+               <div className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">
+                 ESTABELECIDO EM {new Date(article.published_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}
                </div>
-               <div className="w-12 h-[1px] bg-slate-200 dark:bg-white/10"></div>
             </div>
           </div>
 
           {article.image_url && (
-            <div className="relative aspect-[21/10] rounded-[3rem] overflow-hidden shadow-2xl border border-white/5 animate-in fade-in duration-[1.5s] delay-500">
-              <img src={article.image_url} alt={article.title} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/30 to-transparent"></div>
+            <div className="relative aspect-[16/7] rounded-[4rem] overflow-hidden shadow-2xl border border-white/5 group animate-in zoom-in-95 duration-[1.5s]">
+              <img src={article.image_url} alt={article.title} className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-110" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#010309]/40 to-transparent"></div>
+              <div className="absolute bottom-10 left-10 text-[9px] font-black uppercase tracking-[0.4em] text-white bg-black/50 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">FIG_01 // VISUAL_INTEL</div>
             </div>
           )}
 
-          <div className="relative animate-in fade-in duration-1000 delay-700">
+          <div className={`relative animate-in fade-in duration-1000 delay-500 ${config.typography.cap_drop ? 'drop-cap-enabled' : ''}`}>
             <div 
-              className="rich-text dark:prose-invert prose prose-blue prose-2xl max-w-none text-slate-700 dark:text-slate-300 font-light leading-relaxed space-y-10"
-              style={{ fontFamily: "'Inter', sans-serif" }}
+              className="editorial-canvas prose prose-blue dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 font-light leading-relaxed space-y-12"
+              style={{ 
+                fontFamily: "var(--font-sans)", 
+                fontSize: `var(--body-size, 1.125rem)`,
+                color: 'var(--text-main, #f8fafc)'
+              }}
               dangerouslySetInnerHTML={{ __html: resolve('content', article.content || article.excerpt || '') }}
             />
           </div>
         </article>
       </main>
 
-      <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] transition-colors relative">
+      <footer className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] transition-colors relative">
          <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none"></div>
-         <div className="container mx-auto px-6 text-center space-y-8 relative z-10">
-            <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl shadow-2xl shadow-blue-600/30">CT</div>
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.6em] text-slate-500">Claudio Tonelli Group &copy; 2025</p>
-              <p className="text-slate-400 font-light text-sm italic">Arquitetando o amanhã com rigor e visão.</p>
+         <div className="container mx-auto px-6 text-center space-y-10 relative z-10">
+            <div className="w-14 h-14 bg-green-600 text-black rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl shadow-2xl shadow-green-600/30">CT</div>
+            <div className="space-y-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.8em] text-slate-500">Claudio Tonelli Publishing &copy; 2025</p>
+              <div className="flex justify-center gap-10">
+                <Link to="/" className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-green-500 transition-colors">LinkedIn</Link>
+                <Link to="/" className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-green-500 transition-colors">Intelligence Report</Link>
+              </div>
             </div>
-            <Link to="/" className="inline-block bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 px-10 py-4 rounded-2xl text-[10px] uppercase tracking-widest text-blue-500 font-bold hover:bg-blue-600 hover:text-white transition-all shadow-xl">
-              Solicitar Advisory Global
-            </Link>
          </div>
       </footer>
 
       <style>{`
-        .rich-text h2 { font-family: 'Playfair Display', serif; font-style: italic; font-size: 3rem; margin-top: 5rem; color: #fff; line-height: 1.1; border-bottom: 1px solid rgba(59, 130, 246, 0.2); padding-bottom: 1rem; }
-        .rich-text h3 { font-family: 'Playfair Display', serif; font-size: 2.25rem; margin-top: 3.5rem; color: #fff; }
-        .rich-text p { margin-bottom: 2.5rem; font-size: 1.25rem; }
-        .rich-text strong { font-weight: 700; color: #3b82f6; }
-        .rich-text blockquote { border-left: 6px solid #3b82f6; padding-left: 3.5rem; font-style: italic; color: #94a3b8; margin: 5rem 0; font-family: 'Playfair Display', serif; font-size: 2rem; background: rgba(59, 130, 246, 0.03); padding-top: 2rem; padding-bottom: 2rem; border-radius: 0 2rem 2rem 0; }
-        .rich-text img { border-radius: 3rem; margin: 5rem 0; width: 100%; box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.6); }
-        .rich-text ul { list-style-type: none; padding-left: 1rem; margin-bottom: 3rem; }
-        .rich-text li { position: relative; padding-left: 2rem; margin-bottom: 1.25rem; }
-        .rich-text li::before { content: "•"; color: #3b82f6; font-weight: bold; position: absolute; left: 0; font-size: 1.5rem; top: -0.2rem; }
+        :root {
+          --h1-size: ${config.typography.h1_size};
+          --h2-size: ${config.typography.h2_size};
+          --body-size: ${config.typography.body_size};
+          --text-main: ${config.theme.text_main};
+          --text-secondary: ${config.theme.text_secondary};
+          --font-serif: ${config.theme.font_family_serif};
+          --font-sans: ${config.theme.font_family_sans};
+        }
+
+        .editorial-canvas h2 { font-family: var(--font-serif); font-style: italic; font-size: 3rem; margin-top: 6rem; color: var(--text-main); line-height: 1.1; letter-spacing: -0.04em; }
+        .editorial-canvas h3 { font-family: var(--font-serif); font-size: 2rem; margin-top: 4rem; color: var(--text-main); }
+        .editorial-canvas p { margin-bottom: 3rem; font-size: var(--body-size); line-height: 1.8; color: var(--text-main); }
+        .editorial-canvas strong { font-weight: 900; color: var(--text-main); border-bottom: 2px solid #00ff41; }
+        
+        .drop-cap-enabled .editorial-canvas > p:first-of-type::first-letter {
+          float: left;
+          font-family: var(--font-serif);
+          font-size: 6.5rem;
+          line-height: 1;
+          padding-right: 1.5rem;
+          padding-top: 0.5rem;
+          color: #00ff41;
+          font-style: italic;
+          font-weight: bold;
+        }
+
+        .editorial-canvas blockquote { border-left: none; padding-left: 0; font-style: italic; color: var(--text-secondary); margin: 6rem 0; font-family: var(--font-serif); font-size: 2.5rem; text-align: center; border-y: 1px solid rgba(255,255,255,0.05); padding: 4rem 0; }
+        .editorial-canvas img { border-radius: 4rem; margin: 6rem 0; width: 100%; box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8); border: 1px solid rgba(255,255,255,0.1); }
+        .editorial-canvas ul { list-style-type: none; padding-left: 0; margin-bottom: 4rem; }
+        .editorial-canvas li { position: relative; padding-left: 2.5rem; margin-bottom: 1.5rem; font-style: italic; }
+        .editorial-canvas li::before { content: "—"; color: #00ff41; font-weight: bold; position: absolute; left: 0; }
       `}</style>
     </div>
   );
