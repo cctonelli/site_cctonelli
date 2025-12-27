@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Profile, Order, Product, ProductContentBlock, ProductVariant, Insight, UserProduct } from '../types';
 import { fetchAllOrders, fetchSiteConfig, supabase } from '../services/supabaseService';
-import { SITE_CONFIG, LOCAL_INSIGHTS, LOCAL_PRODUCTS, LOCAL_VARIANTS, LOCAL_BLOCKS } from '../services/localRegistry';
+import { SITE_CONFIG, LOCAL_PRODUCTS } from '../services/localRegistry';
 
 type TabType = 'visual_dna' | 'editorial_forge' | 'sovereign_store' | 'insights' | 'orders' | 'hard_build';
 
@@ -18,8 +19,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [loadingOrders, setLoadingOrders] = useState(false);
   
   const currentConfig = fetchSiteConfig();
-  const [config, setConfig] = useState(currentConfig);
-  const [registryProducts, setRegistryProducts] = useState<Product[]>((currentConfig as any)._products || LOCAL_PRODUCTS);
 
   useEffect(() => {
     if (activeTab === 'orders') loadOrders();
@@ -33,10 +32,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   };
 
   const approveOrder = async (order: Order) => {
-    if (!confirm(`Aprovar pedido de R$ ${order.amount} para ${order.profiles?.email}?`)) return;
+    const clientEmail = order.profiles?.email || 'Cliente';
+    if (!confirm(`Confirmar recebimento de R$ ${order.amount.toFixed(2)} e ativar licença para ${clientEmail}?`)) return;
     
     try {
-      // 1. Atualizar status da order
+      // 1. Atualizar status do pedido
       const { error: orderError } = await supabase
         .from('orders')
         .update({ status: 'approved', approved_by_admin: true })
@@ -44,14 +44,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       
       if (orderError) throw orderError;
 
-      // 2. Definir Expiração (Lógica Elite)
+      // 2. Lógica de Expiração Elite baseada na Variante
       const expirationDate = new Date();
-      if (order.variant_id.includes('mensal')) expirationDate.setMonth(expirationDate.getMonth() + 1);
-      else if (order.variant_id.includes('semestral')) expirationDate.setMonth(expirationDate.getMonth() + 6);
-      else if (order.variant_id.includes('anual')) expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-      else expirationDate.setDate(expirationDate.getDate() + 7);
+      let disparosIniciais = 50;
 
-      // 3. Criar registro em user_products
+      if (order.variant_id.includes('anual')) {
+        expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+        disparosIniciais = 32000;
+      } else if (order.variant_id.includes('semestral')) {
+        expirationDate.setMonth(expirationDate.getMonth() + 6);
+        disparosIniciais = 12800;
+      } else if (order.variant_id.includes('mensal')) {
+        expirationDate.setMonth(expirationDate.getMonth() + 1);
+        disparosIniciais = 2400;
+      } else {
+        expirationDate.setDate(expirationDate.getDate() + 7); // Trial
+      }
+
+      // 3. Criar registro de UserProduct
       const newUserProduct: Partial<UserProduct> = {
         user_id: order.user_id,
         product_id: order.product_id,
@@ -59,21 +69,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
         status: 'active',
         approved_by_admin: true,
         expires_at: expirationDate.toISOString(),
-        download_link: 'https://cdn.claudiotonelli.com.br/assets/v8-matrix-setup.exe'
+        download_link: 'https://cdn.claudiotonelli.com.br/assets/v8-matrix-setup.exe' // Link padrão
       };
 
-      const { error: upError } = await supabase.from('user_products').insert([newUserProduct]);
+      const { data: upData, error: upError } = await supabase
+        .from('user_products')
+        .insert([newUserProduct])
+        .select()
+        .single();
+
       if (upError) throw upError;
 
-      alert("PROTOCOLO ATIVADO: O ativo foi liberado para o cliente com sucesso.");
+      // 4. Se for V8 Matrix, inicializar contador de disparos
+      if (order.product_id.includes('v8') || order.product_id.includes('matrix')) {
+        await supabase.from('v8_matrix_usage').insert([{
+          user_product_id: upData.id,
+          remaining_disparos: disparosIniciais,
+          threads: order.variant_id.includes('anual') ? 3 : 1,
+          daily_count: 0,
+          total_count: 0
+        }]);
+      }
+
+      alert("PROTOCOLO ATIVADO: Ativo liberado com sucesso em tempo real.");
       loadOrders();
     } catch (e: any) {
-      alert(`Erro na aprovação: ${e.message}`);
+      alert(`Erro no processo de ativação: ${e.message}`);
     }
   };
 
   const rejectOrder = async (orderId: string) => {
-    if (!confirm("Rejeitar este pedido permanentemente?")) return;
+    if (!confirm("Rejeitar este protocolo permanentemente?")) return;
     await supabase.from('orders').update({ status: 'rejected' }).eq('id', orderId);
     loadOrders();
   };
@@ -94,23 +120,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           </div>
           
           <nav className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar">
-            {[
-              { id: 'orders', label: 'Sales Vault' },
-              { id: 'visual_dna', label: 'DNA Visual' },
-              { id: 'sovereign_store', label: 'Sovereign Store' },
-              { id: 'hard_build', label: 'Hard Build' }
-            ].map(tab => (
-              <button 
-                key={tab.id} 
-                onClick={() => setActiveTab(tab.id as TabType)} 
-                className={`px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] text-left transition-all border ${activeTab === tab.id ? 'bg-green-500 text-black border-green-400' : 'text-slate-600 border-transparent hover:text-white'}`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            <button onClick={() => setActiveTab('orders')} className={`px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] text-left transition-all border ${activeTab === 'orders' ? 'bg-green-500 text-black border-green-400' : 'text-slate-600 border-transparent hover:text-white'}`}>Sales Vault</button>
+            <button onClick={() => setActiveTab('visual_dna')} className={`px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] text-left transition-all border ${activeTab === 'visual_dna' ? 'bg-green-500 text-black border-green-400' : 'text-slate-600 border-transparent hover:text-white'}`}>DNA Visual</button>
           </nav>
           
-          <div className="pt-6 border-t border-white/5 space-y-4">
+          <div className="pt-6 border-t border-white/5">
              <button onClick={onClose} className="w-full text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.5em]">Sair do Core</button>
           </div>
         </div>
@@ -120,34 +134,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             {activeTab === 'orders' && (
               <div className="space-y-12">
                 <header>
-                   <h2 className="text-5xl font-serif text-white italic tracking-tighter">Sales Vault</h2>
-                   <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">Controle de Fluxo e Aprovações</p>
+                   <h2 className="text-5xl font-serif text-white italic tracking-tighter">Sales Vault.</h2>
+                   <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">Controle de Fluxo e Auditoria de Pagamentos</p>
                 </header>
                 
                 {loadingOrders ? (
-                   <div className="py-20 text-center text-green-500 animate-pulse font-black text-xs uppercase tracking-[0.5em]">Lendo Registros...</div>
+                   <div className="py-20 text-center text-green-500 animate-pulse font-black text-xs uppercase tracking-[0.5em]">Sincronizando Registros...</div>
                 ) : orders.length === 0 ? (
-                   <div className="py-40 text-center border-2 border-dashed border-white/5 rounded-[4rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">Sem pedidos no momento.</div>
+                   <div className="py-40 text-center border-2 border-dashed border-white/5 rounded-[4rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">Sem solicitações pendentes.</div>
                 ) : (
                    <div className="grid gap-6">
                       {orders.map(order => (
-                        <div key={order.id} className={`p-10 rounded-[3rem] border transition-all ${order.status === 'pending' ? 'bg-slate-900/60 border-blue-600/30' : 'bg-slate-950/40 border-white/5'}`}>
+                        <div key={order.id} className={`p-10 rounded-[3rem] border transition-all ${order.status === 'pending' ? 'bg-slate-900/60 border-blue-600/30 shadow-lg shadow-blue-600/5' : 'bg-slate-950/40 border-white/5 opacity-60'}`}>
                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10">
                               <div className="space-y-4">
                                  <div className="flex items-center gap-4">
                                     <span className={`text-[8px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full ${order.status === 'pending' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-500'}`}>{order.status}</span>
                                     <span className="text-slate-500 text-[10px] font-mono">#{order.id.slice(0, 8)}</span>
                                  </div>
-                                 <h4 className="text-2xl font-serif italic text-white">{order.profiles?.email || 'Cliente corporativo'}</h4>
+                                 <h4 className="text-2xl font-serif italic text-white">{order.profiles?.email || 'Partner Corporativo'}</h4>
                                  <div className="flex gap-6 text-[9px] font-black uppercase tracking-widest text-slate-500">
-                                    <span>Ativo: {order.product_id}</span>
-                                    <span>Valor: R$ {order.amount.toFixed(2)}</span>
+                                    <span>Produto: {order.product_id}</span>
+                                    <span className="text-blue-500">Valor: R$ {order.amount.toFixed(2)}</span>
                                  </div>
                               </div>
                               {order.status === 'pending' && (
                                 <div className="flex gap-4">
-                                   <button onClick={() => approveOrder(order)} className="px-10 py-5 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-400">APROVAR</button>
-                                   <button onClick={() => rejectOrder(order.id)} className="px-10 py-5 bg-red-600/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 hover:text-white">REJEITAR</button>
+                                   <button onClick={() => approveOrder(order)} className="px-10 py-5 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-400 active:scale-95 transition-all">LIBERAR ATIVO</button>
+                                   <button onClick={() => rejectOrder(order.id)} className="px-10 py-5 bg-red-600/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 hover:text-white active:scale-95 transition-all">REJEITAR</button>
                                 </div>
                               )}
                            </div>
@@ -157,7 +171,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                 )}
               </div>
             )}
-            <div className="py-20 text-center text-slate-800 text-[8px] font-black uppercase tracking-widest">Protocol v16.0 Sovereign Master</div>
+            <div className="py-20 text-center text-slate-800 text-[8px] font-black uppercase tracking-widest">System Governance v16.0 MASTER // S-HUB-CT</div>
           </div>
         </div>
       </div>

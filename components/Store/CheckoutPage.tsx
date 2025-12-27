@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchProductBySlug, fetchProductVariants, createOrder, supabase } from '../../services/supabaseService';
+import { fetchProductBySlug, fetchProductVariants, createOrder } from '../../services/supabaseService';
 import { Product, ProductVariant, Profile, Order } from '../../types';
 import { Language } from '../../services/i18nService';
 
@@ -55,7 +55,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
     
     // Geração de PIX estático manual seguindo padrão BRCODE
     const randomRef = Math.random().toString(16).slice(2, 6).toUpperCase();
-    // Payload PIX para Claudio Tonelli Consultoria (Exemplo operacional)
     const pixPayload = `00020126580014br.gov.bcb.pix0136contato@claudiotonelli.com.br520400005303986540${variant.price.toFixed(2)}5802BR5925Claudio Tonelli Consulto6009SAO PAULO62070503***6304${randomRef}`;
 
     const newOrder: Partial<Order> = {
@@ -113,22 +112,22 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
                     <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto text-green-500 border border-green-500/20 animate-bounce">
                       <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                     </div>
-                    <h2 className="text-4xl font-serif italic dark:text-white text-slate-900">Protocolo Pendente de Ativação.</h2>
-                    <p className="text-slate-500 text-lg font-light italic leading-relaxed">Efetue o pagamento via PIX. A liberação do ativo ocorre manualmente em até 24h úteis.</p>
+                    <h2 className="text-4xl font-serif italic dark:text-white text-slate-900">Protocolo Gerado.</h2>
+                    <p className="text-slate-500 text-lg font-light italic leading-relaxed">Efetue o pagamento via PIX. A liberação do ativo ocorre em até 24h úteis após confirmação manual.</p>
                   </div>
 
                   <div className="max-w-[350px] mx-auto p-12 bg-white rounded-[4rem] shadow-2xl border-4 border-slate-100">
                     <img src={order.pix_qrcode_url || ''} className="w-full h-full object-contain" alt="PIX QR Code" />
                   </div>
 
-                  <div className="p-10 bg-slate-100 dark:bg-white/5 rounded-[2.5rem] border border-white/5 space-y-4">
-                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Chave PIX (E-mail)</span>
-                     <div className="text-xl font-bold dark:text-white text-slate-900 select-all">contato@claudiotonelli.com.br</div>
+                  <div className="p-10 bg-slate-100 dark:bg-white/5 rounded-[2.5rem] border border-white/5 space-y-4 text-center">
+                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Valor a Pagar</span>
+                     <div className="text-3xl font-bold dark:text-white text-slate-900">R$ {order.amount.toFixed(2)}</div>
                   </div>
 
                   <div className="flex justify-center gap-10 pt-6">
                      <Link to="/" className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white">Voltar ao Site</Link>
-                     <Link to="/minha-conta/ativos" className="text-[10px] font-black uppercase tracking-widest text-blue-500">Ver Meus Ativos</Link>
+                     <Link to="/" onClick={(e) => { e.preventDefault(); navigate('/#portal'); }} className="text-[10px] font-black uppercase tracking-widest text-blue-500">Acompanhar no Portal</Link>
                   </div>
                 </motion.div>
               ) : (
@@ -147,7 +146,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ profile, onAuthRequest, lan
                       <div className="pt-10 border-t border-slate-100 dark:border-white/5 grid md:grid-cols-2 gap-10">
                          <div className="space-y-4">
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Termos de Ativação</h4>
-                            <p className="text-sm text-slate-500 italic font-light leading-relaxed">A liberação deste ativo é auditada individualmente pela Claudio Tonelli Advisory. Após o PIX, nosso sistema de inteligência vincula a licença ao seu CPF/CNPJ.</p>
+                            <p className="text-sm text-slate-500 italic font-light leading-relaxed">A liberação deste ativo é auditada individualmente. Após o pagamento, nosso sistema vincula a licença ao seu perfil.</p>
                          </div>
                          <div className="space-y-4">
                             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Benefícios Elite</h4>

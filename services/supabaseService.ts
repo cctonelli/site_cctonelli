@@ -18,7 +18,6 @@ export const fetchSiteConfig = () => {
   if (localOverride) {
     try {
       const parsed = JSON.parse(localOverride);
-      // Mescla a estrutura base com as mudanças do Admin
       return { ...SITE_CONFIG, ...parsed };
     } catch (e) {
       return SITE_CONFIG;
@@ -31,7 +30,6 @@ export const fetchSiteConfig = () => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   const config = fetchSiteConfig();
-  // Se o admin editou a lista de produtos localmente, usamos ela
   if ((config as any)._products) return (config as any)._products;
   
   try {
@@ -110,9 +108,6 @@ export const signOut = async () => {
   await supabase.auth.signOut();
 };
 
-// --- NOVOS MÉTODOS PARA SUPORTE AOS ERROS DE COMPILAÇÃO ---
-
-// Fix: Added missing fetchTestimonials for App.tsx
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
     const { data } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
@@ -122,7 +117,6 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   }
 };
 
-// Fix: Added missing fetchSiteContent for App.tsx
 export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
   try {
     const { data } = await supabase.from('site_content').select('*').eq('page', page);
@@ -136,7 +130,6 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
   }
 };
 
-// Fix: Added missing fetchGlobalTranslations for App.tsx
 export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
   try {
     const { data } = await supabase.from('translations').select('*').eq('lang', lang);
@@ -150,7 +143,6 @@ export const fetchGlobalTranslations = async (lang: string): Promise<Record<stri
   }
 };
 
-// Fix: Added missing submitContact for ContactForm.tsx
 export const submitContact = async (contact: Contact): Promise<boolean> => {
   try {
     const { error } = await supabase.from('contacts').insert([contact]);
@@ -160,30 +152,25 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
   }
 };
 
-// Fix: Added missing fetchUserOrders for ClientPortal.tsx
 export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
   const { data } = await supabase.from('orders').select('*, profiles(*)').eq('user_id', userId).order('created_at', { ascending: false });
   return data || [];
 };
 
-// Fix: Added missing fetchUserProducts for ClientPortal.tsx
 export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
   const { data } = await supabase.from('user_products').select('*').eq('user_id', userId).eq('approved_by_admin', true);
   return data || [];
 };
 
-// Fix: Added missing fetchUsageByProduct for ClientPortal.tsx
 export const fetchUsageByProduct = async (userProductId: string): Promise<V8MatrixUsage | null> => {
   const { data } = await supabase.from('v8_matrix_usage').select('*').eq('user_product_id', userProductId).maybeSingle();
   return data;
 };
 
-// Fix: Added missing signIn for AuthModal.tsx
 export const signIn = async (email: string, password: string) => {
   return await supabase.auth.signInWithPassword({ email, password });
 };
 
-// Fix: Added missing signUp for AuthModal.tsx
 export const signUp = async (email: string, password: string, metadata: any) => {
   return await supabase.auth.signUp({ 
     email, 
@@ -192,17 +179,14 @@ export const signUp = async (email: string, password: string, metadata: any) => 
   });
 };
 
-// Fix: Added missing createProfile for AuthModal.tsx
 export const createProfile = async (profile: Profile) => {
   return await supabase.from('profiles').upsert(profile);
 };
 
-// Fix: Added missing logSupabaseError for AdminCrudSection.tsx
 export const logSupabaseError = (error: any, context: string) => {
   console.error(`[Supabase Error] ${context}:`, error?.message || error);
 };
 
-// Fix: Added missing createOrder for CheckoutPage.tsx
 export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
   try {
     const { data, error } = await supabase.from('orders').insert([order]).select().single();
@@ -214,7 +198,6 @@ export const createOrder = async (order: Partial<Order>): Promise<Order | null> 
   }
 };
 
-// Fix: Added missing fetchTools for ToolsGrid.tsx
 export const fetchTools = async (): Promise<Tool[]> => {
   try {
     const { data } = await supabase.from('tools').select('*').eq('is_active', true).order('name');
