@@ -2,7 +2,7 @@ import { Product, ProductVariant, ProductContentBlock, Insight } from '../types'
 
 export type Language = 'pt' | 'en' | 'es';
 
-// --- KERNEL VISUAL TOTAL ---
+// --- KERNEL VISUAL & NARRATIVO TOTAL ---
 export const SITE_CONFIG = {
   theme: {
     primary: '#2563eb', 

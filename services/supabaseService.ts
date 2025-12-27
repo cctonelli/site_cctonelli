@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
@@ -17,7 +16,8 @@ export const fetchSiteConfig = () => {
   const localOverride = localStorage.getItem('CT_ADMIN_CONFIG_OVERRIDE');
   if (localOverride) {
     try {
-      return { ...SITE_CONFIG, ...JSON.parse(localOverride) };
+      const parsed = JSON.parse(localOverride);
+      return { ...SITE_CONFIG, ...parsed };
     } catch (e) {
       return SITE_CONFIG;
     }
@@ -28,6 +28,9 @@ export const fetchSiteConfig = () => {
 // --- MODELO HÍBRIDO SOBERANO (LOCAL-FIRST) ---
 
 export const fetchProducts = async (): Promise<Product[]> => {
+  const config = fetchSiteConfig();
+  if ((config as any)._products) return (config as any)._products;
+  
   try {
     const { data, error } = await supabase.from('products').select('*').eq('is_active', true);
     if (!error && data && data.length > 0) return data;
@@ -36,6 +39,10 @@ export const fetchProducts = async (): Promise<Product[]> => {
 };
 
 export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
+  const config = fetchSiteConfig();
+  if ((config as any)._products) {
+    return (config as any)._products.find((p: any) => p.slug === slug) || null;
+  }
   try {
     const { data } = await supabase.from('products').select('*').eq('slug', slug).maybeSingle();
     if (data) return data;
@@ -44,6 +51,9 @@ export const fetchProductBySlug = async (slug: string): Promise<Product | null> 
 };
 
 export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
+  const config = fetchSiteConfig();
+  if ((config as any)._variants?.[productId]) return (config as any)._variants[productId];
+
   try {
     const { data } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('order_index');
     if (data && data.length > 0) return data;
@@ -52,6 +62,9 @@ export const fetchProductVariants = async (productId: string): Promise<ProductVa
 };
 
 export const fetchProductContentBlocks = async (productId: string): Promise<ProductContentBlock[]> => {
+  const config = fetchSiteConfig();
+  if ((config as any)._blocks?.[productId]) return (config as any)._blocks[productId];
+
   try {
     const { data } = await supabase.from('product_content_blocks').select('*').eq('product_id', productId).order('order');
     if (data && data.length > 0) return data;
@@ -59,30 +72,23 @@ export const fetchProductContentBlocks = async (productId: string): Promise<Prod
   return LOCAL_BLOCKS[productId] || [];
 };
 
-export const fetchInsights = async (): Promise<Insight[]> => {
-  try {
-    const { data } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
-    if (data && data.length > 0) return data;
-  } catch (e) {}
-  return LOCAL_INSIGHTS;
+// --- GESTÃO DE SEGURANÇA (SENSITIVE DATA - SUPABASE EXCLUSIVE) ---
+
+export const fetchAppVersions = async (): Promise<AppVersion[]> => {
+  const { data } = await supabase.from('app_versions').select('*').order('created_at', { ascending: false });
+  return data || [];
 };
 
-export const fetchInsightById = async (id: string): Promise<Insight | null> => {
-  try {
-    const { data } = await supabase.from('insights').select('*').eq('id', id).maybeSingle();
-    if (data) return data;
-  } catch (e) {}
-  return LOCAL_INSIGHTS.find(i => i.id === id || String(i.id) === id) || null;
+export const fetchLatestVersion = async (appName: string): Promise<AppVersion | null> => {
+  const { data } = await supabase.from('app_versions').select('*').eq('app_name', appName).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  return data;
 };
-
-// --- GESTÃO DE NEGÓCIOS (TRANSACIONAIS - SUPABASE EXCLUSIVE) ---
 
 export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
   const { data } = await supabase.from('orders').insert([order]).select().single();
   return data;
 };
 
-// Fix: Added missing updateOrder export to resolve import error in AdminDashboard.tsx
 export const updateOrder = async (id: string, updates: Partial<Order>): Promise<Order | null> => {
   const { data } = await supabase.from('orders').update(updates).eq('id', id).select().single();
   return data;
@@ -93,6 +99,12 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
   return data || [];
 };
 
+// Fix: added fetchUserOrders to resolve import error in ClientPortal.tsx
+export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
+  const { data } = await supabase.from('orders').select('*, profiles(*)').eq('user_id', userId).order('created_at', { ascending: false });
+  return data || [];
+};
+
 export const getProfile = async (id: string): Promise<Profile | null> => {
   const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
   return data;
@@ -100,6 +112,25 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 
 export const createProfile = async (profile: Profile) => {
   return await supabase.from('profiles').upsert([profile]);
+};
+
+// --- OUTROS MANTIDOS ---
+
+export const fetchInsights = async (): Promise<Insight[]> => {
+  try {
+    const { data } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
+    if (data && data.length > 0) return data;
+  } catch (e) {}
+  return LOCAL_INSIGHTS;
+};
+
+// Fix: added fetchInsightById to resolve import error in ArticlePage.tsx
+export const fetchInsightById = async (id: string): Promise<Insight | null> => {
+  try {
+    const { data } = await supabase.from('insights').select('*').eq('id', id).maybeSingle();
+    if (data) return data;
+  } catch (e) {}
+  return LOCAL_INSIGHTS.find(i => String(i.id) === String(id)) || null;
 };
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
@@ -157,11 +188,6 @@ export const fetchTestimonials = async (): Promise<Testimonial[]> => {
 export const submitContact = async (contact: Contact): Promise<boolean> => {
   const { error } = await supabase.from('contacts').insert([contact]);
   return !error;
-};
-
-export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
-  const { data } = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-  return data || [];
 };
 
 export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
