@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Autoplay, EffectFade } from 'swiper/modules';
@@ -27,7 +28,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
   const renderContent = (slide?: CarouselImage) => {
     const slideCtaText = slide ? resolveTranslation(slide, 'cta_text', slide.cta_text || '') : '';
     const slideCtaUrl = slide?.cta_url || '';
-    const mainCtaText = resolveContent('hero_cta_text', t.btn_insights);
+    const mainCtaText = resolveContent('hero_cta_text', t.btn_insights || 'Insights');
     const mainCtaUrl = resolveContent('hero_cta_link', '#insights');
 
     const primaryCtaText = "SAIBA MAIS";
@@ -45,13 +46,13 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
           className="max-w-4xl p-8 lg:p-14 glass rounded-[3rem] space-y-6 lg:space-y-8 border border-white/10 shadow-2xl backdrop-blur-xl text-center lg:text-left"
         >
           <span className="inline-block px-5 py-2 bg-blue-600/10 border border-blue-600/20 rounded-full text-blue-600 dark:text-blue-500 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.4em]">
-            {resolveContent('hero_badge', t.hero_badge)}
+            {resolveContent('hero_badge', t.hero_badge || 'Visionary Strategy')}
           </span>
           <h1 className="text-4xl lg:text-[5.5rem] font-serif text-slate-900 dark:text-white italic leading-[1] lg:leading-[0.9] tracking-tighter drop-shadow-sm">
-            {slide ? resolveTranslation(slide, 'title', slide.title || '') : resolveContent('hero_title', t.hero_title)}
+            {slide ? resolveTranslation(slide, 'title', slide.title || '') : resolveContent('hero_title', t.hero_title || 'Estratégia Inesquecível')}
           </h1>
           <p className="text-base lg:text-xl text-slate-600 dark:text-slate-300 font-light italic border-l-4 border-blue-600/50 pl-6 lg:pl-8 max-w-2xl leading-relaxed mx-auto lg:mx-0">
-            {slide ? resolveTranslation(slide, 'subtitle', slide.subtitle || '') : resolveContent('hero_subtitle', t.hero_subtitle)}
+            {slide ? resolveTranslation(slide, 'subtitle', slide.subtitle || '') : resolveContent('hero_subtitle', t.hero_subtitle || 'Redefinindo o futuro corporativo')}
           </p>
           
           <div className="flex flex-wrap gap-4 lg:gap-6 pt-4 lg:pt-2 justify-center lg:justify-start">
@@ -136,7 +137,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides, t, resolveContent, 
                 autoplay={{ delay: 8000, disableOnInteraction: false }}
                 effect="fade"
                 fadeEffect={{ crossFade: true }}
-                loop={slides.length > 1}
+                loop={(slides?.length || 0) > 1}
                 className="h-full w-full"
               >
                 {slides.map((slide) => (

@@ -10,7 +10,7 @@ const ThreeGlobe: React.FC = () => {
 
     // 1. Setup da Cena
     const width = containerRef.current.clientWidth || window.innerWidth;
-    const height = containerRef.current.clientHeight || window.innerHeight;
+    const height = containerRef.current.clientHeight || 400; // Fallback height
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
@@ -23,7 +23,10 @@ const ThreeGlobe: React.FC = () => {
     });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    containerRef.current.appendChild(renderer.domElement);
+    
+    if (containerRef.current) {
+      containerRef.current.appendChild(renderer.domElement);
+    }
 
     const isDark = document.documentElement.classList.contains('dark');
     const accentColor = new THREE.Color(isDark ? 0x1d4ed8 : 0x3b82f6);
@@ -111,12 +114,8 @@ const ThreeGlobe: React.FC = () => {
       
       for (let i = 0; i < sparksCount; i++) {
         const i3 = i * 3;
-        
-        // Comportamento 1: Pulsação Base (Rede Orbital)
         const pulse = Math.sin(time * speeds[i] + i) * 0.05;
         
-        // Comportamento 2: Ejeção Aleatória (Fagulhas Soltas)
-        // Usamos o índice para criar um subconjunto de partículas mais erráticas
         if (i % 15 === 0) {
           life[i] += 0.01;
           if (life[i] > 1) life[i] = 0;
@@ -126,7 +125,6 @@ const ThreeGlobe: React.FC = () => {
           posArray[i3 + 1] = originalPos[i3 + 1] * ejectFactor + randomness[i3 + 1] * life[i];
           posArray[i3 + 2] = originalPos[i3 + 2] * ejectFactor + randomness[i3 + 2] * life[i];
         } else {
-          // Movimento orbital padrão expandido
           posArray[i3] = originalPos[i3] * (1.1 + pulse);
           posArray[i3 + 1] = originalPos[i3 + 1] * (1.1 + pulse);
           posArray[i3 + 2] = originalPos[i3 + 2] * (1.1 + pulse);
@@ -144,7 +142,7 @@ const ThreeGlobe: React.FC = () => {
     const handleResize = () => {
       if (!containerRef.current) return;
       const w = containerRef.current.clientWidth;
-      const h = containerRef.current.clientHeight;
+      const h = containerRef.current.clientHeight || 400;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -155,10 +153,9 @@ const ThreeGlobe: React.FC = () => {
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationId);
-      if (containerRef.current && renderer.domElement) {
+      if (containerRef.current && renderer.domElement && containerRef.current.contains(renderer.domElement)) {
         containerRef.current.removeChild(renderer.domElement);
       }
-      // Cleanup de geometria e material
       globeGeom.dispose();
       globeMat.dispose();
       pointsGeom.dispose();

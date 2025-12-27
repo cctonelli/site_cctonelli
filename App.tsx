@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -56,7 +57,7 @@ const App: React.FC = () => {
 
   const syncData = useCallback(async () => {
     try {
-      const [m, i, p, test, s, car, translationsMap] = await Promise.all([
+      const results = await Promise.allSettled([
         fetchMetrics(),
         fetchInsights(),
         fetchProducts(),
@@ -66,18 +67,18 @@ const App: React.FC = () => {
         fetchGlobalTranslations(language)
       ]);
 
-      setMetrics(m);
-      setInsights(i);
-      setProducts(p);
-      setTestimonials(test);
-      setDbContent(s);
-      setCarouselImages(car);
-      setDbTranslations(translationsMap);
+      if (results[0].status === 'fulfilled') setMetrics(results[0].value);
+      if (results[1].status === 'fulfilled') setInsights(results[1].value);
+      if (results[2].status === 'fulfilled') setProducts(results[2].value);
+      if (results[3].status === 'fulfilled') setTestimonials(results[3].value);
+      if (results[4].status === 'fulfilled') setDbContent(results[4].value);
+      if (results[5].status === 'fulfilled') setCarouselImages(results[5].value);
+      if (results[6].status === 'fulfilled') setDbTranslations(results[6].value);
       
       setIsLive(true);
     } catch (err) {
       console.error(`[App Core] Sync Failure:`, err);
-      setIsLive(true);
+      setIsLive(true); // Garante que a tela saia do loading mesmo em erro
     }
   }, [language]);
 
@@ -101,21 +102,29 @@ const App: React.FC = () => {
     
     // INJETAR CONFIGURAÇÃO DO KERNEL EM TEMPO REAL
     const root = document.documentElement;
-    root.style.setProperty('--accent-blue', siteConfig.theme.primary);
-    root.style.setProperty('--brand-gold', siteConfig.theme.secondary);
-    root.style.setProperty('--bg-navy', siteConfig.theme.bg_dark);
-    root.style.setProperty('--global-radius', siteConfig.ux.border_radius_global);
-    root.style.setProperty('--glow-opacity', siteConfig.ux.glow_intensity);
-    root.style.setProperty('--scanline-opacity', siteConfig.ux.scanline_opacity.toString());
+    if (siteConfig && siteConfig.theme) {
+      root.style.setProperty('--accent-blue', siteConfig.theme.primary || '#2563eb');
+      root.style.setProperty('--brand-gold', siteConfig.theme.secondary || '#b4975a');
+      root.style.setProperty('--bg-navy', siteConfig.theme.bg_dark || '#010309');
+      root.style.setProperty('--text-main', siteConfig.theme.text_main || '#f8fafc');
+      root.style.setProperty('--text-secondary', siteConfig.theme.text_secondary || '#94a3b8');
+    }
     
-    // Injeção de Tipografia Editorial Forge
-    root.style.setProperty('--h1-size', siteConfig.typography?.h1_size || '9.5rem');
-    root.style.setProperty('--h2-size', siteConfig.typography?.h2_size || '4.5rem');
-    root.style.setProperty('--body-size', siteConfig.typography?.body_size || '1.125rem');
-    root.style.setProperty('--text-main', siteConfig.theme?.text_main || '#f8fafc');
-    root.style.setProperty('--text-secondary', siteConfig.theme?.text_secondary || '#94a3b8');
+    if (siteConfig && siteConfig.ux) {
+      root.style.setProperty('--global-radius', siteConfig.ux.border_radius_global || '2.5rem');
+      root.style.setProperty('--glow-opacity', siteConfig.ux.glow_intensity || '0.6');
+      root.style.setProperty('--scanline-opacity', (siteConfig.ux.scanline_opacity || 0.08).toString());
+    }
     
-    document.title = siteConfig.seo.title[language] || siteConfig.seo.title['pt'];
+    if (siteConfig && siteConfig.typography) {
+      root.style.setProperty('--h1-size', siteConfig.typography.h1_size || '9.5rem');
+      root.style.setProperty('--h2-size', siteConfig.typography.h2_size || '4.5rem');
+      root.style.setProperty('--body-size', siteConfig.typography.body_size || '1.125rem');
+    }
+    
+    if (siteConfig && siteConfig.seo && siteConfig.seo.title) {
+      document.title = siteConfig.seo.title[language] || siteConfig.seo.title['pt'] || 'Claudio Tonelli Consultoria';
+    }
   }, [syncData, refreshUser, siteConfig, language]);
 
   useEffect(() => {
@@ -171,9 +180,9 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={
             <main className="pt-20 lg:pt-24">
-              {siteConfig.visibility.hero && <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} isLive={isLive} />}
+              {siteConfig.visibility?.hero && <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} isLive={isLive} />}
               
-              {siteConfig.visibility.metrics && (
+              {siteConfig.visibility?.metrics && (
                 <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
                   <div className="container mx-auto px-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
@@ -188,7 +197,7 @@ const App: React.FC = () => {
                 </section>
               )}
 
-              {siteConfig.visibility.insights && (
+              {siteConfig.visibility?.insights && (
                 <section id="insights" className="py-32 bg-white dark:bg-[#010309]">
                   <div className="container mx-auto px-6">
                     <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-24 gap-4">
@@ -217,11 +226,11 @@ const App: React.FC = () => {
                 </section>
               )}
 
-              {siteConfig.visibility.products && <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />}
-              {siteConfig.visibility.strategy_map && <GlobalStrategyMap />}
-              {siteConfig.visibility.tools && <ToolsGrid />}
-              {siteConfig.visibility.testimonials && <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} t={t} />}
-              {siteConfig.visibility.contact_form && <ContactForm language={language} t={t} />}
+              {siteConfig.visibility?.products && <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />}
+              {siteConfig.visibility?.strategy_map && <GlobalStrategyMap />}
+              {siteConfig.visibility?.tools && <ToolsGrid />}
+              {siteConfig.visibility?.testimonials && <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} t={t} />}
+              {siteConfig.visibility?.contact_form && <ContactForm language={language} t={t} />}
             </main>
           } />
           <Route path="/loja" element={<StoreGrid language={language} t={t} resolveTranslation={resolveTranslation} />} />
@@ -232,16 +241,16 @@ const App: React.FC = () => {
           <Route path="/wip" element={<WorkInProgress />} />
         </Routes>
 
-        {siteConfig.visibility.footer && (
+        {siteConfig.visibility?.footer && (
           <footer className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] text-center">
             <div className="container mx-auto px-6 space-y-12">
               <div className="w-14 h-14 bg-blue-600 dark:bg-green-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white dark:text-black shadow-2xl">CT</div>
               <div className="flex justify-center gap-12">
-                 <a href={siteConfig.contact.linkedin} className="text-slate-500 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-colors">LinkedIn</a>
-                 <a href={siteConfig.contact.instagram} className="text-slate-500 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-colors">Instagram</a>
+                 <a href={siteConfig.contact?.linkedin} className="text-slate-500 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-colors">LinkedIn</a>
+                 <a href={siteConfig.contact?.instagram} className="text-slate-500 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-colors">Instagram</a>
               </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
-              <p className="text-[8px] text-slate-700 uppercase tracking-widest">{siteConfig.contact.address}</p>
+              <p className="text-[8px] text-slate-700 uppercase tracking-widest">{siteConfig.contact?.address}</p>
             </div>
           </footer>
         )}
