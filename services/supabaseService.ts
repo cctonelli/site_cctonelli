@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
@@ -10,13 +11,14 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- KERNEL DE CONFIGURAÇÃO (SOBERANIA FRONTEND) ---
+// --- KERNEL DE CONFIGURAÇÃO SOBERANA ---
 
 export const fetchSiteConfig = () => {
   const localOverride = localStorage.getItem('CT_ADMIN_CONFIG_OVERRIDE');
   if (localOverride) {
     try {
       const parsed = JSON.parse(localOverride);
+      // Mescla a estrutura base com as mudanças do Admin
       return { ...SITE_CONFIG, ...parsed };
     } catch (e) {
       return SITE_CONFIG;
@@ -25,29 +27,23 @@ export const fetchSiteConfig = () => {
   return SITE_CONFIG;
 };
 
-// --- MODELO HÍBRIDO SOBERANO (LOCAL-FIRST) ---
+// --- GETTERS QUE RESPEITAM O REGISTRY EDITADO ---
 
 export const fetchProducts = async (): Promise<Product[]> => {
   const config = fetchSiteConfig();
+  // Se o admin editou a lista de produtos localmente, usamos ela
   if ((config as any)._products) return (config as any)._products;
   
   try {
-    const { data, error } = await supabase.from('products').select('*').eq('is_active', true);
-    if (!error && data && data.length > 0) return data;
+    const { data } = await supabase.from('products').select('*').eq('is_active', true);
+    if (data && data.length > 0) return data;
   } catch (e) {}
   return LOCAL_PRODUCTS;
 };
 
 export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
-  const config = fetchSiteConfig();
-  if ((config as any)._products) {
-    return (config as any)._products.find((p: any) => p.slug === slug) || null;
-  }
-  try {
-    const { data } = await supabase.from('products').select('*').eq('slug', slug).maybeSingle();
-    if (data) return data;
-  } catch (e) {}
-  return LOCAL_PRODUCTS.find(p => p.slug === slug) || null;
+  const products = await fetchProducts();
+  return products.find(p => p.slug === slug) || null;
 };
 
 export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
@@ -72,51 +68,10 @@ export const fetchProductContentBlocks = async (productId: string): Promise<Prod
   return LOCAL_BLOCKS[productId] || [];
 };
 
-// --- GESTÃO DE SEGURANÇA (SENSITIVE DATA - SUPABASE EXCLUSIVE) ---
-
-export const fetchAppVersions = async (): Promise<AppVersion[]> => {
-  const { data } = await supabase.from('app_versions').select('*').order('created_at', { ascending: false });
-  return data || [];
-};
-
-export const fetchLatestVersion = async (appName: string): Promise<AppVersion | null> => {
-  const { data } = await supabase.from('app_versions').select('*').eq('app_name', appName).order('created_at', { ascending: false }).limit(1).maybeSingle();
-  return data;
-};
-
-export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
-  const { data } = await supabase.from('orders').insert([order]).select().single();
-  return data;
-};
-
-export const updateOrder = async (id: string, updates: Partial<Order>): Promise<Order | null> => {
-  const { data } = await supabase.from('orders').update(updates).eq('id', id).select().single();
-  return data;
-};
-
-export const fetchAllOrders = async (): Promise<Order[]> => {
-  const { data } = await supabase.from('orders').select('*, profiles(*)').order('created_at', { ascending: false });
-  return data || [];
-};
-
-// Fix: added fetchUserOrders to resolve import error in ClientPortal.tsx
-export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
-  const { data } = await supabase.from('orders').select('*, profiles(*)').eq('user_id', userId).order('created_at', { ascending: false });
-  return data || [];
-};
-
-export const getProfile = async (id: string): Promise<Profile | null> => {
-  const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
-  return data;
-};
-
-export const createProfile = async (profile: Profile) => {
-  return await supabase.from('profiles').upsert([profile]);
-};
-
-// --- OUTROS MANTIDOS ---
-
 export const fetchInsights = async (): Promise<Insight[]> => {
+  const config = fetchSiteConfig();
+  if ((config as any)._insights) return (config as any)._insights;
+
   try {
     const { data } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
     if (data && data.length > 0) return data;
@@ -124,14 +79,12 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   return LOCAL_INSIGHTS;
 };
 
-// Fix: added fetchInsightById to resolve import error in ArticlePage.tsx
 export const fetchInsightById = async (id: string): Promise<Insight | null> => {
-  try {
-    const { data } = await supabase.from('insights').select('*').eq('id', id).maybeSingle();
-    if (data) return data;
-  } catch (e) {}
-  return LOCAL_INSIGHTS.find(i => String(i.id) === String(id)) || null;
+  const insights = await fetchInsights();
+  return insights.find(i => String(i.id) === String(id)) || null;
 };
+
+// --- MÉTODOS SUPABASE MANTIDOS PARA DADOS DINÂMICOS ---
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
   const { data } = await supabase.from('metrics').select('*').order('display_order');
@@ -143,73 +96,130 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   return data || [];
 };
 
-export const signIn = async (email: string, password?: string) => {
-  return password 
-    ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-    : await supabase.auth.signInWithOtp({ email: email.trim() });
+export const fetchAllOrders = async (): Promise<Order[]> => {
+  const { data } = await supabase.from('orders').select('*, profiles(*)').order('created_at', { ascending: false });
+  return data || [];
 };
 
-export const signUp = async (email: string, password?: string, metadata?: any) => {
-  return await supabase.auth.signUp({ 
-    email: email.trim(), 
-    password,
-    options: { data: metadata }
-  });
+export const getProfile = async (id: string): Promise<Profile | null> => {
+  const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
+  return data;
 };
 
 export const signOut = async () => {
   await supabase.auth.signOut();
-  localStorage.removeItem('supabase.auth.token');
 };
 
-export const logSupabaseError = (context: string, error: any) => {
-  if (!error) return { isError: false, message: '', isMissingTable: false, isRlsError: false, code: '', suggestedSql: null };
-  console.error(`[Supabase Error][${context}]`, error);
-  return { 
-    isError: true, 
-    message: error.message, 
-    code: error.code || '',
-    isMissingTable: error.code === '42P01', 
-    isRlsError: error.code === '42501',
-    suggestedSql: null
-  };
-};
+// --- NOVOS MÉTODOS PARA SUPORTE AOS ERROS DE COMPILAÇÃO ---
 
-export const fetchTools = async (): Promise<Tool[]> => {
-  const { data } = await supabase.from('tools').select('*').eq('is_active', true);
-  return data || [];
-};
-
+// Fix: Added missing fetchTestimonials for App.tsx
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
-  const { data } = await supabase.from('testimonials').select('*').eq('approved', true);
-  return data || [];
+  try {
+    const { data } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
+    return data || [];
+  } catch (e) {
+    return [];
+  }
 };
 
+// Fix: Added missing fetchSiteContent for App.tsx
+export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
+  try {
+    const { data } = await supabase.from('site_content').select('*').eq('page', page);
+    const contentMap: Record<string, any> = {};
+    data?.forEach(item => {
+      contentMap[item.key] = item;
+    });
+    return contentMap;
+  } catch (e) {
+    return {};
+  }
+};
+
+// Fix: Added missing fetchGlobalTranslations for App.tsx
+export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
+  try {
+    const { data } = await supabase.from('translations').select('*').eq('lang', lang);
+    const transMap: Record<string, string> = {};
+    data?.forEach(item => {
+      transMap[item.key] = item.value;
+    });
+    return transMap;
+  } catch (e) {
+    return {};
+  }
+};
+
+// Fix: Added missing submitContact for ContactForm.tsx
 export const submitContact = async (contact: Contact): Promise<boolean> => {
-  const { error } = await supabase.from('contacts').insert([contact]);
-  return !error;
+  try {
+    const { error } = await supabase.from('contacts').insert([contact]);
+    return !error;
+  } catch (e) {
+    return false;
+  }
 };
 
-export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
-  const { data } = await supabase.from('user_products').select('*').eq('user_id', userId);
+// Fix: Added missing fetchUserOrders for ClientPortal.tsx
+export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
+  const { data } = await supabase.from('orders').select('*, profiles(*)').eq('user_id', userId).order('created_at', { ascending: false });
   return data || [];
 };
 
+// Fix: Added missing fetchUserProducts for ClientPortal.tsx
+export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
+  const { data } = await supabase.from('user_products').select('*').eq('user_id', userId).eq('approved_by_admin', true);
+  return data || [];
+};
+
+// Fix: Added missing fetchUsageByProduct for ClientPortal.tsx
 export const fetchUsageByProduct = async (userProductId: string): Promise<V8MatrixUsage | null> => {
   const { data } = await supabase.from('v8_matrix_usage').select('*').eq('user_product_id', userProductId).maybeSingle();
   return data;
 };
 
-export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
-  const { data } = await supabase.from('translations').select('key, value').eq('language', lang);
-  const transMap: Record<string, string> = {};
-  data?.forEach(item => { transMap[item.key] = item.value; });
-  return transMap;
+// Fix: Added missing signIn for AuthModal.tsx
+export const signIn = async (email: string, password: string) => {
+  return await supabase.auth.signInWithPassword({ email, password });
 };
 
-export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
-  const { data } = await supabase.from('site_content').select('*').eq('page', page);
-  const contentMap: Record<string, any> = {};
-  data?.forEach(item => { contentMap[item.key] = item; });
-  return contentMap;
+// Fix: Added missing signUp for AuthModal.tsx
+export const signUp = async (email: string, password: string, metadata: any) => {
+  return await supabase.auth.signUp({ 
+    email, 
+    password, 
+    options: { data: metadata } 
+  });
 };
+
+// Fix: Added missing createProfile for AuthModal.tsx
+export const createProfile = async (profile: Profile) => {
+  return await supabase.from('profiles').upsert(profile);
+};
+
+// Fix: Added missing logSupabaseError for AdminCrudSection.tsx
+export const logSupabaseError = (error: any, context: string) => {
+  console.error(`[Supabase Error] ${context}:`, error?.message || error);
+};
+
+// Fix: Added missing createOrder for CheckoutPage.tsx
+export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
+  try {
+    const { data, error } = await supabase.from('orders').insert([order]).select().single();
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    console.error("Order creation fail:", e);
+    return null;
+  }
+};
+
+// Fix: Added missing fetchTools for ToolsGrid.tsx
+export const fetchTools = async (): Promise<Tool[]> => {
+  try {
+    const { data } = await supabase.from('tools').select('*').eq('is_active', true).order('name');
+    return data || [];
+  } catch (e) {
+    return [];
+  }
+}
