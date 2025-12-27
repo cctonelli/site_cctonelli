@@ -2,7 +2,7 @@ import { Product, ProductVariant, ProductContentBlock, Insight } from '../types'
 
 export type Language = 'pt' | 'en' | 'es';
 
-// --- KERNEL TOTAL (DNA SOBERANO v13.0) ---
+// --- KERNEL VISUAL TOTAL ---
 export const SITE_CONFIG = {
   theme: {
     primary: '#2563eb', 
@@ -15,10 +15,10 @@ export const SITE_CONFIG = {
   ux: {
     matrix_mode: true,
     scanline_opacity: 0.05,
-    glitch_intensity: 1,
-    border_radius_global: '2.5rem',
     glow_intensity: '0.4',
-    animation_speed: 'normal' // fast, normal, slow
+    border_radius_global: '2.5rem',
+    font_size_base: '16px',
+    h1_size: '9.5rem'
   },
   visibility: {
     hero: true,
@@ -38,41 +38,23 @@ export const SITE_CONFIG = {
     linkedin: 'https://linkedin.com/company/claudiotonelli',
     instagram: 'https://instagram.com/claudiotonelli'
   },
+  seo: {
+    title: { pt: 'Claudio Tonelli | Advisory de Elite', en: 'Claudio Tonelli | Elite Advisory', es: 'Claudio Tonelli | Advisory de Elite' },
+    description: { pt: 'Consultoria estratégica de alta performance.', en: 'High-performance strategic consulting.', es: 'Consultoría estratégica de alto rendimiento' }
+  },
   menus: {
     nav_strategy: { pt: 'Estratégia', en: 'Strategy', es: 'Estrategia' },
     nav_insights: { pt: 'Insights', en: 'Insights', es: 'Insights' },
     nav_performance: { pt: 'Performance', en: 'Performance', es: 'Rendimento' },
     nav_connection: { pt: 'Conexão', en: 'Connection', es: 'Conexión' },
     nav_client_area: { pt: 'Área do Cliente', en: 'Client Area', es: 'Área del Cliente' }
-  },
-  seo: {
-    title: { pt: 'Claudio Tonelli | Advisory de Elite', en: 'Claudio Tonelli | Elite Advisory', es: 'Claudio Tonelli | Advisory de Elite' },
-    description: { pt: 'Consultoria estratégica de alta performance.', en: 'High-performance strategic consulting.', es: 'Consultoría estratégica de alto rendimiento' },
-    og_image: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=2071&auto=format&fit=crop'
   }
 };
 
-// --- REPOSITÓRIO DE INSIGHTS PERMANENTES ---
-export const LOCAL_INSIGHTS: Insight[] = [
-  {
-    id: 'insight-v8-launch',
-    title: 'A Era do V8 MATRIX: Automação e Domínio',
-    subtitle: 'O salto tecnológico no Advisory Digital.',
-    excerpt: 'Como a nova versão 12.5 está redefinindo o ROI de nossos parceiros.',
-    image_url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop',
-    published_at: '2025-12-26T10:00:00Z',
-    is_active: true,
-    display_order: 0,
-    category: 'TECNOLOGIA',
-    link: null,
-    content: `<h2>O Protocolo V8 Matrix</h2><p>O rigor da consultoria tradicional encontrou seu sucessor digital. O V8 não é apenas um disparador; é uma rede neural de engajamento que opera no limite da escala digital.</p>`
-  }
-];
-
-// --- REPOSITÓRIO DE ATIVOS DE ELITE (PRODUTOS) ---
+// --- REPOSITÓRIO DE PRODUTOS ---
 export const LOCAL_PRODUCTS: Product[] = [
   {
-    id: 'v8-matrix-id',
+    id: '1549b854-3c86-4961-bc05-866609fe8d8e',
     slug: 'v8-matrix-edition',
     title: 'V8 MATRIX EDITION v12.5',
     subtitle: 'O Protocolo Definitivo de Escala e Domínio Digital.',
@@ -80,22 +62,21 @@ export const LOCAL_PRODUCTS: Product[] = [
     image_url: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop',
     featured: true,
     pricing_type: 'subscription',
-    is_active: true,
-    download_ftp_link: 'https://ftp.claudiotonelli.com.br/v8-matrix-latest.zip'
+    is_active: true
   }
 ];
 
 export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
-  'v8-matrix-id': [
+  '1549b854-3c86-4961-bc05-866609fe8d8e': [
     {
       id: 'v8-elite',
-      product_id: 'v8-matrix-id',
+      product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       name: 'Elite Strategy',
       price: 1497.00,
       currency: 'BRL',
       interval: 'semester',
       quantity_limit: 1,
-      features: ['5.000 Disparos Iniciais', 'Inteligência Anti-Ban V5', 'Suporte Executive 24/7', 'Acesso ao Advisory Group'],
+      features: ['5.000 Disparos Iniciais', 'Inteligência Anti-Ban V5', 'Suporte Executive 24/7'],
       is_most_popular: true,
       is_free: false,
       order_index: 0
@@ -104,45 +85,46 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
 };
 
 export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
-  'v8-matrix-id': [
+  '1549b854-3c86-4961-bc05-866609fe8d8e': [
     {
-      id: 'b1',
-      product_id: 'v8-matrix-id',
+      id: '8d0cb912-e79f-4d65-85bf-051817ecf3ed',
+      product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       block_type: 'hero',
-      order: 0,
-      content: {
-        title: 'V8 MATRIX',
-        glitch_title: 'SYSTEM_SOVEREIGN',
-        subtitle: 'A ferramenta de soberania que as grandes consultorias usam para dominar o tráfego orgânico e direto.',
-        overlay_text: 'PROTOCOL_V12.5_ACTIVE',
-        style: 'matrix'
-      }
-    },
-    {
-      id: 'b2',
-      product_id: 'v8-matrix-id',
-      block_type: 'features',
       order: 1,
       content: {
-        title: 'Arquitetura de Ativos',
-        items: [
-          { icon: 'brain', text: 'Rede Neural de Engajamento' },
-          { icon: 'shield', text: 'Escudo Anti-Ban de Elite' },
-          { icon: 'zap', text: 'Processamento Multithread' },
-          { icon: 'robot', text: 'Automação Resiliente' }
-        ],
-        style: 'glitch_grid'
+        style: "matrix",
+        title: "SUPER DISPARADOR V8",
+        subtitle: "A ferramenta mais indetectável e poderosa do Brasil",
+        glitch_title: "MATRIX EDITION v12.5",
+        overlay_text: "100% HUMANIZADO | 0% DETECTADO"
       }
     },
     {
-      id: 'b3',
-      product_id: 'v8-matrix-id',
-      block_type: 'comparison',
+      id: 'fa959930-2dce-459d-92bf-12be2af91c73',
+      product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
+      block_type: 'features',
       order: 2,
       content: {
-        title: 'ESCOLHA SEU NÍVEL DE PODER',
-        style: 'terminal_matrix'
+        title: "TECNOLOGIA MATRIX ATIVADA",
+        style: "glitch_grid",
+        items: [
+          { icon: "brain", text: "Humanização extrema com erros simulados" },
+          { icon: "shield", text: "100% indetectável desde 2023" },
+          { icon: "zap", text: "Duas threads simultâneas" }
+        ]
+      }
+    },
+    {
+      id: 'c28d9c3e-7dcf-461d-9679-c9313cea00f6',
+      product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
+      block_type: 'comparison',
+      order: 4,
+      content: {
+        style: "terminal_matrix",
+        title: "ESCOLHA SEU NÍVEL DE PODER"
       }
     }
   ]
 };
+
+export const LOCAL_INSIGHTS: Insight[] = [];
