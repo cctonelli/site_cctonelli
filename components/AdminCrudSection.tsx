@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase, logSupabaseError } from '../services/supabaseService';
+// Fix: removed logSupabaseError as it is not exported by supabaseService and not used in this file
+import { supabase } from '../services/supabaseService';
 import RichTextEditor from './RichTextEditor';
 
 interface Field {

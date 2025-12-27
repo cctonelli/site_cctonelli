@@ -11,8 +11,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- KERNEL DE CONFIGURAÇÃO SOBERANA ---
-
 export const fetchSiteConfig = () => {
   const localOverride = localStorage.getItem('CT_ADMIN_CONFIG_OVERRIDE');
   if (localOverride) {
@@ -25,8 +23,6 @@ export const fetchSiteConfig = () => {
   }
   return SITE_CONFIG;
 };
-
-// --- GETTERS QUE RESPEITAM O REGISTRY EDITADO ---
 
 export const fetchProducts = async (): Promise<Product[]> => {
   const config = fetchSiteConfig();
@@ -81,8 +77,6 @@ export const fetchInsightById = async (id: string): Promise<Insight | null> => {
   const insights = await fetchInsights();
   return insights.find(i => String(i.id) === String(id)) || null;
 };
-
-// --- MÉTODOS SUPABASE MANTIDOS PARA DADOS DINÂMICOS ---
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
   const { data } = await supabase.from('metrics').select('*').order('display_order');
@@ -181,10 +175,6 @@ export const signUp = async (email: string, password: string, metadata: any) => 
 
 export const createProfile = async (profile: Profile) => {
   return await supabase.from('profiles').upsert(profile);
-};
-
-export const logSupabaseError = (error: any, context: string) => {
-  console.error(`[Supabase Error] ${context}:`, error?.message || error);
 };
 
 export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {

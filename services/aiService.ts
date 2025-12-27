@@ -4,6 +4,7 @@ import { Product, Profile } from "../types";
 
 export const getPersonalizedRecommendations = async (profile: Profile, products: Product[]): Promise<string> => {
   try {
+    // Always initialize GoogleGenAI with a fresh instance from process.env.API_KEY
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     // Fix: Using p.title instead of p.name as per Product interface in types.ts
     const productNames = products.map(p => p.title).join(", ");
@@ -15,7 +16,8 @@ export const getPersonalizedRecommendations = async (profile: Profile, products:
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      // Using gemini-3-flash-preview for recommendation logic
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
         temperature: 0.8,

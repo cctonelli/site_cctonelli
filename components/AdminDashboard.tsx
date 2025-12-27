@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Profile, Order, Product, ProductContentBlock, ProductVariant, Insight, UserProduct } from '../types';
+import { Profile, Order, UserProduct } from '../types';
 import { fetchAllOrders, fetchSiteConfig, supabase } from '../services/supabaseService';
-import { SITE_CONFIG, LOCAL_PRODUCTS } from '../services/localRegistry';
 
 type TabType = 'visual_dna' | 'editorial_forge' | 'sovereign_store' | 'insights' | 'orders' | 'hard_build';
 
@@ -36,7 +35,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     if (!confirm(`Confirmar recebimento de R$ ${order.amount.toFixed(2)} e ativar licença para ${clientEmail}?`)) return;
     
     try {
-      // 1. Atualizar status do pedido
+      // 1. Atualizar status do pedido no banco
       const { error: orderError } = await supabase
         .from('orders')
         .update({ status: 'approved', approved_by_admin: true })
@@ -44,24 +43,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       
       if (orderError) throw orderError;
 
-      // 2. Lógica de Expiração Elite baseada na Variante
+      // 2. Calcular expiração baseado na variante
       const expirationDate = new Date();
       let disparosIniciais = 50;
+      let threads = 1;
 
-      if (order.variant_id.includes('anual')) {
+      const variantName = order.variant_id.toLowerCase();
+      if (variantName.includes('anual')) {
         expirationDate.setFullYear(expirationDate.getFullYear() + 1);
         disparosIniciais = 32000;
-      } else if (order.variant_id.includes('semestral')) {
+        threads = 3;
+      } else if (variantName.includes('semestral')) {
         expirationDate.setMonth(expirationDate.getMonth() + 6);
         disparosIniciais = 12800;
-      } else if (order.variant_id.includes('mensal')) {
+        threads = 2;
+      } else if (variantName.includes('mensal')) {
         expirationDate.setMonth(expirationDate.getMonth() + 1);
         disparosIniciais = 2400;
+        threads = 1;
       } else {
-        expirationDate.setDate(expirationDate.getDate() + 7); // Trial
+        expirationDate.setDate(expirationDate.getDate() + 7); // Trial padrão
       }
 
-      // 3. Criar registro de UserProduct
+      // 3. Criar Ativo Digital (UserProduct)
       const newUserProduct: Partial<UserProduct> = {
         user_id: order.user_id,
         product_id: order.product_id,
@@ -69,7 +73,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
         status: 'active',
         approved_by_admin: true,
         expires_at: expirationDate.toISOString(),
-        download_link: 'https://cdn.claudiotonelli.com.br/assets/v8-matrix-setup.exe' // Link padrão
+        download_link: 'https://cdn.claudiotonelli.com.br/assets/v8-matrix-setup.exe'
       };
 
       const { data: upData, error: upError } = await supabase
@@ -80,21 +84,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
 
       if (upError) throw upError;
 
-      // 4. Se for V8 Matrix, inicializar contador de disparos
-      if (order.product_id.includes('v8') || order.product_id.includes('matrix')) {
+      // 4. Inicializar métricas V8 Matrix
+      const isV8 = order.product_id.toLowerCase().includes('v8') || order.product_id.toLowerCase().includes('matrix');
+      if (isV8) {
         await supabase.from('v8_matrix_usage').insert([{
           user_product_id: upData.id,
           remaining_disparos: disparosIniciais,
-          threads: order.variant_id.includes('anual') ? 3 : 1,
+          threads: threads,
           daily_count: 0,
-          total_count: 0
+          total_count: 0,
+          last_reset: new Date().toISOString()
         }]);
       }
 
-      alert("PROTOCOLO ATIVADO: Ativo liberado com sucesso em tempo real.");
+      alert("PROTOCOLO ATIVADO: Ativo liberado com sucesso via Realtime Sync.");
       loadOrders();
     } catch (e: any) {
-      alert(`Erro no processo de ativação: ${e.message}`);
+      alert(`Falha na ativação: ${e.message}`);
     }
   };
 
@@ -110,7 +116,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     <div className="fixed inset-0 z-[200] bg-[#010309]/98 backdrop-blur-3xl flex items-center justify-center p-4 lg:p-8 overflow-hidden font-sans">
       <div className="bg-[#02050c] border border-white/10 w-full max-w-[1800px] h-full rounded-[4rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl">
         
-        <div className="w-full lg:w-80 bg-[#010309] border-r border-white/5 p-10 flex flex-col gap-6 shrink-0">
+        <aside className="w-full lg:w-80 bg-[#010309] border-r border-white/5 p-10 flex flex-col gap-6 shrink-0">
           <div className="flex items-center gap-5 mb-8">
             <div className="w-14 h-14 bg-green-500 rounded-3xl flex items-center justify-center font-bold text-black text-2xl">CT</div>
             <div className="flex flex-col">
@@ -127,21 +133,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           <div className="pt-6 border-t border-white/5">
              <button onClick={onClose} className="w-full text-slate-700 hover:text-red-500 text-[10px] font-black uppercase tracking-[0.5em]">Sair do Core</button>
           </div>
-        </div>
+        </aside>
 
-        <div className="flex-1 overflow-y-auto p-10 lg:p-20 bg-grid relative custom-scrollbar">
+        <main className="flex-1 overflow-y-auto p-10 lg:p-20 bg-grid relative custom-scrollbar">
           <div className="max-w-6xl mx-auto pb-32">
             {activeTab === 'orders' && (
               <div className="space-y-12">
                 <header>
                    <h2 className="text-5xl font-serif text-white italic tracking-tighter">Sales Vault.</h2>
-                   <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">Controle de Fluxo e Auditoria de Pagamentos</p>
+                   <p className="text-slate-500 text-xs mt-2 uppercase tracking-widest">Auditoria e Ativação de Protocolos de Compra</p>
                 </header>
                 
                 {loadingOrders ? (
-                   <div className="py-20 text-center text-green-500 animate-pulse font-black text-xs uppercase tracking-[0.5em]">Sincronizando Registros...</div>
+                   <div className="py-20 text-center text-green-500 animate-pulse font-black text-xs uppercase tracking-[0.5em]">Acessando registros criptografados...</div>
                 ) : orders.length === 0 ? (
-                   <div className="py-40 text-center border-2 border-dashed border-white/5 rounded-[4rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">Sem solicitações pendentes.</div>
+                   <div className="py-40 text-center border-2 border-dashed border-white/5 rounded-[4rem] text-slate-600 font-black uppercase tracking-widest text-[10px]">Sem solicitações no momento.</div>
                 ) : (
                    <div className="grid gap-6">
                       {orders.map(order => (
@@ -150,7 +156,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                               <div className="space-y-4">
                                  <div className="flex items-center gap-4">
                                     <span className={`text-[8px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full ${order.status === 'pending' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-500'}`}>{order.status}</span>
-                                    <span className="text-slate-500 text-[10px] font-mono">#{order.id.slice(0, 8)}</span>
+                                    <span className="text-slate-500 text-[10px] font-mono">#{order.id.slice(0, 8).toUpperCase()}</span>
                                  </div>
                                  <h4 className="text-2xl font-serif italic text-white">{order.profiles?.email || 'Partner Corporativo'}</h4>
                                  <div className="flex gap-6 text-[9px] font-black uppercase tracking-widest text-slate-500">
@@ -160,7 +166,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                               </div>
                               {order.status === 'pending' && (
                                 <div className="flex gap-4">
-                                   <button onClick={() => approveOrder(order)} className="px-10 py-5 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-400 active:scale-95 transition-all">LIBERAR ATIVO</button>
+                                   <button onClick={() => approveOrder(order)} className="px-10 py-5 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-green-400 active:scale-95 transition-all">ATIVAR LICENÇA</button>
                                    <button onClick={() => rejectOrder(order.id)} className="px-10 py-5 bg-red-600/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 hover:text-white active:scale-95 transition-all">REJEITAR</button>
                                 </div>
                               )}
@@ -171,9 +177,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                 )}
               </div>
             )}
-            <div className="py-20 text-center text-slate-800 text-[8px] font-black uppercase tracking-widest">System Governance v16.0 MASTER // S-HUB-CT</div>
+            <div className="py-20 text-center text-slate-800 text-[8px] font-black uppercase tracking-widest">System Governance v16.0 MASTER // CLAUDIO TONELLI ADVISORY</div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

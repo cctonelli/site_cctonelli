@@ -140,7 +140,6 @@ export interface Testimonial {
 export interface Profile {
   id: string;
   full_name: string | null;
-  // Added email property to fix type errors in AdminDashboard.tsx
   email: string | null;
   cpf_cnpj: string | null;
   gender: 'Masculino' | 'Feminino' | 'Outro' | 'Prefiro não informar' | null;

@@ -12,9 +12,11 @@ Fale em português do Brasil.
 
 export const getConsultancyAdvice = async (userPrompt: string): Promise<string> => {
   try {
+    // Always initialize GoogleGenAI with a fresh instance from process.env.API_KEY
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      // Using gemini-3-flash-preview for basic text tasks/Q&A
+      model: 'gemini-3-flash-preview',
       contents: userPrompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
