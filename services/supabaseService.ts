@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
@@ -16,7 +17,7 @@ export const fetchSiteConfig = () => {
   const localOverride = localStorage.getItem('CT_ADMIN_CONFIG_OVERRIDE');
   if (localOverride) {
     try {
-      return JSON.parse(localOverride);
+      return { ...SITE_CONFIG, ...JSON.parse(localOverride) };
     } catch (e) {
       return SITE_CONFIG;
     }
@@ -24,13 +25,13 @@ export const fetchSiteConfig = () => {
   return SITE_CONFIG;
 };
 
-// --- CONTEÚDO HÍBRIDO (LOCAL + DB REDUNDANCY) ---
+// --- MODELO HÍBRIDO SOBERANO (LOCAL-FIRST) ---
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    const { data } = await supabase.from('products').select('*').eq('is_active', true);
-    if (data && data.length > 0) return data;
-  } catch (e) { console.warn("Supabase Down: Usando Registry Local"); }
+    const { data, error } = await supabase.from('products').select('*').eq('is_active', true);
+    if (!error && data && data.length > 0) return data;
+  } catch (e) {}
   return LOCAL_PRODUCTS;
 };
 
@@ -74,45 +75,17 @@ export const fetchInsightById = async (id: string): Promise<Insight | null> => {
   return LOCAL_INSIGHTS.find(i => i.id === id || String(i.id) === id) || null;
 };
 
-// --- GESTÃO DE NEGÓCIOS (SUPABASE ONLY) ---
-
-export const fetchMetrics = async (): Promise<Metric[]> => {
-  const { data } = await supabase.from('metrics').select('*').order('display_order');
-  return data || [];
-};
-
-export const fetchTestimonials = async (): Promise<Testimonial[]> => {
-  const { data } = await supabase.from('testimonials').select('*').eq('approved', true);
-  return data || [];
-};
-
-export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
-  const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
-  return data || [];
-};
-
-export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
-  const { data } = await supabase.from('translations').select('key, value').eq('language', lang);
-  const transMap: Record<string, string> = {};
-  data?.forEach(item => { transMap[item.key] = item.value; });
-  return transMap;
-};
-
-export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
-  const { data } = await supabase.from('site_content').select('*').eq('page', page);
-  const contentMap: Record<string, any> = {};
-  data?.forEach(item => { contentMap[item.key] = item; });
-  return contentMap;
-};
+// --- GESTÃO DE NEGÓCIOS (TRANSACIONAIS - SUPABASE EXCLUSIVE) ---
 
 export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
   const { data } = await supabase.from('orders').insert([order]).select().single();
   return data;
 };
 
-export const updateOrder = async (id: string, updates: Partial<Order>): Promise<boolean> => {
-  const { error } = await supabase.from('orders').update(updates).eq('id', id);
-  return !error;
+// Fix: Added missing updateOrder export to resolve import error in AdminDashboard.tsx
+export const updateOrder = async (id: string, updates: Partial<Order>): Promise<Order | null> => {
+  const { data } = await supabase.from('orders').update(updates).eq('id', id).select().single();
+  return data;
 };
 
 export const fetchAllOrders = async (): Promise<Order[]> => {
@@ -127,6 +100,16 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
 
 export const createProfile = async (profile: Profile) => {
   return await supabase.from('profiles').upsert([profile]);
+};
+
+export const fetchMetrics = async (): Promise<Metric[]> => {
+  const { data } = await supabase.from('metrics').select('*').order('display_order');
+  return data || [];
+};
+
+export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
+  const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
+  return data || [];
 };
 
 export const signIn = async (email: string, password?: string) => {
@@ -166,6 +149,11 @@ export const fetchTools = async (): Promise<Tool[]> => {
   return data || [];
 };
 
+export const fetchTestimonials = async (): Promise<Testimonial[]> => {
+  const { data } = await supabase.from('testimonials').select('*').eq('approved', true);
+  return data || [];
+};
+
 export const submitContact = async (contact: Contact): Promise<boolean> => {
   const { error } = await supabase.from('contacts').insert([contact]);
   return !error;
@@ -184,4 +172,18 @@ export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> 
 export const fetchUsageByProduct = async (userProductId: string): Promise<V8MatrixUsage | null> => {
   const { data } = await supabase.from('v8_matrix_usage').select('*').eq('user_product_id', userProductId).maybeSingle();
   return data;
+};
+
+export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
+  const { data } = await supabase.from('translations').select('key, value').eq('language', lang);
+  const transMap: Record<string, string> = {};
+  data?.forEach(item => { transMap[item.key] = item.value; });
+  return transMap;
+};
+
+export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
+  const { data } = await supabase.from('site_content').select('*').eq('page', page);
+  const contentMap: Record<string, any> = {};
+  data?.forEach(item => { contentMap[item.key] = item; });
+  return contentMap;
 };

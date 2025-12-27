@@ -26,7 +26,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v12.5-SOVEREIGN";
+const APP_VERSION = "v13.0-SOVEREIGN";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -46,7 +46,7 @@ const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  // KERNEL CONFIGURATION
+  // KERNEL CONFIGURATION (DNA DO SITE)
   const siteConfig = useMemo(() => fetchSiteConfig(), []);
 
   const t = useMemo(() => {
@@ -99,11 +99,18 @@ const App: React.FC = () => {
     refreshUser(); 
     syncData();
     
-    // INJETAR CONFIGURAÇÃO DO KERNEL
+    // INJETAR CONFIGURAÇÃO DO KERNEL EM TEMPO REAL
     const root = document.documentElement;
     root.style.setProperty('--accent-blue', siteConfig.theme.primary);
     root.style.setProperty('--brand-gold', siteConfig.theme.secondary);
-  }, [syncData, refreshUser, siteConfig]);
+    root.style.setProperty('--bg-navy', siteConfig.theme.bg_dark);
+    root.style.setProperty('--global-radius', siteConfig.ux.border_radius_global);
+    root.style.setProperty('--glow-opacity', siteConfig.ux.glow_intensity);
+    root.style.setProperty('--scanline-opacity', siteConfig.ux.scanline_opacity.toString());
+    
+    // Atualizar Título da Página (SEO SOBERANO)
+    document.title = siteConfig.seo.title[language] || siteConfig.seo.title['pt'];
+  }, [syncData, refreshUser, siteConfig, language]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -125,12 +132,13 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500">
+      <div className="relative min-h-screen bg-white dark:bg-brand-navy transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
         
+        {/* Status Protocol v13.0 */}
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">KERNAL {isLive ? 'ACTIVE' : 'SYNC'}</span>
+            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">SOVEREIGN CORE</span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
           </div>
@@ -157,51 +165,55 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={
             <main className="pt-20 lg:pt-24">
-              <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} isLive={isLive} />
+              {siteConfig.visibility.hero && <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} isLive={isLive} />}
               
-              <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
-                    {metrics.map(m => (
-                      <div key={m.id} className="text-center group">
-                        <div className="text-5xl lg:text-7xl font-serif font-bold text-blue-600 mb-2 transition-transform group-hover:scale-110 duration-500">{m.value}</div>
-                        <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', '')}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              <section id="insights" className="py-32 bg-white dark:bg-slate-950">
-                <div className="container mx-auto px-6">
-                  <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-4">
-                    <div>
-                      <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
-                      <h2 className="text-4xl lg:text-7xl font-serif italic dark:text-white text-slate-900 leading-[1.1]">{resolveContent('insights_title', t.insights_title)}</h2>
+              {siteConfig.visibility.metrics && (
+                <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
+                  <div className="container mx-auto px-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
+                      {metrics.map(m => (
+                        <div key={m.id} className="text-center group">
+                          <div className="text-5xl lg:text-7xl font-serif font-bold text-blue-600 mb-2 transition-transform group-hover:scale-110 duration-500">{m.value}</div>
+                          <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', '')}</div>
+                        </div>
+                      ))}
                     </div>
-                    <Link to="/wip" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{resolveContent('insights_all', t.insights_all)}</Link>
                   </div>
-                  <div className="grid md:grid-cols-3 gap-12">
-                    {insights.map(insight => (
-                      <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-6">
-                        <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 relative shadow-xl">
-                          <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
-                        </div>
-                        <div className="space-y-3">
-                          <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors">{resolveTranslation(insight, 'title', '')}</h3>
-                          <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light leading-relaxed">{resolveTranslation(insight, 'excerpt', '')}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </section>
+                </section>
+              )}
 
-              <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />
-              <GlobalStrategyMap />
-              <ToolsGrid />
-              <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} t={t} />
-              <ContactForm language={language} t={t} />
+              {siteConfig.visibility.insights && (
+                <section id="insights" className="py-32 bg-white dark:bg-slate-950">
+                  <div className="container mx-auto px-6">
+                    <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-4">
+                      <div>
+                        <div className="text-blue-500 font-bold uppercase tracking-[0.3em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
+                        <h2 className="text-4xl lg:text-7xl font-serif italic dark:text-white text-slate-900 leading-[1.1]">{resolveContent('insights_title', t.insights_title)}</h2>
+                      </div>
+                      <Link to="/wip" className="text-[10px] font-bold uppercase tracking-widest text-blue-600 border-b-2 border-blue-600/10 hover:border-blue-600 pb-1 transition-all">{resolveContent('insights_all', t.insights_all)}</Link>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-12">
+                      {insights.map(insight => (
+                        <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-6">
+                          <div className="aspect-[4/5] overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 relative shadow-xl" style={{ borderRadius: 'var(--global-radius)' }}>
+                            <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
+                          </div>
+                          <div className="space-y-3">
+                            <h3 className="text-2xl font-serif italic dark:text-white text-slate-900 group-hover:text-blue-600 transition-colors">{resolveTranslation(insight, 'title', '')}</h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 italic font-light leading-relaxed">{resolveTranslation(insight, 'excerpt', '')}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {siteConfig.visibility.products && <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />}
+              {siteConfig.visibility.strategy_map && <GlobalStrategyMap />}
+              {siteConfig.visibility.tools && <ToolsGrid />}
+              {siteConfig.visibility.testimonials && <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} t={t} />}
+              {siteConfig.visibility.contact_form && <ContactForm language={language} t={t} />}
             </main>
           } />
           <Route path="/loja" element={<StoreGrid language={language} t={t} resolveTranslation={resolveTranslation} />} />
@@ -212,12 +224,19 @@ const App: React.FC = () => {
           <Route path="/wip" element={<WorkInProgress />} />
         </Routes>
 
-        <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center">
-          <div className="container mx-auto px-6 space-y-10">
-            <div className="w-14 h-14 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white shadow-2xl">CT</div>
-            <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
-          </div>
-        </footer>
+        {siteConfig.visibility.footer && (
+          <footer className="py-24 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-brand-navy text-center">
+            <div className="container mx-auto px-6 space-y-12">
+              <div className="w-14 h-14 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white shadow-2xl">CT</div>
+              <div className="flex justify-center gap-8">
+                 <a href={siteConfig.contact.linkedin} className="text-slate-500 hover:text-blue-500 text-[10px] font-black uppercase tracking-widest">LinkedIn</a>
+                 <a href={siteConfig.contact.instagram} className="text-slate-500 hover:text-blue-500 text-[10px] font-black uppercase tracking-widest">Instagram</a>
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
+              <p className="text-[8px] text-slate-700 uppercase tracking-widest">{siteConfig.contact.address}</p>
+            </div>
+          </footer>
+        )}
         <ChatBot />
         <FloatingCTA t={t} />
       </div>
