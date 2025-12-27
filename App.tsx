@@ -145,6 +145,9 @@ const App: React.FC = () => {
     return item?.value || t[key] || localFallback;
   }, [language, dbContent, t]);
 
+  // Defensive check for rendering
+  if (!siteConfig) return null;
+
   return (
     <Router>
       <div className="relative min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
