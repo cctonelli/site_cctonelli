@@ -46,12 +46,20 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
     window.scrollTo(0, 0);
   }, [slug]);
 
-  if (loading || !product) return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+  if (loading) return (
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center space-y-8">
       <div className="relative w-32 h-32">
         <div className="absolute inset-0 border-2 border-blue-600/10 rounded-full animate-pulse"></div>
         <div className="absolute inset-0 border-t-2 border-blue-600 rounded-full animate-spin"></div>
       </div>
+      <p className="text-blue-500 font-black uppercase tracking-[0.5em] text-[10px] animate-pulse">Sincronizando Core Registry...</p>
+    </div>
+  );
+
+  if (!product) return (
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
+      <h2 className="text-white font-serif italic text-4xl mb-6">Ativo não encontrado.</h2>
+      <Link to="/loja" className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs">Voltar à Vitrine</Link>
     </div>
   );
 
@@ -90,6 +98,19 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
               {content.glitch_title && (
                 <div className="font-mono text-xl md:text-3xl font-black uppercase tracking-[0.8em] py-8 animate-pulse" style={{ color: blockColor, textShadow: `0 0 15px ${blockColor}60` }}>{content.glitch_title}</div>
               )}
+              {content.video_url && (
+                <div className="max-w-4xl mx-auto aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl mb-20">
+                  <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src={content.video_url} 
+                    title="Product Demo" 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              )}
               <p className="text-xl md:text-3xl text-slate-500 font-light italic leading-relaxed max-w-4xl mx-auto mb-20">{content.subtitle || product.subtitle}</p>
               <div className="flex flex-wrap justify-center gap-6 md:gap-8">
                   <a href="#precos" className="text-white px-10 md:px-16 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-[11px] shadow-2xl transition-all hover:scale-105 active:scale-95" style={{ backgroundColor: blockColor, boxShadow: `0 20px 40px ${blockColor}30` }}>
@@ -107,6 +128,22 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
             <div className="container mx-auto px-6 max-w-4xl text-center space-y-12">
                <h2 className="text-4xl md:text-6xl font-serif italic text-white leading-tight">{content.title}</h2>
                <p className="text-lg md:text-2xl text-slate-400 font-light italic leading-relaxed">{content.subtitle}</p>
+            </div>
+          </section>
+        );
+
+      case 'image_gallery':
+        return (
+          <section key={block.id} className="py-32 md:py-48 bg-black border-b border-white/5">
+            <div className="container mx-auto px-6">
+              <h3 className="text-center text-4xl font-serif italic text-white mb-20">{content.title || 'Visuals'}</h3>
+              <div className="grid md:grid-cols-3 gap-8">
+                {content.images?.map((img: string, i: number) => (
+                  <div key={i} className="aspect-square rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl">
+                    <img src={img} className="w-full h-full object-cover opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-700" alt="" />
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         );
