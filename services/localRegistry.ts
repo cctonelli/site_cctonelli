@@ -5,7 +5,7 @@ export type Language = 'pt' | 'en' | 'es';
 // --- KERNEL VISUAL & NARRATIVO TOTAL ---
 export const SITE_CONFIG = {
   theme: {
-    primary: '#2563eb', 
+    primary: '#00ff41', // Verde Matrix Neon Original
     secondary: '#b4975a', 
     bg_dark: '#010309',
     bg_light: '#ffffff',
@@ -14,10 +14,10 @@ export const SITE_CONFIG = {
   },
   ux: {
     matrix_mode: true,
-    matrix_speed: 1.5,
-    matrix_opacity: 0.15,
-    scanline_opacity: 0.05,
-    glow_intensity: '0.4',
+    matrix_speed: 1.8,
+    matrix_opacity: 0.2,
+    scanline_opacity: 0.08,
+    glow_intensity: '0.6',
     border_radius_global: '2.5rem',
     font_size_base: '16px',
     h1_size: '9.5rem'
@@ -59,8 +59,8 @@ export const LOCAL_PRODUCTS: Product[] = [
     id: 'v8-matrix-id',
     slug: 'v8-matrix-edition',
     title: 'V8 MATRIX EDITION v6.0.0',
-    subtitle: 'Protocolo de Escala e Domínio Digital Indetectável.',
-    description: 'Engenharia de disparos em massa humanizada com inteligência de cadência por período (Dayparting) e micro-interações simuladas.',
+    subtitle: 'O Protocolo Definitivo de Escala e Domínio Digital.',
+    description: 'Engenharia de disparos em massa humanizada com inteligência de cadência por período (Dayparting), micro-interações de interface e algoritmos anti-banimento v6.0.',
     image_url: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop',
     featured: true,
     pricing_type: 'subscription',
@@ -71,7 +71,7 @@ export const LOCAL_PRODUCTS: Product[] = [
     slug: 'quantum-red-pill',
     title: 'QUANTUM RED PILL',
     subtitle: 'Descriptografia de Mercado e Visão Executiva Nível 13.',
-    description: 'Sistema de monitoramento em tempo real de fluxos de capital e tendências disruptivas. Fuja da simulação corporativa.',
+    description: 'Sistema de monitoramento em tempo real de fluxos de capital e tendências disruptivas. Fuja da simulação corporativa com advisory de elite.',
     image_url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop',
     featured: false,
     pricing_type: 'one_time',
@@ -89,7 +89,13 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       currency: 'BRL',
       interval: 'semester',
       quantity_limit: 1,
-      features: ['Dayparting Inteligente', 'Mouse Curves (Antiban)', 'Multi-Thread v6', 'Suporte +55 44 99732-8888'],
+      features: [
+        'Dayparting Inteligente', 
+        'Mouse Curves (Antiban)', 
+        'Multi-Thread v6 Core', 
+        'Suporte Executive +55 44 99732-8888',
+        'Licença Vitalícia para 2 Instâncias'
+      ],
       is_most_popular: true,
       is_free: false,
       order_index: 0
@@ -121,10 +127,11 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
       order: 1,
       content: {
         style: "matrix",
+        matrix_color: "#00ff41",
         title: "V8 MATRIX v6.0",
-        subtitle: "100% Funcional, Moderno, Resiliente e Indetectável.",
+        subtitle: "Engenharia de disparos indetectável com alma humana.",
         glitch_title: "SYSTEM_SOVEREIGN_V6",
-        overlay_text: "ACTIVE_PROTOCOL_HUMANIZED"
+        overlay_text: "ACTIVE_PROTOCOL_NEON_GREEN"
       }
     },
     {
@@ -133,14 +140,26 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
       block_type: 'features',
       order: 2,
       content: {
-        title: "Arquitetura de Ativos v6",
+        title: "Arquitetura de Ativos v6.0",
+        matrix_color: "#00ff41",
         style: "glitch_grid",
         items: [
-          { icon: "brain", text: "Micro-interações de Interface" },
-          { icon: "shield", text: "Validação NTP Antifraude" },
-          { icon: "zap", text: "Processamento Multithread de Elite" },
-          { icon: "robot", text: "Typing Profiles Dinâmicos" }
+          { icon: "brain", text: "Cadência por Período (Dayparting)" },
+          { icon: "shield", text: "Algoritmo Anti-Ban v6.0" },
+          { icon: "zap", text: "Multi-Thread de Alta Performance" },
+          { icon: "robot", text: "Simulação de Micro-interações" }
         ]
+      }
+    },
+    {
+      id: 'b3-v8',
+      product_id: 'v8-matrix-id',
+      block_type: 'comparison',
+      order: 3,
+      content: {
+        title: "ESCOLHA SEU NÍVEL DE PODER",
+        style: "terminal_matrix",
+        matrix_color: "#00ff41"
       }
     }
   ],
@@ -154,7 +173,7 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
         style: "matrix",
         matrix_color: "#ef4444",
         title: "RED PILL VISION",
-        subtitle: "Você escolhe: o Advisory comum ou a verdade do mercado.",
+        subtitle: "A verdade crua do mercado corporativo revelada.",
         glitch_title: "DECRYPT_REALITY",
         overlay_text: "CORE_ACCESS_AUTHORIZED"
       }
@@ -166,7 +185,8 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
       order: 2,
       content: {
         title: "SAIA DA SIMULAÇÃO CORPORATIVA",
-        style: "terminal_matrix"
+        style: "terminal_matrix",
+        matrix_color: "#ef4444"
       }
     }
   ]
