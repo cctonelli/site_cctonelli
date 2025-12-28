@@ -157,7 +157,7 @@ export const upsertItem = async (table: string, payload: any) => {
 };
 
 export const deleteItem = async (table: string, id: string | number) => {
-  const { error } = await supabase.from(table).delete().eq('id', id);
+  const { error } = await supabase.from(table).delete().match({ id });
   if (error) throw error;
 };
 

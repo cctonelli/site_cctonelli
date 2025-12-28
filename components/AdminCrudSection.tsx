@@ -7,6 +7,7 @@ interface Field {
   key: string;
   label: string;
   type?: 'text' | 'textarea' | 'image' | 'toggle' | 'number' | 'json' | 'rich-text';
+  placeholder?: string;
 }
 
 interface AdminCrudSectionProps {
@@ -46,7 +47,6 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       if (error) throw error;
       setItems(Array.isArray(data) ? data : []);
     } catch (e: any) {
-      // Robust error message extraction to avoid [object Object]
       const errorMsg = e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
       console.error(`[Admin Crud] Load fail for ${tableName}:`, errorMsg);
       setStatus({ 
@@ -65,6 +65,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const handleEdit = (item: any) => {
     setEditingId(item[idColumn]);
     setFormData({ ...item });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSave = async () => {
@@ -77,7 +78,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
 
       if (error) throw error;
 
-      setStatus({ text: 'Registro atualizado com sucesso!', type: 'success' });
+      setStatus({ text: 'Registro sincronizado com o Kernel!', type: 'success' });
       setFormData({});
       setEditingId(null);
       await loadData();
@@ -90,7 +91,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   };
 
   const handleDelete = async (id: any) => {
-    if (!confirm('Deseja excluir este item permanentemente?')) return;
+    if (!confirm('Deseja excluir este item permanentemente do banco de dados?')) return;
     try {
       const { error } = await supabase.from(tableName).delete().eq(idColumn, id);
       if (error) throw error;
@@ -102,17 +103,18 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   };
 
   return (
-    <div className="space-y-10">
-      <div className="bg-slate-900/60 p-10 rounded-[2.5rem] border border-white/5 space-y-8 shadow-2xl backdrop-blur-md">
-        <h3 className="text-2xl font-serif italic text-white flex items-center gap-3">
-          <span className="w-1.5 h-10 bg-green-500 rounded-full"></span>
-          {editingId ? 'Editar' : 'Criar'} {title}
+    <div className="space-y-12">
+      <div className="bg-slate-900/60 p-10 lg:p-14 rounded-[4rem] border border-white/5 space-y-10 shadow-3xl backdrop-blur-3xl">
+        <h3 className="text-3xl font-serif italic text-white flex items-center gap-5">
+          <span className="w-1.5 h-12 bg-blue-600 rounded-full"></span>
+          {editingId ? 'Refinar' : 'Forjar'} {title}
         </h3>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-10">
           {(fields || []).map(f => (
-            <div key={f.key} className={f.type === 'textarea' || f.type === 'rich-text' ? 'md:col-span-2' : ''}>
-              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 block mb-3">{f.label}</label>
+            <div key={f.key} className={f.type === 'textarea' || f.type === 'rich-text' || f.type === 'json' ? 'md:col-span-2' : ''}>
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-4">{f.label}</label>
+              
               {f.type === 'rich-text' ? (
                 <RichTextEditor 
                   content={formData[f.key] || ''} 
@@ -120,13 +122,29 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
                 />
               ) : f.type === 'textarea' ? (
                 <textarea 
-                  className="w-full bg-black border border-white/5 rounded-2xl p-6 text-sm text-slate-300 h-40 focus:border-green-500 outline-none"
+                  placeholder={f.placeholder || "Descreva os detalhes aqui..."}
+                  className="w-full bg-black border border-white/5 rounded-[2rem] p-8 text-sm text-slate-300 h-48 focus:border-blue-600 outline-none transition-all placeholder:opacity-30"
                   value={formData[f.key] || ''} 
                   onChange={e => setFormData({...formData, [f.key]: e.target.value})}
                 />
+              ) : f.type === 'number' ? (
+                <input 
+                  type="number"
+                  className="w-full bg-black border border-white/5 rounded-2xl p-6 text-sm text-white focus:border-blue-600 outline-none"
+                  value={formData[f.key] || ''} 
+                  onChange={e => setFormData({...formData, [f.key]: parseFloat(e.target.value)})}
+                />
+              ) : f.type === 'toggle' ? (
+                <button 
+                  onClick={() => setFormData({...formData, [f.key]: !formData[f.key]})}
+                  className={`px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData[f.key] ? 'bg-blue-600 text-white' : 'bg-black text-slate-600 border border-white/5'}`}
+                >
+                  {formData[f.key] ? 'ATIVO' : 'DESATIVADO'}
+                </button>
               ) : (
                 <input 
-                  className="w-full bg-black border border-white/5 rounded-xl p-5 text-sm text-white focus:border-green-500 outline-none"
+                  placeholder={f.placeholder || "Insira o valor..."}
+                  className="w-full bg-black border border-white/5 rounded-2xl p-6 text-sm text-white focus:border-blue-600 outline-none transition-all placeholder:opacity-30"
                   value={formData[f.key] || ''} 
                   onChange={e => setFormData({...formData, [f.key]: e.target.value})}
                 />
@@ -135,37 +153,41 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
           ))}
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex gap-6">
           <button 
             disabled={loading}
             onClick={handleSave} 
-            className="flex-1 bg-green-500 text-black py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl disabled:opacity-50"
+            className="flex-1 bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl shadow-blue-600/20 disabled:opacity-50 hover:bg-blue-500 transition-all active:scale-95"
           >
-            {editingId ? 'ATUALIZAR' : 'PUBLICAR'}
+            {editingId ? 'SINCRONIZAR ATUALIZAÇÃO' : 'PUBLICAR NO KERNEL'}
           </button>
           {editingId && (
-            <button onClick={() => { setEditingId(null); setFormData({}); }} className="px-10 bg-white/5 text-slate-500 py-5 rounded-2xl font-black uppercase text-[10px]">CANCELAR</button>
+            <button onClick={() => { setEditingId(null); setFormData({}); }} className="px-12 bg-white/5 text-slate-500 py-6 rounded-2xl font-black uppercase text-[11px] hover:text-white transition-colors">DESCARTAR</button>
           )}
         </div>
         {status && (
-          <div className={`p-4 rounded-xl text-[10px] font-black uppercase text-center transition-all ${status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500 animate-pulse'}`}>
+          <div className={`p-6 rounded-2xl text-[10px] font-black uppercase text-center transition-all ${status.type === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 animate-pulse border border-red-500/20'}`}>
             {status.text}
           </div>
         )}
       </div>
 
-      <div className="grid gap-4">
+      {/* Grid de Registros */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         {items.length === 0 && !loading && !status && (
-          <div className="text-center py-10 text-slate-600 uppercase tracking-widest text-[10px] border border-dashed border-white/5 rounded-3xl">
-            Nenhum registro encontrado.
+          <div className="col-span-full text-center py-20 text-slate-700 uppercase tracking-widest text-[10px] border border-dashed border-white/10 rounded-[3rem] italic">
+            Ledger Vazio. Nenhum registro detectado.
           </div>
         )}
         {items.map(item => (
-          <div key={item[idColumn]} className="bg-slate-900/40 p-6 rounded-3xl border border-white/5 flex items-center justify-between group">
-            <div className="text-white font-serif italic text-lg">{item.title || item.name || item.label || 'Sem título'}</div>
-            <div className="flex gap-4">
-              <button onClick={() => handleEdit(item)} className="p-3 text-slate-600 hover:text-green-500 transition-all text-[10px] font-black">EDIT</button>
-              <button onClick={() => handleDelete(item[idColumn])} className="p-3 text-slate-800 hover:text-red-500 transition-all text-[10px] font-black">DELETE</button>
+          <div key={item[idColumn]} className="bg-slate-900/40 p-10 rounded-[3rem] border border-white/5 flex flex-col justify-between gap-8 group hover:border-blue-600/30 transition-all backdrop-blur-3xl shadow-xl">
+            <div className="space-y-3">
+               <div className="text-white font-serif italic text-2xl group-hover:text-blue-500 transition-colors">{item.title || item.name || item.label || 'Sem Identificação'}</div>
+               <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-600 truncate">{item.slug || item.id}</div>
+            </div>
+            <div className="flex gap-4 border-t border-white/5 pt-6">
+              <button onClick={() => handleEdit(item)} className="flex-1 py-3 text-slate-500 hover:text-white bg-white/5 rounded-xl transition-all text-[10px] font-black tracking-widest uppercase">EDITAR</button>
+              <button onClick={() => handleDelete(item[idColumn])} className="px-6 py-3 text-slate-800 hover:text-red-500 bg-black/50 rounded-xl transition-all text-[10px] font-black tracking-widest uppercase">DEL</button>
             </div>
           </div>
         ))}

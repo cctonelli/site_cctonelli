@@ -1,39 +1,39 @@
-# Claudio Tonelli Consultoria — Editorial Advisory Hub v15.5-SUPREME
+# Claudio Tonelli Consultoria — Sovereign Master Hub v18.9-MASTER
 
-O ecossistema digital da **Claudio Tonelli Consultoria** atingiu o estágio de **Soberania Editorial Total**. Esta plataforma agora opera não apenas como uma loja, mas como um **Periódico de Elite**, onde a profundidade do conteúdo McKinsey encontra a estética disruptiva da Matrix.
+O ecossistema digital da **Claudio Tonelli Consultoria** atingiu o estágio de **Soberania Master**. Esta plataforma opera como um **Kernel de Estratégia**, onde a gestão da marca, marketplace e editorial ocorre em tempo real através do Command Center.
 
-## 🚀 Status de Evolução: Estágio v15.5-EDITORIAL (Soberania Digital)
+## 🚀 Status de Evolução: v18.9-SOVEREIGN-MASTER
 
-A plataforma foi elevada para um patamar de customização sem precedentes através do **Kernel de Configuração Soberana**:
+A plataforma agora é controlada inteiramente via interface administrativa, eliminando a necessidade de hard-coding para ajustes estéticos ou operacionais:
 
-1.  **Editorial Forge (Admin):** Controle granular de tipografia direto no painel. Ajuste de tamanhos de fonte (`H1`, `H2`, `Corpo`), famílias tipográficas e ativação de *Drop Caps* (letras capitulares) para um visual de jornal de luxo.
-2.  **Color Forge & Neon Matrix:** Sincronização em tempo real de paletas de cores. O verde neon Matrix (#00ff41) agora é o padrão de comando, injetado dinamicamente em todas as camadas do CSS.
-3.  **The Tonelli Journal (ArticlePage):** Refatoração completa das páginas de insight. Layout otimizado para leitura longa com grid editorial, citações impactantes e suporte a blocos de inteligência visual.
-4.  **Floating CTA "Vitrine de Ativos":** Reposicionado para a borda lateral direita (centralizado verticalmente) como uma aba de acesso rápido, garantindo que o fluxo de conversão não interrompa a experiência de leitura, mas esteja sempre ao alcance do clique.
-5.  **V8 MATRIX v6.0 Core:** Motor de renderização Matrix Rain aprimorado com controle de densidade, velocidade e brilho neon configuráveis pelo Admin.
+1.  **Visual DNA (Real-time Preview):** Controle total sobre a paleta neon, cores de fundo e escala tipográfica. O Admin pode ajustar o tamanho do `H1` (ex: 9.5rem) e ver a mudança instantaneamente via injeção de CSS Variables.
+2.  **Marketplace Forge:** Gestão granular de ativos digitais. Permite forjar novos produtos (como o V8 Matrix), editar variantes de preço, recorrência e descrições estratégicas.
+3.  **Editorial Forge:** Sistema completo de publicação de Insights. Transforme análises complexas em artigos com tipografia de luxo e suporte a *Rich Text*.
+4.  **Sales Vault (Auditoria PIX):** Fila de processamento de pedidos com integração de perfil. O administrador valida o pagamento e libera o ativo para o Executive Hub do cliente com um clique.
+5.  **Matrix UX Control:** Calibragem da experiência imersiva. Ajuste de velocidade, densidade e brilho do fundo Matrix diretamente pelo painel.
 
 ---
 
-## 🔐 Governança de Dados & Segurança (Supabase)
+## 🔐 Infraestrutura & Governança (Supabase)
 
-O hub mantém sua integridade através de políticas rigorosas de **Row Level Security**:
+A segurança é garantida por camadas de **Row Level Security (RLS)** e um modelo híbrido de dados:
 
-| Módulo | Funcionalidade | Camada de Segurança |
+| Módulo | Persistência | Protocolo de Segurança |
 | :--- | :--- | :--- |
-| **Editorial** | Insights & Conteúdo | Leitura pública, Escrita via Admin com Autenticação Forte. |
-| **Sovereign Store** | Produtos & Ativos | Sincronização híbrida (Local Registry + Supabase) para redundância total. |
-| **Sales Vault** | Pedidos & PIX | Criptografia AES-256 no processamento de pedidos e validação manual de ativos. |
-| **Security Hub** | Licenças APK | Gestão de versões e downloads forçados protegida por RLS Nível 1. |
+| **Configuração** | `site_content` | Leitura pública, Escrita restrita ao `user_type: admin`. |
+| **Marketplace** | `products` & `variants` | Cache local (Registry) + Sincronização Supabase. |
+| **Transações** | `orders` | Auditoria manual obrigatória para ativação de licenças. |
+| **Identidade** | `profiles` | Dados criptografados e acesso restrito ao proprietário. |
 
 ---
 
-## 🛠️ Guia do Editor (Comandos do Admin)
+## 🛠️ Comandos do Command Center
 
-Para operar a plataforma no nível máximo de performance:
+Para manter a Soberania de Marca:
 
-1.  **Aba Editorial Forge:** Use para calibrar o "tom de voz visual". Aumente o `h1_size` para anúncios de impacto ou reduza o `body_size` para análises técnicas densas.
-2.  **Aba Sovereign Store:** Edite os blocos do V8 Matrix Edition. Mude a cor do `Matrix Rain` individualmente por bloco para criar contrastes narrativos.
-3.  **Aba Hard Build:** Sempre que fizer mudanças estruturais no design, clique em "GERAR BUILD REGISTRY.TS" para exportar o DNA e garantir que a configuração sobreviva a qualquer reset de cache.
+1.  **DNA Visual:** Ajuste o `Acento Primário` para mudar o tom de toda a interface (Neon Matrix ou Blue Advisory).
+2.  **Visibilidade:** Ative ou desative seções inteiras do site (Métricas, Depoimentos, etc.) na aba **Geral & SEO**.
+3.  **Auditoria:** Acesse o **Sales Vault** para monitorar transações PIX pendentes.
 
 **Claudio Tonelli Consultoria**  
-*Onde a autoridade editorial e a engenharia de performance convergem no Protocolo Matrix.*
+*Excelência estratégica forjada em código soberano.*
