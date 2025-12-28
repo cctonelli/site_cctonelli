@@ -85,7 +85,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
       case 'hero':
         return (
           <section key={block.id} className="pt-48 pb-64 relative bg-black overflow-hidden border-b border-white/5 min-h-[90vh] flex items-center">
-            {isMatrixSlug && (
+            {(isMatrixSlug || content.style === 'matrix') && (
               <div className="scanline" style={{ background: `linear-gradient(0deg, rgba(0,0,0,0) 0%, ${blockColor}30 50%, rgba(0,0,0,0) 100%)` }}></div>
             )}
             <div className="container mx-auto px-6 relative z-10 text-center">
@@ -98,9 +98,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                 {content.overlay_text || 'SYSTEM_CORE_ACTIVE'}
               </motion.div>
               <h1 
-                className={`text-6xl md:text-[8rem] lg:text-[11rem] font-serif leading-[0.8] italic tracking-tighter text-white mb-12 ${isMatrixSlug ? 'glitch-text' : ''}`} 
+                className={`text-6xl md:text-[8rem] lg:text-[11rem] font-serif leading-[0.8] italic tracking-tighter text-white mb-12 ${isMatrixSlug || content.style === 'matrix' ? 'glitch-text' : ''}`} 
                 data-text={content.title || product.title}
-                style={isMatrixSlug ? { textShadow: `0 0 50px ${blockColor}60` } : {}}
+                style={(isMatrixSlug || content.style === 'matrix') ? { textShadow: `0 0 50px ${blockColor}60` } : {}}
               >
                 {content.title || product.title}
               </h1>
@@ -128,7 +128,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
 
       case 'features':
         return (
-          <section key={block.id} className="py-32 md:py-48 bg-black/80 relative border-b border-white/5 backdrop-blur-md">
+          <section key={block.id} className="py-32 md:py-48 bg-black/80 relative border-b border-white/5 backdrop-blur-md overflow-hidden">
+            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/5 blur-[150px] rounded-full pointer-events-none"></div>
             <div className="container mx-auto px-6 relative z-10">
               <h3 className="text-center text-4xl md:text-6xl font-serif italic text-white mb-24 md:mb-32">
                 {content.title || 'Arquitetura de Ativos'}
@@ -160,9 +161,10 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                 <h3 className="text-center text-4xl md:text-6xl font-serif italic text-white mb-24">{content.title || 'Visual Intelligence'}</h3>
                 <div className="grid md:grid-cols-2 gap-10 lg:gap-16">
                    {content.images?.map((img: any, i: number) => (
-                      <div key={i} className="group relative rounded-[4rem] overflow-hidden border border-white/5 shadow-2xl">
+                      <div key={i} className="group relative rounded-[4rem] overflow-hidden border border-white/5 shadow-2xl bg-slate-900/40">
+                         {isMatrixSlug && <div className="absolute inset-0 z-10 pointer-events-none opacity-20 bg-scanlines animate-scanline"></div>}
                          <img src={img.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-1000" alt={img.caption} />
-                         <div className="absolute bottom-10 left-10 bg-black/50 backdrop-blur-md px-8 py-3 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                         <div className="absolute bottom-10 left-10 z-20 bg-black/50 backdrop-blur-md px-8 py-3 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-white opacity-0 group-hover:opacity-100 transition-opacity">
                             {img.caption}
                          </div>
                       </div>
@@ -177,7 +179,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
           <section key={block.id} className="py-32 md:py-48 bg-slate-950 border-b border-white/5">
              <div className="container mx-auto px-6 max-w-6xl text-center">
                 <h3 className="text-4xl md:text-6xl font-serif italic text-white mb-24">{content.title || 'Demo Exclusiva'}</h3>
-                <div className={`aspect-video rounded-[4rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] relative group border-4 ${content.style === 'matrix_border' ? 'border-green-500/30 shadow-[0_0_40px_rgba(0,255,65,0.2)]' : 'border-white/5'}`}>
+                <div className={`aspect-video rounded-[4rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] relative group border-4 ${content.style === 'matrix_border' || isMatrixSlug ? 'border-green-500/30 shadow-[0_0_40px_rgba(0,255,65,0.2)]' : 'border-white/5'}`}>
                    <iframe src={content.video_url} className="w-full h-full" frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen></iframe>
                 </div>
              </div>
@@ -186,13 +188,14 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
 
       case 'cta':
         return (
-          <section key={block.id} className="py-48 bg-gradient-to-b from-black to-slate-900 border-b border-white/5 text-center">
-             <div className="container mx-auto px-6 space-y-12">
-                <h2 className={`text-5xl md:text-[6rem] font-serif italic text-white tracking-tighter leading-none ${content.style === 'glitch_activation' ? 'glitch-text' : ''}`} data-text={content.title}>{content.title || 'Pronto para a Transição?'}</h2>
+          <section key={block.id} className="py-48 bg-gradient-to-b from-black to-slate-900 border-b border-white/5 text-center relative overflow-hidden">
+             <div className="absolute inset-0 bg-grid opacity-10"></div>
+             <div className="container mx-auto px-6 space-y-12 relative z-10">
+                <h2 className={`text-5xl md:text-[6rem] font-serif italic text-white tracking-tighter leading-none ${content.style === 'glitch_activation' || isMatrixSlug ? 'glitch-text' : ''}`} data-text={content.title}>{content.title || 'Pronto para a Transição?'}</h2>
                 <button 
                   onClick={() => scrollToSection('precos')}
                   className="px-20 py-8 rounded-3xl font-black uppercase tracking-[0.5em] text-[11px] shadow-2xl transition-all hover:scale-110 active:scale-95"
-                  style={{ backgroundColor: blockColor, color: '#000' }}
+                  style={{ backgroundColor: blockColor, color: (isMatrixSlug || content.style === 'glitch_activation') ? '#000' : '#fff' }}
                 >
                    {content.button_text || 'ATIVAR PROTOCOLO'}
                 </button>
