@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatBot from './components/ChatBot';
 import FloatingCTA from './components/FloatingCTA';
@@ -29,7 +29,7 @@ import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from '.
 
 const APP_VERSION = "v18.8-SOVEREIGN";
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -40,6 +40,7 @@ const App: React.FC = () => {
   const [siteConfig, setSiteConfig] = useState<any>(null);
   
   const [isLive, setIsLive] = useState(false);
+  const [systemLog, setSystemLog] = useState("KRNL_INIT_SUCCESS");
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'pt');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'dark');
   
@@ -48,6 +49,8 @@ const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
+  const location = useLocation();
+
   const t = useMemo(() => {
     const base = staticTranslations[language] || staticTranslations['pt'];
     return { ...base, ...dbTranslations };
@@ -55,6 +58,7 @@ const App: React.FC = () => {
 
   const syncData = useCallback(async () => {
     try {
+      setSystemLog("SYNCING_CORE_DATA...");
       const config = await fetchSiteConfig();
       setSiteConfig(config);
 
@@ -77,9 +81,11 @@ const App: React.FC = () => {
       if (results[6].status === 'fulfilled') setDbTranslations(results[6].value);
       
       setIsLive(true);
+      setSystemLog("GATEWAY_ONLINE");
     } catch (err) {
       console.error(`[App Core] Sync Failure:`, err);
       setIsLive(true); 
+      setSystemLog("ERR_REDUNDANCY_ACTIVE");
     }
   }, [language]);
 
@@ -109,6 +115,11 @@ const App: React.FC = () => {
     refreshUser(); 
     syncData();
   }, [syncData, refreshUser]);
+
+  useEffect(() => {
+    setSystemLog(`NAV_TO_${location.pathname.replace('/', '').toUpperCase() || 'HOME'}`);
+    window.scrollTo(0, 0);
+  }, [location]);
 
   useEffect(() => {
     if (siteConfig) {
@@ -141,112 +152,119 @@ const App: React.FC = () => {
   if (!siteConfig) return null;
 
   return (
-    <Router>
-      <div className="relative min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
-        
-        {/* Status Protocol */}
-        <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
-          <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">SOVEREIGN COMMAND</span>
-            <div className="w-px h-2 bg-white/10 mx-1"></div>
-            <span className="text-[7px] font-mono text-green-500 font-bold">{APP_VERSION}</span>
-          </div>
+    <div className="relative min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
+      
+      {/* Status Protocol v18.8 */}
+      <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none group">
+        <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">SOVEREIGN COMMAND</span>
+          <div className="w-px h-2 bg-white/10 mx-1"></div>
+          <span className="text-[7px] font-mono text-green-500 font-bold">{APP_VERSION}</span>
         </div>
-
-        <Navbar 
-          onAdminClick={() => {
-            if (!userProfile) setIsAuthOpen(true);
-            else if (userProfile.user_type === 'admin') setIsAdminOpen(true);
-            else setIsClientPortalOpen(true);
-          }} 
-          userProfile={userProfile} 
-          onLogout={handleLogout} 
-          language={language}
-          setLanguage={setLanguage}
-          theme={theme}
-          setTheme={setTheme}
-        />
-
-        {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={() => { refreshUser(); syncData(); }} />}
-        {isAdminOpen && userProfile && <AdminDashboard profile={userProfile} onClose={() => setIsAdminOpen(false)} />}
-        {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
-
-        <Routes>
-          <Route path="/" element={
-            <main className="pt-20 lg:pt-24">
-              {siteConfig.visibility?.hero && <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} isLive={isLive} />}
-              
-              {siteConfig.visibility?.metrics && (
-                <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
-                  <div className="container mx-auto px-6">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
-                      {metrics.map(m => (
-                        <div key={m.id} className="text-center group">
-                          <div className="text-5xl lg:text-7xl font-serif font-bold text-blue-600 dark:text-green-600 mb-2 transition-transform group-hover:scale-110 duration-500">{m.value}</div>
-                          <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', '')}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {siteConfig.visibility?.insights && (
-                <section id="insights" className="py-32 bg-white dark:bg-[#010309]">
-                  <div className="container mx-auto px-6">
-                    <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-24 gap-4">
-                      <div className="space-y-4">
-                        <div className="text-blue-500 dark:text-green-500 font-black uppercase tracking-[0.5em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
-                        <h2 className="text-5xl md:text-[5rem] font-serif italic dark:text-white text-slate-900 leading-[0.9] tracking-tighter">{resolveContent('insights_title', t.insights_title)}</h2>
-                      </div>
-                      <Link to="/wip" className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 dark:text-green-500 border-b-2 border-current pb-2 transition-all">Folhear Acervo</Link>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-16">
-                      {insights.map(insight => (
-                        <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-8">
-                          <div className="aspect-[3/4] overflow-hidden bg-slate-900 border border-white/5 relative shadow-2xl" style={{ borderRadius: 'var(--global-radius)' }}>
-                            <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                            <div className="absolute bottom-8 left-8 right-8 text-white">
-                               <div className="text-[9px] font-black uppercase tracking-widest text-green-500 mb-2">{insight.category || 'INSIGHT'}</div>
-                               <h3 className="text-3xl font-serif italic leading-tight">{resolveTranslation(insight, 'title', '')}</h3>
-                            </div>
-                          </div>
-                          <p className="text-slate-500 text-base font-light italic leading-relaxed line-clamp-2">{resolveTranslation(insight, 'excerpt', '')}</p>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {siteConfig.visibility?.products && <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />}
-              {siteConfig.visibility?.strategy_map && <GlobalStrategyMap />}
-              {siteConfig.visibility?.tools && <ToolsGrid />}
-              {siteConfig.visibility?.testimonials && <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} t={t} />}
-              {siteConfig.visibility?.contact_form && <ContactForm language={language} t={t} />}
-            </main>
-          } />
-          <Route path="/loja" element={<StoreGrid language={language} t={t} resolveTranslation={resolveTranslation} />} />
-          <Route path="/ferramentas" element={<div className="pt-32"><ToolsGrid /></div>} />
-          <Route path="/loja/:slug" element={<ProductPage language={language} t={t} resolveTranslation={resolveTranslation} />} />
-          <Route path="/loja/:slug/checkout" element={<CheckoutPage profile={userProfile} onAuthRequest={() => setIsAuthOpen(true)} language={language} t={t} />} />
-          <Route path="/insight/:id" element={<ArticlePage />} />
-          <Route path="/wip" element={<WorkInProgress />} />
-        </Routes>
-
-        <footer className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] text-center">
-            <div className="container mx-auto px-6 space-y-12">
-              <div className="w-14 h-14 bg-blue-600 dark:bg-green-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white dark:text-black shadow-2xl">CT</div>
-              <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
-            </div>
-        </footer>
-        <ChatBot />
-        <FloatingCTA t={t} />
+        <div className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-lg border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+           <span className="text-[6px] font-mono text-slate-500 uppercase tracking-widest">{systemLog}</span>
+        </div>
       </div>
-    </Router>
+
+      <Navbar 
+        onAdminClick={() => {
+          if (!userProfile) setIsAuthOpen(true);
+          else if (userProfile.user_type === 'admin') setIsAdminOpen(true);
+          else setIsClientPortalOpen(true);
+        }} 
+        userProfile={userProfile} 
+        onLogout={handleLogout} 
+        language={language}
+        setLanguage={setLanguage}
+        theme={theme}
+        setTheme={setTheme}
+      />
+
+      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={() => { refreshUser(); syncData(); }} />}
+      {isAdminOpen && userProfile && <AdminDashboard profile={userProfile} onClose={() => setIsAdminOpen(false)} />}
+      {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
+
+      <Routes>
+        <Route path="/" element={
+          <main className="pt-20 lg:pt-24">
+            {siteConfig.visibility?.hero && <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} isLive={isLive} />}
+            
+            {siteConfig.visibility?.metrics && (
+              <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
+                <div className="container mx-auto px-6">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
+                    {metrics.map(m => (
+                      <div key={m.id} className="text-center group">
+                        <div className="text-5xl lg:text-7xl font-serif font-bold text-blue-600 dark:text-green-600 mb-2 transition-transform group-hover:scale-110 duration-500">{m.value}</div>
+                        <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">{resolveTranslation(m, 'label', '')}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {siteConfig.visibility?.insights && (
+              <section id="insights" className="py-32 bg-white dark:bg-[#010309]">
+                <div className="container mx-auto px-6">
+                  <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-24 gap-4">
+                    <div className="space-y-4">
+                      <div className="text-blue-500 dark:text-green-500 font-black uppercase tracking-[0.5em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
+                      <h2 className="text-5xl md:text-[5rem] font-serif italic dark:text-white text-slate-900 leading-[0.9] tracking-tighter">{resolveContent('insights_title', t.insights_title)}</h2>
+                    </div>
+                    <Link to="/wip" className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 dark:text-green-500 border-b-2 border-current pb-2 transition-all">Folhear Acervo</Link>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-16">
+                    {insights.map(insight => (
+                      <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-8">
+                        <div className="aspect-[3/4] overflow-hidden bg-slate-900 border border-white/5 relative shadow-2xl" style={{ borderRadius: 'var(--global-radius)' }}>
+                          <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                          <div className="absolute bottom-8 left-8 right-8 text-white">
+                             <div className="text-[9px] font-black uppercase tracking-widest text-green-500 mb-2">{insight.category || 'INSIGHT'}</div>
+                             <h3 className="text-3xl font-serif italic leading-tight">{resolveTranslation(insight, 'title', '')}</h3>
+                          </div>
+                        </div>
+                        <p className="text-slate-500 text-base font-light italic leading-relaxed line-clamp-2">{resolveTranslation(insight, 'excerpt', '')}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {siteConfig.visibility?.products && <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />}
+            {siteConfig.visibility?.strategy_map && <GlobalStrategyMap />}
+            {siteConfig.visibility?.tools && <ToolsGrid />}
+            {siteConfig.visibility?.testimonials && <TestimonialsSection testimonials={testimonials} language={language} resolveTranslation={resolveTranslation} t={t} />}
+            {siteConfig.visibility?.contact_form && <ContactForm language={language} t={t} />}
+          </main>
+        } />
+        <Route path="/loja" element={<StoreGrid language={language} t={t} resolveTranslation={resolveTranslation} />} />
+        <Route path="/ferramentas" element={<div className="pt-32"><ToolsGrid /></div>} />
+        <Route path="/loja/:slug" element={<ProductPage language={language} t={t} resolveTranslation={resolveTranslation} />} />
+        <Route path="/loja/:slug/checkout" element={<CheckoutPage profile={userProfile} onAuthRequest={() => setIsAuthOpen(true)} language={language} t={t} />} />
+        <Route path="/insight/:id" element={<ArticlePage />} />
+        <Route path="/wip" element={<WorkInProgress />} />
+      </Routes>
+
+      <footer className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] text-center">
+          <div className="container mx-auto px-6 space-y-12">
+            <div className="w-14 h-14 bg-blue-600 dark:bg-green-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white dark:text-black shadow-2xl">CT</div>
+            <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
+          </div>
+      </footer>
+      <ChatBot />
+      <FloatingCTA t={t} />
+    </div>
   );
 };
+
+const App: React.FC = () => (
+  <Router>
+    <AppContent />
+  </Router>
+);
 
 export default App;

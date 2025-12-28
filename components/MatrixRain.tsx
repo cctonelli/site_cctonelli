@@ -50,20 +50,30 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
         return;
       }
 
-      // Rastro mais longo para efeito imersivo
+      // Efeito de rastro (Trails) - Fundo quase preto com baixa opacidade
       ctx.fillStyle = `rgba(1, 3, 9, ${intensity === 'ultra' ? 0.05 : 0.08})`;
       ctx.fillRect(0, 0, width, height);
 
-      ctx.fillStyle = color;
       ctx.font = `900 ${fontSize}px font-mono, monospace`;
 
       for (let i = 0; i < drops.length; i++) {
         const text = charArray[Math.floor(Math.random() * charArray.length)];
         
-        // Brilho Neon Master
-        if (intensity === 'ultra') {
-          ctx.shadowBlur = 15;
-          ctx.shadowColor = color;
+        // Random Glitch Effect: Ocasionalmente um caractere brilha intensamente em branco
+        const isGlitch = Math.random() > 0.995;
+        
+        if (isGlitch) {
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = '#ffffff';
+        } else {
+          ctx.fillStyle = color;
+          if (intensity === 'ultra' || intensity === 'high') {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+          } else {
+            ctx.shadowBlur = 0;
+          }
         }
 
         ctx.fillText(text, i * fontSize, drops[i] * fontSize);
@@ -97,7 +107,7 @@ const MatrixRain: React.FC<MatrixRainProps> = ({
     };
   }, [color, speed, fontSize, actualDensity, intensity]);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0" style={{ opacity }} />;
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" style={{ opacity }} />;
 };
 
 export default MatrixRain;
