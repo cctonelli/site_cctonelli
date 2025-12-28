@@ -111,7 +111,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                 {content.subtitle || product.subtitle}
               </p>
               <div className="flex flex-wrap justify-center gap-6 md:gap-10">
-                  <a href="#precos" className="text-black px-12 md:px-20 py-6 rounded-2xl font-black uppercase tracking-[0.4em] text-[10px] md:text-[12px] shadow-2xl transition-all hover:scale-110 active:scale-95" style={{ backgroundColor: blockColor, boxShadow: `0 20px 60px ${blockColor}50` }}>
+                  <a 
+                    href={content.cta_link || "#precos"} 
+                    className="text-black px-12 md:px-20 py-6 rounded-2xl font-black uppercase tracking-[0.4em] text-[10px] md:text-[12px] shadow-2xl transition-all hover:scale-110 active:scale-95" 
+                    style={{ backgroundColor: blockColor, boxShadow: `0 20px 60px ${blockColor}50` }}
+                  >
                     {content.cta_text || 'ATIVAR PROTOCOLO'}
                   </a>
                   <Link to="/loja" className="bg-white/5 text-slate-500 border border-white/10 px-10 md:px-16 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-[11px] hover:bg-white/10 hover:text-white transition-all backdrop-blur-md">MAIS ATIVOS</Link>
@@ -151,7 +155,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
 
       case 'comparison':
         return (
-          <section key={block.id} id="precos" className="py-48 md:py-64 bg-[#010309] relative border-y border-white/5">
+          <section key={block.id} id="precos" className="py-48 md:py-64 bg-[#010309] relative border-y border-white/5 scroll-mt-32">
              {isMatrixStyle && <MatrixRain color={blockColor} speed={0.4} opacity={0.08} fontSize={12} density={0.99} intensity="high" />}
             <div className="container mx-auto px-6 relative z-10">
               <header className="text-center mb-32 md:mb-40 space-y-10">
@@ -223,6 +227,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                <h2 className="text-white font-serif italic text-7xl md:text-[12rem] tracking-tighter mb-10 leading-none">{product.title}</h2>
                <p className="text-slate-500 text-2xl font-light italic max-w-2xl mx-auto mb-20">{product.subtitle}</p>
                <a href="#precos" className="bg-blue-600 text-white px-20 py-7 rounded-[2.5rem] font-black uppercase tracking-widest text-[11px] shadow-2xl">REQUISITAR ACESSO</a>
+               
+               {/* Alvo da âncora para o modo de fallback */}
+               <section id="precos" className="scroll-mt-32 pt-20">
+                  <div className="text-slate-600 font-mono text-sm uppercase tracking-widest">Pricing Protocol Loading...</div>
+               </section>
             </div>
           )}
         </AnimatePresence>
