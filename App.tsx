@@ -27,7 +27,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v18.8-SOVEREIGN";
+const APP_VERSION = "v18.9-SOVEREIGN";
 
 const AppContent: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -128,6 +128,17 @@ const AppContent: React.FC = () => {
       root.style.setProperty('--bg-navy', siteConfig.theme.bg_dark);
       root.style.setProperty('--h1-size', siteConfig.typography.h1_size);
       root.style.setProperty('--body-size', siteConfig.typography.body_size);
+      
+      // Persist Custom CSS Injection
+      if (siteConfig.theme.custom_css) {
+        let styleTag = document.getElementById('sovereign-custom-css');
+        if (!styleTag) {
+          styleTag = document.createElement('style');
+          styleTag.id = 'sovereign-custom-css';
+          document.head.appendChild(styleTag);
+        }
+        styleTag.innerHTML = siteConfig.theme.custom_css;
+      }
     }
   }, [siteConfig]);
 
@@ -154,7 +165,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
       
-      {/* Status Protocol v18.8 */}
+      {/* Status Protocol v18.9 */}
       <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none group">
         <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
           <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>

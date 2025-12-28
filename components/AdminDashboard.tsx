@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 
 type TabType = 'visual_dna' | 'editorial' | 'marketplace' | 'orders' | 'settings' | 'users';
 
-const ADMIN_VERSION = "v18.9-SOVEREIGN-MASTER";
+const ADMIN_VERSION = "v18.9-SOVEREIGN-MASTER-EXT";
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -68,11 +68,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
         value: value,
         updated_at: new Date().toISOString()
       });
+      
       const root = document.documentElement;
       if (field === 'theme' && subfield === 'primary') root.style.setProperty('--accent-blue', value);
       if (field === 'theme' && subfield === 'bg_dark') root.style.setProperty('--bg-navy', value);
       if (field === 'typography' && subfield === 'h1_size') root.style.setProperty('--h1-size', value);
       if (field === 'typography' && subfield === 'body_size') root.style.setProperty('--body-size', value);
+      
+      // Inject Custom CSS in real-time
+      if (field === 'theme' && subfield === 'custom_css') {
+        let styleTag = document.getElementById('sovereign-custom-css');
+        if (!styleTag) {
+          styleTag = document.createElement('style');
+          styleTag.id = 'sovereign-custom-css';
+          document.head.appendChild(styleTag);
+        }
+        styleTag.innerHTML = value;
+      }
     } catch (e: any) {
       console.error("Config Sync Fail:", e);
     }
@@ -133,7 +145,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           
           <nav className="flex flex-col gap-3 flex-1 overflow-y-auto custom-scrollbar">
             <button onClick={() => setActiveTab('orders')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'orders' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Sales Vault</button>
-            <button onClick={() => setActiveTab('marketplace')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'marketplace' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Marketplace Editor</button>
+            <button onClick={() => setActiveTab('marketplace')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'marketplace' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Marketplace Forge</button>
             <button onClick={() => setActiveTab('editorial')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'editorial' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Editorial Forge</button>
             <button onClick={() => setActiveTab('visual_dna')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'visual_dna' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>DNA Visual</button>
             <button onClick={() => setActiveTab('users')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'users' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Partners & CRM</button>
@@ -243,6 +255,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                           </div>
                        </div>
                     </div>
+
+                    <div className="md:col-span-2 p-10 bg-slate-900/60 rounded-[3rem] border border-white/5 space-y-10 backdrop-blur-3xl">
+                       <h3 className="text-xl font-bold text-white uppercase tracking-widest border-l-2 border-blue-600 pl-4">Injeção Custom CSS (Soberania Master)</h3>
+                       <p className="text-[10px] text-slate-500 uppercase tracking-widest">Use este campo para ajustes manuais que não estão mapeados no dashboard.</p>
+                       <textarea 
+                          value={siteConfig.theme.custom_css || ''} 
+                          onChange={e => handleUpdateConfig('theme', 'custom_css', e.target.value)}
+                          placeholder="/* ex: .btn-soberano { background: gold; } */"
+                          className="w-full bg-black border border-white/5 rounded-2xl p-6 text-xs text-green-500 font-mono h-64 focus:border-blue-600 outline-none transition-all"
+                       />
+                    </div>
                  </div>
               </div>
             )}
@@ -250,18 +273,67 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             {activeTab === 'marketplace' && (
               <div className="space-y-20">
                  <h2 className="text-6xl font-serif text-white italic tracking-tighter">Marketplace <span className="text-blue-600">Forge.</span></h2>
-                 <AdminCrudSection tableName="products" title="Ativos Digitais" fields={[{ key: 'title', label: 'Título do Ativo (ex: V8 Matrix Edition)' }, { key: 'slug', label: 'Slug / URL (ex: v8-matrix)' }, { key: 'subtitle', label: 'Lead Curto (subtítulo)', type: 'textarea' }, { key: 'description', label: 'Descrição Completa', type: 'textarea' }, { key: 'image_url', label: 'URL da Imagem Principal' }, { key: 'pricing_type', label: 'Tipo (subscription/one_time)' }]} displayColumns={['title', 'slug']} />
-                 <div className="h-px bg-white/5 my-10"></div>
-                 <AdminCrudSection tableName="product_variants" title="Planos e Variantes" fields={[{ key: 'product_id', label: 'ID do Produto Pai (UUID)' }, { key: 'name', label: 'Nome do Plano' }, { key: 'price', label: 'Preço Nominal (R$)', type: 'number' }, { key: 'interval', label: 'Intervalo (month/semester/year)' }, { key: 'order_index', label: 'Ordem', type: 'number' }]} displayColumns={['name', 'price']} />
+                 
+                 <div className="space-y-12">
+                   <h3 className="text-2xl font-bold text-white uppercase tracking-widest">1. Ativos Digitais</h3>
+                   <AdminCrudSection 
+                      tableName="products" 
+                      title="Ativos Digitais" 
+                      fields={[
+                        { key: 'title', label: 'Título do Ativo', placeholder: 'ex: V8 Matrix Edition' }, 
+                        { key: 'slug', label: 'Slug / URL', placeholder: 'ex: v8-matrix' }, 
+                        { key: 'subtitle', label: 'Lead Curto (subtítulo)', type: 'textarea', placeholder: 'ex: A ferramenta mais potente do Brasil.' }, 
+                        { key: 'description', label: 'Descrição Completa', type: 'textarea' }, 
+                        { key: 'image_url', label: 'URL da Imagem Principal', placeholder: 'ex: https://i.imgur.com/logo.png' }, 
+                        { key: 'pricing_type', label: 'Tipo (subscription/one_time)' }
+                      ]} 
+                      displayColumns={['title', 'slug']} 
+                   />
+                 </div>
+
+                 <div className="h-px bg-white/5 my-20"></div>
+
+                 <div className="space-y-12">
+                   <h3 className="text-2xl font-bold text-white uppercase tracking-widest">2. Canvas Builder (Blocos da Página)</h3>
+                   <AdminCrudSection 
+                      tableName="product_content_blocks" 
+                      title="Blocos de Conteúdo" 
+                      fields={[
+                        { key: 'product_id', label: 'UUID do Ativo Pai', placeholder: 'Copie do ID do produto' }, 
+                        { key: 'block_type', label: 'Tipo do Bloco (hero/features/comparison/faq)', placeholder: 'ex: hero' }, 
+                        { key: 'order', label: 'Ordem (1, 2, 3...)', type: 'number' },
+                        { key: 'content', label: 'Configuração (JSON)', type: 'textarea', placeholder: 'ex: { "title": "...", "subtitle": "..." }' }
+                      ]} 
+                      displayColumns={['block_type', 'order']} 
+                   />
+                 </div>
+
+                 <div className="h-px bg-white/5 my-20"></div>
+
+                 <div className="space-y-12">
+                   <h3 className="text-2xl font-bold text-white uppercase tracking-widest">3. Níveis de Poder (Planos)</h3>
+                   <AdminCrudSection 
+                      tableName="product_variants" 
+                      title="Planos e Variantes" 
+                      fields={[
+                        { key: 'product_id', label: 'ID do Produto Pai (UUID)' }, 
+                        { key: 'name', label: 'Nome do Plano', placeholder: 'ex: Plano Anual Soberano' }, 
+                        { key: 'price', label: 'Preço Nominal (R$)', type: 'number' }, 
+                        { key: 'interval', label: 'Intervalo (month/semester/year)' }, 
+                        { key: 'order_index', label: 'Ordem', type: 'number' }
+                      ]} 
+                      displayColumns={['name', 'price']} 
+                   />
+                 </div>
               </div>
             )}
 
             {activeTab === 'editorial' && (
                <div className="space-y-20">
                   <h2 className="text-6xl font-serif text-white italic tracking-tighter">Editorial <span className="text-blue-600">Forge.</span></h2>
-                  <AdminCrudSection tableName="insights" title="Insights & Artigos" fields={[{ key: 'title', label: 'Título da Edição' }, { key: 'category', label: 'Editoria' }, { key: 'image_url', label: 'URL da Mídia Editorial' }, { key: 'excerpt', label: 'Lead Editorial', type: 'textarea' }, { key: 'content', label: 'Corpo do Artigo (HTML)', type: 'rich-text' }]} displayColumns={['title', 'category']} />
+                  <AdminCrudSection tableName="insights" title="Insights & Artigos" fields={[{ key: 'title', label: 'Título da Edição', placeholder: 'ex: O Futuro da Estratégia' }, { key: 'category', label: 'Editoria', placeholder: 'ex: ADVISORY' }, { key: 'image_url', label: 'URL da Mídia Editorial', placeholder: 'ex: https://i.imgur.com/img.jpg' }, { key: 'excerpt', label: 'Lead Editorial', type: 'textarea' }, { key: 'content', label: 'Corpo do Artigo (HTML)', type: 'rich-text' }]} displayColumns={['title', 'category']} />
                   <div className="h-px bg-white/5 my-10"></div>
-                  <AdminCrudSection tableName="metrics" title="Métricas de KPI" fields={[{ key: 'label', label: 'Rótulo do KPI' }, { key: 'value', label: 'Valor (ex: 25+)' }, { key: 'display_order', label: 'Ordem', type: 'number' }]} displayColumns={['label', 'value']} />
+                  <AdminCrudSection tableName="metrics" title="Métricas de KPI" fields={[{ key: 'label', label: 'Rótulo do KPI', placeholder: 'ex: Clientes Satisfeitos' }, { key: 'value', label: 'Valor (ex: 25+)', placeholder: 'ex: 98%' }, { key: 'display_order', label: 'Ordem', type: 'number' }]} displayColumns={['label', 'value']} />
                </div>
             )}
 
