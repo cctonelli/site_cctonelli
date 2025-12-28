@@ -78,7 +78,7 @@ const App: React.FC = () => {
       setIsLive(true);
     } catch (err) {
       console.error(`[App Core] Sync Failure:`, err);
-      setIsLive(true); // Garante que a tela saia do loading mesmo em erro
+      setIsLive(true); 
     }
   }, [language]);
 
@@ -95,6 +95,14 @@ const App: React.FC = () => {
       setUserProfile(null);
     }
   }, []);
+
+  const handleLogout = useCallback(async () => {
+    await signOut();
+    setUserProfile(null);
+    setIsAdminOpen(false);
+    setIsClientPortalOpen(false);
+    refreshUser();
+  }, [refreshUser]);
 
   useEffect(() => { 
     refreshUser(); 
@@ -145,7 +153,6 @@ const App: React.FC = () => {
     return item?.value || t[key] || localFallback;
   }, [language, dbContent, t]);
 
-  // Defensive check for rendering
   if (!siteConfig) return null;
 
   return (
@@ -169,7 +176,7 @@ const App: React.FC = () => {
             else setIsClientPortalOpen(true);
           }} 
           userProfile={userProfile} 
-          onLogout={() => signOut().then(() => refreshUser())} 
+          onLogout={handleLogout} 
           language={language}
           setLanguage={setLanguage}
           theme={theme}
