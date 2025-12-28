@@ -69,7 +69,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
         <div className="absolute inset-0 border-2 border-blue-600/10 rounded-full animate-pulse"></div>
         <div className="absolute inset-0 border-t-2 border-blue-600 rounded-full animate-spin"></div>
       </div>
-      <p className="text-blue-500 font-black uppercase tracking-[0.5em] text-[10px] animate-pulse">Sincronizando Protocolo V8...</p>
+      <p className="text-blue-500 font-black uppercase tracking-[0.5em] text-[10px] animate-pulse">Sincronizando Protocolo Ativo...</p>
     </div>
   );
 
@@ -95,7 +95,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                 className="inline-block px-10 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.6em] bg-black/40 border backdrop-blur-md animate-pulse mb-16" 
                 style={{ borderColor: `${blockColor}60`, color: blockColor, boxShadow: `0 0 30px ${blockColor}40` }}
               >
-                {content.overlay_text || 'SYSTEM_SOVEREIGN_V8'}
+                {content.overlay_text || 'SYSTEM_CORE_ACTIVE'}
               </motion.div>
               <h1 
                 className={`text-6xl md:text-[8rem] lg:text-[11rem] font-serif leading-[0.8] italic tracking-tighter text-white mb-12 ${isMatrixSlug ? 'glitch-text' : ''}`} 
@@ -141,7 +141,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                     className="p-12 rounded-[3.5rem] bg-slate-900/40 border border-white/5 hover:border-white/20 transition-all group backdrop-blur-xl relative overflow-hidden" 
                   >
                     <div className="w-20 h-20 rounded-[1.8rem] bg-white/5 flex items-center justify-center text-4xl mb-10 group-hover:rotate-12 duration-500 transition-all" style={{ backgroundColor: `${blockColor}15`, color: blockColor, boxShadow: `inset 0 0 25px ${blockColor}20` }}>
-                      {item.icon === 'brain' ? '🧠' : item.icon === 'shield' ? '🛡️' : item.icon === 'zap' ? '⚡' : '🤖'}
+                      {item.icon === 'brain' ? '🧠' : item.icon === 'shield' ? '🛡️' : item.icon === 'zap' ? '⚡' : item.icon === 'robot' ? '🤖' : '⚙️'}
                     </div>
                     <p className="text-slate-400 text-lg md:text-xl font-light italic leading-relaxed group-hover:text-white transition-colors">
                       {item.text}
@@ -150,6 +150,53 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                 ))}
               </div>
             </div>
+          </section>
+        );
+
+      case 'image_gallery':
+        return (
+          <section key={block.id} className="py-32 md:py-48 bg-black border-b border-white/5">
+             <div className="container mx-auto px-6">
+                <h3 className="text-center text-4xl md:text-6xl font-serif italic text-white mb-24">{content.title || 'Visual Intelligence'}</h3>
+                <div className="grid md:grid-cols-2 gap-10 lg:gap-16">
+                   {content.images?.map((img: any, i: number) => (
+                      <div key={i} className="group relative rounded-[4rem] overflow-hidden border border-white/5 shadow-2xl">
+                         <img src={img.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-1000" alt={img.caption} />
+                         <div className="absolute bottom-10 left-10 bg-black/50 backdrop-blur-md px-8 py-3 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                            {img.caption}
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          </section>
+        );
+
+      case 'video':
+        return (
+          <section key={block.id} className="py-32 md:py-48 bg-slate-950 border-b border-white/5">
+             <div className="container mx-auto px-6 max-w-6xl">
+                <h3 className="text-center text-4xl md:text-6xl font-serif italic text-white mb-24">{content.title || 'Demo Exclusiva'}</h3>
+                <div className="aspect-video rounded-[4rem] overflow-hidden border-4 border-white/5 shadow-[0_0_100px_rgba(0,0,0,1)] relative group">
+                   <iframe src={content.video_url} className="w-full h-full" frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen></iframe>
+                </div>
+             </div>
+          </section>
+        );
+
+      case 'cta':
+        return (
+          <section key={block.id} className="py-48 bg-gradient-to-b from-black to-slate-900 border-b border-white/5 text-center">
+             <div className="container mx-auto px-6 space-y-12">
+                <h2 className="text-5xl md:text-[6rem] font-serif italic text-white tracking-tighter leading-none">{content.title || 'Pronto para a Transição?'}</h2>
+                <button 
+                  onClick={() => scrollToSection('precos')}
+                  className="px-20 py-8 rounded-3xl font-black uppercase tracking-[0.5em] text-[11px] shadow-2xl transition-all hover:scale-110 active:scale-95"
+                  style={{ backgroundColor: blockColor, color: '#000' }}
+                >
+                   {content.button_text || 'ATVAR PROTOCOLO'}
+                </button>
+             </div>
           </section>
         );
 
@@ -248,7 +295,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
          <div className="absolute inset-0 bg-grid opacity-10"></div>
          <div className="container mx-auto px-6 space-y-12 relative z-10">
             <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl mx-auto flex items-center justify-center font-bold text-3xl text-white">CT</div>
-            <p className="text-[10px] font-black uppercase tracking-[0.8em] text-slate-700 italic">Claudio Tonelli Advisory Group &copy; 2025 // SOVEREIGN_V8_PROTOCOL</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.8em] text-slate-700 italic">Claudio Tonelli Advisory Group &copy; 2025 // SOVEREIGN_PROTOCOL</p>
          </div>
       </footer>
     </div>

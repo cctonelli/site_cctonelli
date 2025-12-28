@@ -3,7 +3,7 @@ import { Product, ProductVariant, ProductContentBlock, Insight } from '../types'
 
 export type Language = 'pt' | 'en' | 'es';
 
-// --- KERNEL VISUAL & NARRATIVO TOTAL v16.0 ---
+// --- KERNEL VISUAL & NARRATIVO TOTAL v18.9-SOVEREIGN ---
 export const SITE_CONFIG = {
   theme: {
     primary: '#00ff41', // Verde Matrix Neon
@@ -218,18 +218,8 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
     {
       id: 'b2',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
-      block_type: 'text',
-      order: 2,
-      content: {
-        title: "Tecnologia de Elite",
-        subtitle: "Humanização extrema com digitação simulada e algoritmos anti-banimento testados desde 2023."
-      }
-    },
-    {
-      id: 'b3',
-      product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       block_type: 'features',
-      order: 3,
+      order: 2,
       content: {
         title: "Arquitetura de Ativos",
         items: [
@@ -241,10 +231,10 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
       }
     },
     {
-      id: 'b4',
+      id: 'b3',
       product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
       block_type: 'comparison',
-      order: 4,
+      order: 3,
       content: {
         title: "Níveis de Poder",
         subtitle: "Escolha o protocolo ideal para sua escala corporativa."
@@ -283,20 +273,33 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
       }
     },
     {
+      id: 'ms-b3',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      block_type: 'image_gallery',
+      order: 3,
+      content: {
+        title: "Interface Hacker Elite",
+        images: [
+          { url: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070", caption: "Dashboard de simulações" },
+          { url: "https://images.unsplash.com/photo-1510511459019-5dee667ffb62?q=80&w=2070", caption: "Resultados em tempo real" }
+        ]
+      }
+    },
+    {
       id: 'ms-b4',
       product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
       block_type: 'comparison',
-      order: 3,
+      order: 4,
       content: {
         style: "terminal_matrix",
         title: "Compare os Planos"
       }
     },
     {
-      id: 'ms-b6',
+      id: 'ms-b5',
       product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
       block_type: 'cta',
-      order: 4,
+      order: 5,
       content: {
         style: "glitch_activation",
         title: "Ativar Simulador MATRIX",
