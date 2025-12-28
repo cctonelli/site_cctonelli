@@ -1,6 +1,8 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { fetchInsightById, fetchSiteConfig } from '../services/supabaseService';
+import { SITE_CONFIG } from '../services/localRegistry';
 import { Insight } from '../types';
 import { Language } from '../services/i18nService';
 
@@ -9,7 +11,12 @@ const ArticlePage: React.FC = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const lang = (queryParams.get('lang') as Language) || 'pt';
-  const config = fetchSiteConfig();
+  // Fix: fetchSiteConfig is async, use state with local fallback to avoid accessing Promise properties
+  const [config, setConfig] = useState<any>(SITE_CONFIG);
+
+  useEffect(() => {
+    fetchSiteConfig().then(setConfig);
+  }, []);
 
   const [article, setArticle] = useState<Insight | null>(null);
   const [loading, setLoading] = useState(true);

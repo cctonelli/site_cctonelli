@@ -4,6 +4,7 @@ import { Profile } from '../types';
 import { Language, languages } from '../services/i18nService';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { fetchSiteConfig } from '../services/supabaseService';
+import { SITE_CONFIG } from '../services/localRegistry';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavbarProps {
@@ -29,7 +30,12 @@ const Navbar: React.FC<NavbarProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const config = fetchSiteConfig();
+  // Fix: fetchSiteConfig is async, use state with local fallback to avoid accessing Promise properties
+  const [config, setConfig] = useState<any>(SITE_CONFIG);
+
+  useEffect(() => {
+    fetchSiteConfig().then(setConfig);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);

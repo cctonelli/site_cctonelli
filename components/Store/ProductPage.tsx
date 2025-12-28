@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchProductBySlug, fetchProductVariants, fetchProductContentBlocks, fetchSiteConfig } from '../../services/supabaseService';
+import { SITE_CONFIG } from '../../services/localRegistry';
 import { Product, ProductVariant, ProductContentBlock } from '../../types';
 import { Language } from '../../services/i18nService';
 import MatrixRain from '../MatrixRain';
@@ -16,7 +17,13 @@ interface ProductPageProps {
 const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslation }) => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const config = fetchSiteConfig();
+  // Fix: fetchSiteConfig is async, use state with local fallback to avoid accessing Promise properties
+  const [config, setConfig] = useState<any>(SITE_CONFIG);
+
+  useEffect(() => {
+    fetchSiteConfig().then(setConfig);
+  }, []);
+
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [blocks, setBlocks] = useState<ProductContentBlock[]>([]);

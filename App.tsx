@@ -27,7 +27,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v15.5-EDITORIAL";
+const APP_VERSION = "v18.8-SOVEREIGN";
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -37,6 +37,7 @@ const App: React.FC = () => {
   const [carouselImages, setCarouselImages] = useState<CarouselImage[]>([]);
   const [dbContent, setDbContent] = useState<Record<string, any>>({});
   const [dbTranslations, setDbTranslations] = useState<Record<string, string>>({});
+  const [siteConfig, setSiteConfig] = useState<any>(null);
   
   const [isLive, setIsLive] = useState(false);
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'pt');
@@ -47,9 +48,6 @@ const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
 
-  // KERNEL CONFIGURATION
-  const siteConfig = useMemo(() => fetchSiteConfig(), []);
-
   const t = useMemo(() => {
     const base = staticTranslations[language] || staticTranslations['pt'];
     return { ...base, ...dbTranslations };
@@ -57,6 +55,9 @@ const App: React.FC = () => {
 
   const syncData = useCallback(async () => {
     try {
+      const config = await fetchSiteConfig();
+      setSiteConfig(config);
+
       const results = await Promise.allSettled([
         fetchMetrics(),
         fetchInsights(),
@@ -107,33 +108,17 @@ const App: React.FC = () => {
   useEffect(() => { 
     refreshUser(); 
     syncData();
-    
-    // INJETAR CONFIGURAÇÃO DO KERNEL EM TEMPO REAL
-    const root = document.documentElement;
-    if (siteConfig && siteConfig.theme) {
-      root.style.setProperty('--accent-blue', siteConfig.theme.primary || '#2563eb');
-      root.style.setProperty('--brand-gold', siteConfig.theme.secondary || '#b4975a');
-      root.style.setProperty('--bg-navy', siteConfig.theme.bg_dark || '#010309');
-      root.style.setProperty('--text-main', siteConfig.theme.text_main || '#f8fafc');
-      root.style.setProperty('--text-secondary', siteConfig.theme.text_secondary || '#94a3b8');
+  }, [syncData, refreshUser]);
+
+  useEffect(() => {
+    if (siteConfig) {
+      const root = document.documentElement;
+      root.style.setProperty('--accent-blue', siteConfig.theme.primary);
+      root.style.setProperty('--bg-navy', siteConfig.theme.bg_dark);
+      root.style.setProperty('--h1-size', siteConfig.typography.h1_size);
+      root.style.setProperty('--body-size', siteConfig.typography.body_size);
     }
-    
-    if (siteConfig && siteConfig.ux) {
-      root.style.setProperty('--global-radius', siteConfig.ux.border_radius_global || '2.5rem');
-      root.style.setProperty('--glow-opacity', siteConfig.ux.glow_intensity || '0.6');
-      root.style.setProperty('--scanline-opacity', (siteConfig.ux.scanline_opacity || 0.08).toString());
-    }
-    
-    if (siteConfig && siteConfig.typography) {
-      root.style.setProperty('--h1-size', siteConfig.typography.h1_size || '9.5rem');
-      root.style.setProperty('--h2-size', siteConfig.typography.h2_size || '4.5rem');
-      root.style.setProperty('--body-size', siteConfig.typography.body_size || '1.125rem');
-    }
-    
-    if (siteConfig && siteConfig.seo && siteConfig.seo.title) {
-      document.title = siteConfig.seo.title[language] || siteConfig.seo.title['pt'] || 'Claudio Tonelli Consultoria';
-    }
-  }, [syncData, refreshUser, siteConfig, language]);
+  }, [siteConfig]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -159,11 +144,11 @@ const App: React.FC = () => {
     <Router>
       <div className="relative min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
         
-        {/* Status Protocol v15.5 */}
+        {/* Status Protocol */}
         <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none">
           <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
             <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">EDITORIAL COMMAND</span>
+            <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">SOVEREIGN COMMAND</span>
             <div className="w-px h-2 bg-white/10 mx-1"></div>
             <span className="text-[7px] font-mono text-green-500 font-bold">{APP_VERSION}</span>
           </div>
@@ -251,19 +236,12 @@ const App: React.FC = () => {
           <Route path="/wip" element={<WorkInProgress />} />
         </Routes>
 
-        {siteConfig.visibility?.footer && (
-          <footer className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] text-center">
+        <footer className="py-32 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-[#010309] text-center">
             <div className="container mx-auto px-6 space-y-12">
               <div className="w-14 h-14 bg-blue-600 dark:bg-green-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl text-white dark:text-black shadow-2xl">CT</div>
-              <div className="flex justify-center gap-12">
-                 <a href={siteConfig.contact?.linkedin} className="text-slate-500 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-colors">LinkedIn</a>
-                 <a href={siteConfig.contact?.instagram} className="text-slate-500 hover:text-green-500 text-[10px] font-black uppercase tracking-widest transition-colors">Instagram</a>
-              </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.6em] max-w-xl mx-auto leading-loose">{resolveContent('copyright', t.copyright)}</p>
-              <p className="text-[8px] text-slate-700 uppercase tracking-widest">{siteConfig.contact?.address}</p>
             </div>
-          </footer>
-        )}
+        </footer>
         <ChatBot />
         <FloatingCTA t={t} />
       </div>

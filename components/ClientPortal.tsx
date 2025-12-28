@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Product, Profile, UserProduct, V8MatrixUsage } from '../types';
+import { Product, Profile, UserProduct, V8MatrixUsage, Order } from '../types';
 import { getPersonalizedRecommendations } from '../services/aiService';
-import { fetchUserProducts, fetchUsageByProduct, supabase } from '../services/supabaseService';
+import { fetchUserProducts, fetchUsageByProduct, supabase, fetchAllOrders } from '../services/supabaseService';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,9 +13,10 @@ interface ClientPortalProps {
 }
 
 const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'catalog' | 'assets'>('assets');
+  const [activeTab, setActiveTab] = useState<'catalog' | 'assets' | 'audit'>('assets');
   const [recommendation, setRecommendation] = useState<string>('Analisando perfil estratégico...');
   const [userProducts, setUserProducts] = useState<UserProduct[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [usageMap, setUsageMap] = useState<Record<string, V8MatrixUsage>>({});
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +26,14 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
       const upData = await fetchUserProducts(profile.id);
       setUserProducts(upData);
       
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('status', 'pending');
+      
+      setPendingOrders(ordersData || []);
+
       const usages: Record<string, V8MatrixUsage> = {};
       await Promise.all(upData.map(async (up) => {
         const usage = await fetchUsageByProduct(up.id);
@@ -64,6 +73,17 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
           loadAssets();
         }
       )
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'orders', 
+          filter: `user_id=eq.${profile.id}` 
+        }, 
+        () => {
+          loadAssets();
+        }
+      )
       .subscribe();
       
     return () => { supabase.removeChannel(channel); };
@@ -81,12 +101,13 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
           <div className="w-16 h-16 bg-blue-600 rounded-[1.5rem] flex items-center justify-center font-bold text-3xl text-white shadow-2xl group transition-all">CT</div>
           <div>
             <h1 className="text-4xl font-serif font-bold text-white italic tracking-tighter leading-none">Executive Hub.</h1>
-            <p className="text-[9px] uppercase tracking-[0.6em] text-slate-600 font-black mt-2">Portal S-v16.1-MASTER</p>
+            <p className="text-[9px] uppercase tracking-[0.6em] text-slate-600 font-black mt-2">Portal S-v18.8-MASTER</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-6 bg-slate-900/60 p-2 rounded-[2.5rem] border border-white/5 shadow-inner">
+        <div className="hidden md:flex items-center gap-6 bg-slate-900/60 p-2 rounded-[2.5rem] border border-white/5 shadow-inner">
           <button onClick={() => setActiveTab('assets')} className={`px-12 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all ${activeTab === 'assets' ? 'bg-blue-600 text-white shadow-2xl' : 'text-slate-600 hover:text-white'}`}>Ativos</button>
+          <button onClick={() => setActiveTab('audit')} className={`px-12 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all ${activeTab === 'audit' ? 'bg-blue-600 text-white shadow-2xl' : 'text-slate-600 hover:text-white'}`}>Auditoria {pendingOrders.length > 0 && `(${pendingOrders.length})`}</button>
           <button onClick={() => setActiveTab('catalog')} className={`px-12 py-4 rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.3em] transition-all ${activeTab === 'catalog' ? 'bg-blue-600 text-white shadow-2xl' : 'text-slate-600 hover:text-white'}`}>Explorar</button>
         </div>
 
@@ -110,7 +131,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
                       <div className="w-20 h-20 border-t-2 border-blue-600 rounded-full animate-spin"></div>
                       <span className="text-blue-500 font-black text-xs uppercase tracking-[0.8em] animate-pulse">Sincronizando Ledger de Ativos...</span>
                    </div>
-                ) : userProducts.length === 0 ? (
+                ) : userProducts.length === 0 && pendingOrders.length === 0 ? (
                    <div className="py-60 text-center border-2 border-dashed border-white/5 rounded-[5rem] bg-slate-900/10 space-y-16">
                       <p className="text-[12px] font-black uppercase tracking-[1em] text-slate-700 italic">Sua carteira de ativos está vazia.</p>
                       <button onClick={() => setActiveTab('catalog')} className="px-20 py-8 bg-blue-600 text-white rounded-[2.5rem] font-black uppercase tracking-[0.4em] text-[11px] hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/30">Visitar Marketplace</button>
@@ -163,6 +184,27 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
                    </div>
                 )}
               </motion.div>
+            ) : activeTab === 'audit' ? (
+              <motion.div key="audit" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-16">
+                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">Auditoria de <span className="text-blue-600">Acesso.</span></h2>
+                 <div className="grid gap-8">
+                    {pendingOrders.map(order => (
+                       <div key={order.id} className="p-12 bg-slate-900/40 border border-blue-600/20 rounded-[4rem] backdrop-blur-3xl flex flex-col md:flex-row justify-between items-center gap-10">
+                          <div className="space-y-4">
+                             <div className="text-blue-500 font-black uppercase tracking-widest text-[9px]">Protocolo em Validação PIX</div>
+                             <h4 className="text-3xl font-serif italic text-white">Ref: #{order.id.slice(0,8)}</h4>
+                             <p className="text-slate-500 text-sm font-light italic">Valor: R$ {order.amount.toLocaleString('pt-BR')} • Data: {new Date(order.created_at || '').toLocaleDateString()}</p>
+                          </div>
+                          <div className="px-10 py-4 bg-blue-600/10 border border-blue-600/30 rounded-full">
+                             <span className="text-blue-500 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">AGUARDANDO LEDGER</span>
+                          </div>
+                       </div>
+                    ))}
+                    {pendingOrders.length === 0 && (
+                       <div className="py-40 text-center text-slate-600 uppercase tracking-widest text-xs italic">Nenhum protocolo pendente de auditoria no momento.</div>
+                    )}
+                 </div>
+              </motion.div>
             ) : (
               <motion.div key="catalog" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="space-y-32">
                  <section className="p-20 bg-slate-900/40 border border-white/5 rounded-[5rem] backdrop-blur-3xl space-y-16 relative overflow-hidden group">
@@ -201,7 +243,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ profile, products, onClose 
       </main>
 
       <footer className="p-16 border-t border-white/5 bg-[#010309] text-center">
-         <p className="text-[10px] font-black uppercase tracking-[1em] text-slate-700 italic">© 2025 Claudio Tonelli Advisory Group // Executive Hub v16.1 MASTER // PROTOCOL_LEVEL_S</p>
+         <p className="text-[10px] font-black uppercase tracking-[1em] text-slate-700 italic">© 2025 Claudio Tonelli Advisory Group // Executive Hub v18.8 MASTER // PROTOCOL_LEVEL_S</p>
       </footer>
     </div>
   );
