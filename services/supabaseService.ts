@@ -83,14 +83,19 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   return data || [];
 };
 
+/**
+ * Fetches all orders with an explicit error throwing mechanism 
+ * to allow UI components to handle and display error messages.
+ */
 export const fetchAllOrders = async (): Promise<Order[]> => {
   const { data, error } = await supabase
     .from('orders')
-    .select('*, profiles:user_id(id, email, full_name, whatsapp)')
+    .select('*, profiles (id, email, full_name, whatsapp)')
     .order('created_at', { ascending: false });
   
   if (error) {
-    console.error("[Supabase] Error fetching Sales Vault:", error.message);
+    console.error("[Supabase] fetchAllOrders Error Details:", error);
+    throw error;
   }
   return data || [];
 };
@@ -141,15 +146,19 @@ export const createProfile = async (profile: Profile) => {
 
 export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
   const { data, error } = await supabase.from('orders').insert([order]).select().single();
+  if (error) throw error;
   return data;
 };
 
 export const upsertItem = async (table: string, payload: any) => {
-  return await supabase.from(table).upsert(payload).select();
+  const { data, error } = await supabase.from(table).upsert(payload).select();
+  if (error) throw error;
+  return data;
 };
 
 export const deleteItem = async (table: string, id: string | number) => {
-  return await supabase.from(table).delete().eq('id', id);
+  const { error } = await supabase.from(table).delete().eq('id', id);
+  if (error) throw error;
 };
 
 export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {

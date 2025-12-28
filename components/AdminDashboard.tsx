@@ -17,6 +17,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [activeTab, setActiveTab] = useState<TabType>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [siteConfig, setSiteConfig] = useState<any>(null);
 
@@ -31,22 +32,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
 
   const loadOrders = async () => {
     setLoadingOrders(true);
-    const data = await fetchAllOrders();
-    setOrders(data);
-    setLoadingOrders(false);
+    setOrderError(null);
+    try {
+      const data = await fetchAllOrders();
+      setOrders(data);
+    } catch (e: any) {
+      const msg = e.message || e.details || "Erro desconhecido ao carregar pedidos.";
+      console.error("[AdminDashboard] Error fetching Sales Vault:", msg);
+      setOrderError(msg);
+      setOrders([]);
+    } finally {
+      setLoadingOrders(false);
+    }
   };
 
   const handleUpdateConfig = async (field: string, subfield: string, value: any) => {
     const newConfig = { ...siteConfig };
     newConfig[field][subfield] = value;
     setSiteConfig(newConfig);
-    await upsertItem('site_content', {
-      page: 'config',
-      key: `setting_${field}_${subfield}`,
-      value: value,
-      updated_at: new Date().toISOString()
-    });
-    localStorage.setItem('CT_ADMIN_CONFIG_OVERRIDE', JSON.stringify(newConfig));
+    try {
+      await upsertItem('site_content', {
+        page: 'config',
+        key: `setting_${field}_${subfield}`,
+        value: value,
+        updated_at: new Date().toISOString()
+      });
+      localStorage.setItem('CT_ADMIN_CONFIG_OVERRIDE', JSON.stringify(newConfig));
+    } catch (e: any) {
+      alert("Erro ao atualizar configuração: " + (e.message || "Tente novamente."));
+    }
   };
 
   const approveOrder = async (order: Order) => {
@@ -118,10 +132,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           <div className="max-w-7xl mx-auto pb-40">
             {activeTab === 'orders' && (
               <div className="space-y-12">
-                <h2 className="text-6xl font-serif text-white italic tracking-tighter">Sales <span className="text-blue-600">Vault.</span></h2>
+                <div className="flex justify-between items-end">
+                  <h2 className="text-6xl font-serif text-white italic tracking-tighter">Sales <span className="text-blue-600">Vault.</span></h2>
+                  <button onClick={loadOrders} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-white transition-colors">Recarregar Ledger</button>
+                </div>
+                
                 <div className="grid gap-8">
                   {loadingOrders ? (
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs">Sincronizando transações...</div>
+                  ) : orderError ? (
+                    <div className="p-12 border border-red-500/30 bg-red-500/5 rounded-[3rem] text-center space-y-6">
+                      <p className="text-red-500 font-black uppercase tracking-widest text-xs">Erro Crítico de Sincronização</p>
+                      <p className="text-slate-400 text-sm font-light italic">{orderError}</p>
+                      <p className="text-[10px] text-slate-600 uppercase tracking-widest">Verifique se a tabela 'orders' existe e se as políticas RLS estão ativas.</p>
+                    </div>
                   ) : orders.length === 0 ? (
                     <div className="p-20 border border-dashed border-white/5 rounded-[3rem] text-center text-slate-600 uppercase tracking-widest text-xs">Nenhum pedido pendente de auditoria.</div>
                   ) : orders.map(order => (

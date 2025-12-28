@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-// Fix: removed logSupabaseError as it is not exported by supabaseService and not used in this file
 import { supabase } from '../services/supabaseService';
 import RichTextEditor from './RichTextEditor';
 
@@ -25,6 +24,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   displayColumns = [],
   idColumn = 'id' 
 }) => {
+  // Ensure the table name is sanitized for PostgREST
   const tableName = useMemo(() => (rawTableName || '').replace('public.', '').trim(), [rawTableName]);
 
   const [items, setItems] = useState<any[]>([]); 
@@ -36,6 +36,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const loadData = useCallback(async () => {
     if (!tableName) return;
     setLoading(true);
+    setStatus(null);
     try {
       const { data, error } = await supabase
         .from(tableName)
@@ -45,8 +46,13 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       if (error) throw error;
       setItems(Array.isArray(data) ? data : []);
     } catch (e: any) {
-      console.error("[Admin Crud] Load fail:", e);
-      setStatus({ text: "Usando fallback local ou offline.", type: 'warning' });
+      // Robust error message extraction to avoid [object Object]
+      const errorMsg = e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
+      console.error(`[Admin Crud] Load fail for ${tableName}:`, errorMsg);
+      setStatus({ 
+        text: `Erro ao carregar ${tableName}: ${errorMsg}`, 
+        type: 'error' 
+      });
     } finally {
       setLoading(false);
     }
@@ -76,7 +82,8 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       setEditingId(null);
       await loadData();
     } catch (e: any) {
-      setStatus({ text: e.message || "Falha na sincronização.", type: 'error' });
+      const errorMsg = e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
+      setStatus({ text: `Erro ao salvar: ${errorMsg}`, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -89,7 +96,8 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       if (error) throw error;
       await loadData();
     } catch (e: any) {
-      alert(`Erro: ${e.message}`);
+      const errorMsg = e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
+      alert(`Erro ao excluir: ${errorMsg}`);
     }
   };
 
@@ -128,23 +136,36 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
         </div>
         
         <div className="flex gap-4">
-          <button onClick={handleSave} className="flex-1 bg-green-500 text-black py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl">
+          <button 
+            disabled={loading}
+            onClick={handleSave} 
+            className="flex-1 bg-green-500 text-black py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl disabled:opacity-50"
+          >
             {editingId ? 'ATUALIZAR' : 'PUBLICAR'}
           </button>
           {editingId && (
             <button onClick={() => { setEditingId(null); setFormData({}); }} className="px-10 bg-white/5 text-slate-500 py-5 rounded-2xl font-black uppercase text-[10px]">CANCELAR</button>
           )}
         </div>
-        {status && <div className={`p-4 rounded-xl text-[10px] font-black uppercase text-center ${status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>{status.text}</div>}
+        {status && (
+          <div className={`p-4 rounded-xl text-[10px] font-black uppercase text-center transition-all ${status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500 animate-pulse'}`}>
+            {status.text}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4">
+        {items.length === 0 && !loading && !status && (
+          <div className="text-center py-10 text-slate-600 uppercase tracking-widest text-[10px] border border-dashed border-white/5 rounded-3xl">
+            Nenhum registro encontrado.
+          </div>
+        )}
         {items.map(item => (
           <div key={item[idColumn]} className="bg-slate-900/40 p-6 rounded-3xl border border-white/5 flex items-center justify-between group">
-            <div className="text-white font-serif italic text-lg">{item.title || item.name || 'Sem título'}</div>
+            <div className="text-white font-serif italic text-lg">{item.title || item.name || item.label || 'Sem título'}</div>
             <div className="flex gap-4">
-              <button onClick={() => handleEdit(item)} className="p-3 text-slate-600 hover:text-green-500 transition-all">EDIT</button>
-              <button onClick={() => handleDelete(item[idColumn])} className="p-3 text-slate-800 hover:text-red-500 transition-all">DELETE</button>
+              <button onClick={() => handleEdit(item)} className="p-3 text-slate-600 hover:text-green-500 transition-all text-[10px] font-black">EDIT</button>
+              <button onClick={() => handleDelete(item[idColumn])} className="p-3 text-slate-800 hover:text-red-500 transition-all text-[10px] font-black">DELETE</button>
             </div>
           </div>
         ))}
