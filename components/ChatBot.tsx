@@ -31,7 +31,7 @@ const ChatBot: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-[1000]">
       {isOpen ? (
         <div className="bg-slate-900 border border-white/10 w-80 sm:w-96 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="bg-blue-600 p-4 flex justify-between items-center">
