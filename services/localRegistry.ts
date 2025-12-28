@@ -1,3 +1,4 @@
+
 import { Product, ProductVariant, ProductContentBlock, Insight } from '../types';
 
 export type Language = 'pt' | 'en' | 'es';
@@ -12,7 +13,8 @@ export const SITE_CONFIG = {
     text_main: '#f8fafc',
     text_secondary: '#94a3b8',
     font_family_serif: "'Playfair Display', serif",
-    font_family_sans: "'Inter', sans-serif"
+    font_family_sans: "'Inter', sans-serif",
+    custom_css: ''
   },
   typography: {
     h1_size: '9.5rem',
@@ -72,6 +74,17 @@ export const LOCAL_PRODUCTS: Product[] = [
     featured: true,
     pricing_type: 'subscription',
     is_active: true
+  },
+  {
+    id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+    slug: 'matrix-strategy-simulator',
+    title: 'Matrix Strategy Simulator',
+    subtitle: 'Simule estratégias de elite com IA MATRIX',
+    description: 'Ferramenta de simulação para CEOs — cenários reais, resultados instantâneos.',
+    image_url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop',
+    featured: true,
+    pricing_type: 'subscription',
+    is_active: true
   }
 ];
 
@@ -85,13 +98,7 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       currency: 'BRL',
       interval: null,
       quantity_limit: 50,
-      features: [
-        "50 disparos totais",
-        "Máximo 10 disparos/dia",
-        "Validade de 7 dias",
-        "Suporte básico via WhatsApp",
-        "Humanização padrão"
-      ],
+      features: ["50 disparos totais", "Máximo 10 disparos/dia", "Validade de 7 dias", "Suporte básico via WhatsApp", "Humanização padrão"],
       is_most_popular: false,
       is_free: true,
       order_index: 0
@@ -104,13 +111,7 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       currency: 'BRL',
       interval: 'month',
       quantity_limit: 2400,
-      features: [
-        "2.400 disparos por mês",
-        "Humanização avançada",
-        "Suporte prioritário 12h",
-        "Envio de todas as mídias",
-        "1 thread de disparo"
-      ],
+      features: ["2.400 disparos por mês", "Humanização avançada", "Suporte prioritário 12h", "Envio de todas as mídias", "1 thread de disparo"],
       is_most_popular: false,
       is_free: false,
       order_index: 1
@@ -123,13 +124,7 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       currency: 'BRL',
       interval: 'semester',
       quantity_limit: 12800,
-      features: [
-        "12.800 disparos em 6 meses",
-        "Desconto promocional ativo",
-        "2 threads simultâneas",
-        "Suporte VIP 24h",
-        "Humanização Premium"
-      ],
+      features: ["12.800 disparos em 6 meses", "Desconto promocional ativo", "2 threads simultâneas", "Suporte VIP 24h", "Humanização Premium"],
       is_most_popular: true,
       is_free: false,
       order_index: 2
@@ -142,13 +137,61 @@ export const LOCAL_VARIANTS: Record<string, ProductVariant[]> = {
       currency: 'BRL',
       interval: 'year',
       quantity_limit: 32000,
-      features: [
-        "32.000 disparos em 12 meses",
-        "Melhor custo-benefício",
-        "3 threads simultâneas",
-        "Licença Vitalícia Atualizações",
-        "Prioridade Máxima"
-      ],
+      features: ["32.000 disparos em 12 meses", "Melhor custo-benefício", "3 threads simultâneas", "Licença Vitalícia Atualizações", "Prioridade Máxima"],
+      is_most_popular: false,
+      is_free: false,
+      order_index: 3
+    }
+  ],
+  'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d': [
+    {
+      id: 'matrix-sim-free',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      name: 'Free (Demo)',
+      price: 0.00,
+      currency: 'BRL',
+      interval: null,
+      quantity_limit: 5,
+      features: ["5 simulações gratuitas", "Suporte básico", "Validade 7 dias"],
+      is_most_popular: false,
+      is_free: true,
+      order_index: 0
+    },
+    {
+      id: 'matrix-sim-mensal',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      name: 'Mensal',
+      price: 199.00,
+      currency: 'BRL',
+      interval: 'month',
+      quantity_limit: 50,
+      features: ["50 simulações/mês", "Suporte prioritário", "Atualizações mensais"],
+      is_most_popular: false,
+      is_free: false,
+      order_index: 1
+    },
+    {
+      id: 'matrix-sim-semestral',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      name: 'Semestral',
+      price: 399.00,
+      currency: 'BRL',
+      interval: 'semester',
+      quantity_limit: 300,
+      features: ["300 simulações em 6 meses", "Desconto 66% (era R$1194)", "Threads extras para simulações paralelas", "Suporte VIP 24h"],
+      is_most_popular: true,
+      is_free: false,
+      order_index: 2
+    },
+    {
+      id: 'matrix-sim-anual',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      name: 'Anual',
+      price: 799.00,
+      currency: 'BRL',
+      interval: 'year',
+      quantity_limit: 999999,
+      features: ["Ilimitado por 12 meses", "Melhor custo-benefício", "Desconto 66% (era R$2388)", "Acesso beta a novas simulações", "Licença vitalícia"],
       is_most_popular: false,
       is_free: false,
       order_index: 3
@@ -206,18 +249,59 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
         title: "Níveis de Poder",
         subtitle: "Escolha o protocolo ideal para sua escala corporativa."
       }
+    }
+  ],
+  'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d': [
+    {
+      id: 'ms-b1',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      block_type: 'hero',
+      order: 1,
+      content: {
+        style: "matrix",
+        title: "Matrix Strategy Simulator",
+        glitch_title: "v1.0.0",
+        subtitle: "Simule o futuro do seu negócio com IA elite",
+        overlay_text: "ESTRATÉGIAS IMERSIVAS | RESULTADOS REAIS",
+        cta_text: "Ver Planos"
+      }
     },
     {
-      id: 'b5',
-      product_id: '1549b854-3c86-4961-bc05-866609fe8d8e',
-      block_type: 'faq',
-      order: 5,
+      id: 'ms-b2',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      block_type: 'features',
+      order: 2,
       content: {
-        title: "FAQ",
+        style: "glitch_grid",
+        title: "Poderes MATRIX Ativados",
         items: [
-          { question: "É seguro?", answer: "Sim. 100% focado em humanização e segurança." },
-          { question: "Como recebo?", answer: "Acesso imediato no Hub após aprovação do PIX." }
+          { icon: "brain", text: "Simulações ilimitadas com IA Gemini" },
+          { icon: "shield", text: "Cenários personalizados para CEOs" },
+          { icon: "zap", text: "Threads paralelas para análises rápidas" },
+          { icon: "robot", text: "Dados criptografados e seguros" }
         ]
+      }
+    },
+    {
+      id: 'ms-b4',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      block_type: 'comparison',
+      order: 3,
+      content: {
+        style: "terminal_matrix",
+        title: "Compare os Planos"
+      }
+    },
+    {
+      id: 'ms-b6',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      block_type: 'cta',
+      order: 4,
+      content: {
+        style: "glitch_activation",
+        title: "Ativar Simulador MATRIX",
+        button_text: "Ver Planos",
+        button_link: "#precos"
       }
     }
   ]
