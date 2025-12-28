@@ -25,25 +25,26 @@ export const fetchSiteConfig = () => {
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
-  const config = fetchSiteConfig();
-  if ((config as any)._products) return (config as any)._products;
-  
   try {
-    const { data } = await supabase.from('products').select('*').eq('is_active', true);
+    const { data, error } = await supabase.from('products').select('*').order('title');
+    if (error) throw error;
     if (data && data.length > 0) return data;
-  } catch (e) {}
+  } catch (e) {
+    console.warn("DB Products load fail, using local registry.");
+  }
   return LOCAL_PRODUCTS;
 };
 
 export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
+  try {
+    const { data } = await supabase.from('products').select('*').eq('slug', slug).maybeSingle();
+    if (data) return data;
+  } catch (e) {}
   const products = await fetchProducts();
   return products.find(p => p.slug === slug) || null;
 };
 
 export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
-  const config = fetchSiteConfig();
-  if ((config as any)._variants?.[productId]) return (config as any)._variants[productId];
-
   try {
     const { data } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('order_index');
     if (data && data.length > 0) return data;
@@ -52,9 +53,6 @@ export const fetchProductVariants = async (productId: string): Promise<ProductVa
 };
 
 export const fetchProductContentBlocks = async (productId: string): Promise<ProductContentBlock[]> => {
-  const config = fetchSiteConfig();
-  if ((config as any)._blocks?.[productId]) return (config as any)._blocks[productId];
-
   try {
     const { data } = await supabase.from('product_content_blocks').select('*').eq('product_id', productId).order('order');
     if (data && data.length > 0) return data;
@@ -63,9 +61,6 @@ export const fetchProductContentBlocks = async (productId: string): Promise<Prod
 };
 
 export const fetchInsights = async (): Promise<Insight[]> => {
-  const config = fetchSiteConfig();
-  if ((config as any)._insights) return (config as any)._insights;
-
   try {
     const { data } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
     if (data && data.length > 0) return data;
@@ -74,8 +69,11 @@ export const fetchInsights = async (): Promise<Insight[]> => {
 };
 
 export const fetchInsightById = async (id: string): Promise<Insight | null> => {
-  const insights = await fetchInsights();
-  return insights.find(i => String(i.id) === String(id)) || null;
+  try {
+    const { data } = await supabase.from('insights').select('*').eq('id', id).maybeSingle();
+    if (data) return data;
+  } catch (e) {}
+  return null;
 };
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
@@ -89,7 +87,16 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 };
 
 export const fetchAllOrders = async (): Promise<Order[]> => {
-  const { data } = await supabase.from('orders').select('*, profiles(*)').order('created_at', { ascending: false });
+  // JOIN explícito com profiles para garantir que o Admin veja QUEM comprou
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, profiles:user_id(id, email, full_name, whatsapp)')
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error("Fetch Orders Error:", error);
+    return [];
+  }
   return data || [];
 };
 
@@ -147,7 +154,7 @@ export const submitContact = async (contact: Contact): Promise<boolean> => {
 };
 
 export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
-  const { data } = await supabase.from('orders').select('*, profiles(*)').eq('user_id', userId).order('created_at', { ascending: false });
+  const { data } = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
   return data || [];
 };
 
@@ -195,4 +202,14 @@ export const fetchTools = async (): Promise<Tool[]> => {
   } catch (e) {
     return [];
   }
-}
+};
+
+// --- NOVAS FUNÇÕES DE PERSISTÊNCIA GLOBAL PARA ADMIN ---
+
+export const upsertItem = async (table: string, payload: any) => {
+  return await supabase.from(table).upsert(payload).select();
+};
+
+export const deleteItem = async (table: string, id: string | number) => {
+  return await supabase.from(table).delete().eq('id', id);
+};

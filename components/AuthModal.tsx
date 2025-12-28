@@ -30,14 +30,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
     setIsLoading(true);
     setError(null);
 
-    // Sanitização rigorosa contra erros de validação (espaços invisíveis no e-mail e outros campos)
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = fullName.trim();
     const cleanTaxId = taxId.trim();
     const cleanWhatsapp = whatsapp.trim();
 
     if (!validateEmailFormat(cleanEmail)) {
-      setError(`O endereço de e-mail "${cleanEmail}" não parece ser válido. Verifique se há caracteres extras.`);
+      setError(`O e-mail "${cleanEmail}" é inválido.`);
       setIsLoading(false);
       return;
     }
@@ -46,7 +45,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
       if (mode === 'login') {
         const { error: signInError } = await signIn(cleanEmail, password);
         if (signInError) throw signInError;
-        
         onSuccess();
         onClose();
       } else {
@@ -58,20 +56,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           gender: gender,
         });
         
-        if (signUpError) {
-          // Tratamento amigável para erro de e-mail inválido retornado pela API
-          if (signUpError.message.toLowerCase().includes('invalid') && signUpError.message.toLowerCase().includes('email')) {
-            throw new Error(`O e-mail "${cleanEmail}" foi rejeitado pelo servidor de autenticação. Verifique se há espaços no final ou se o provedor é aceito.`);
-          }
-          throw signUpError;
-        }
+        if (signUpError) throw signUpError;
 
         if (data.user) {
-          // 2. Gravação de Perfil via UPSERT (Garante persistência de CPF/CNPJ)
+          // 2. Gravação de Perfil forçada (John Doe deve estar aqui!)
           const profilePayload: Profile = {
             id: data.user.id,
             full_name: cleanName,
-            // Include cleanEmail in the profile payload to match the updated Profile type
             email: cleanEmail,
             cpf_cnpj: cleanTaxId,
             whatsapp: cleanWhatsapp,
@@ -79,12 +70,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             user_type: 'client'
           };
 
-          // Fix: Correctly extract error from the Supabase response instead of checking a non-existent isError property
           const { error: profileError } = await createProfile(profilePayload);
-          
           if (profileError) {
-            console.warn("[Auth Modal] Falha ao persistir dados adicionais no perfil. Provável erro de RLS no banco de dados.", profileError.message);
-            // Não bloqueamos o usuário aqui se o Auth deu certo, mas avisamos no console
+             console.warn("Perfil não persistido publicamente (RLS Check):", profileError.message);
           }
 
           if (!data.session) {
@@ -96,13 +84,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         }
       }
     } catch (err: any) {
-      console.error("[Auth Modal Error]", err);
-      // Se for erro de RLS na criação do perfil, damos uma dica
-      if (err.message && err.message.includes('row-level security')) {
-        setError('Erro de permissão no banco de dados. Contate o suporte para validar as políticas RLS de perfis.');
-      } else {
-        setError(err.message || 'Falha na autenticação. Verifique os dados e tente novamente.');
-      }
+      setError(err.message || 'Falha na operação.');
     } finally {
       setIsLoading(false);
     }
@@ -111,13 +93,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
   if (needsConfirmation) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-2xl">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-12 text-center space-y-8 shadow-2xl">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-12 text-center space-y-8">
           <div className="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center mx-auto text-blue-500">
-             <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+             <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
           </div>
-          <h2 className="text-3xl font-serif text-white italic">Ativar Conta</h2>
-          <p className="text-slate-400 text-sm font-light leading-relaxed">Enviamos um link de confirmação para <strong>{email.trim()}</strong>. Por favor, valide seu e-mail para prosseguir.</p>
-          <button onClick={onClose} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 transition-all">Fechar</button>
+          <h2 className="text-3xl font-serif text-white italic">Confirmar E-mail</h2>
+          <p className="text-slate-400 text-sm">Enviamos um link para <strong>{email}</strong>.</p>
+          <button onClick={onClose} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px]">Fechar</button>
         </motion.div>
       </div>
     );
@@ -126,51 +108,34 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={onClose} />
-      
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative bg-slate-900 border border-white/10 w-full max-w-lg rounded-[3rem] overflow-hidden shadow-2xl">
-        <div className="p-10 lg:p-14 space-y-10 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="p-10 lg:p-14 space-y-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
           <header className="text-center space-y-4">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-3xl shadow-xl shadow-blue-600/20">CT</div>
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center font-bold text-3xl">CT</div>
             <h2 className="text-3xl font-serif text-white italic">{mode === 'login' ? 'Identificação' : 'Novo Partner'}</h2>
-            <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.4em]">Core Estratégico Tonelli</p>
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <AnimatePresence mode="wait">
-              {mode === 'register' && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden">
-                  <input required placeholder="Nome Completo" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input required placeholder="CPF ou CNPJ" value={taxId} onChange={e => setTaxId(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all" />
-                    <input required placeholder="WhatsApp" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all" />
-                  </div>
-                  <select required value={gender || ''} onChange={e => setGender(e.target.value as Profile['gender'])} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-slate-300 focus:border-blue-500 outline-none transition-all">
-                    <option value="" disabled>Gênero</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Feminino">Feminino</option>
-                    <option value="Outro">Outro</option>
-                    <option value="Prefiro não informar">Prefiro não informar</option>
-                  </select>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <input required type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all" />
-            <input required type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none transition-all" />
-
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] text-red-500 font-bold uppercase tracking-widest text-center animate-shake">
-                {error}
+            {mode === 'register' && (
+              <div className="space-y-4">
+                <input required placeholder="Nome Completo" value={fullName} onChange={e => setFullName(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none" />
+                <div className="grid grid-cols-2 gap-4">
+                  <input required placeholder="CPF ou CNPJ" value={taxId} onChange={e => setTaxId(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none" />
+                  <input required placeholder="WhatsApp" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none" />
+                </div>
               </div>
             )}
+            <input required type="email" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none" />
+            <input required type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-white focus:border-blue-500 outline-none" />
 
-            <button disabled={isLoading} className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50">
-              {isLoading ? 'Conectando ao Core...' : (mode === 'login' ? 'Entrar Agora' : 'Finalizar Registro')}
+            {error && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] text-red-500 font-bold uppercase text-center">{error}</div>}
+
+            <button disabled={isLoading} className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] disabled:opacity-50">
+              {isLoading ? 'Conectando...' : (mode === 'login' ? 'Entrar' : 'Registrar')}
             </button>
           </form>
-
-          <div className="text-center pt-2">
-            <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }} className="text-[9px] uppercase tracking-widest text-slate-500 hover:text-white transition-colors font-bold">
+          <div className="text-center">
+            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-[9px] uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
               {mode === 'login' ? 'Ainda não é parceiro? Registre-se' : 'Já possui acesso? Conecte-se'}
             </button>
           </div>

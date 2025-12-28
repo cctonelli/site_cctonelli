@@ -50,7 +50,14 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const offset = 100; // Offset para a Navbar fixa
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
     }
   };
 
@@ -244,7 +251,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                  REQUISITAR ACESSO
                </button>
                
-               {/* Alvo da âncora para o modo de fallback */}
                <section id="precos" className="scroll-mt-32 pt-20">
                   <div className="text-slate-600 font-mono text-sm uppercase tracking-widest">Pricing Protocol Loading...</div>
                </section>
