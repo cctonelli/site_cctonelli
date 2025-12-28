@@ -5,7 +5,7 @@ import { fetchAllOrders, fetchSiteConfig, supabase, upsertItem } from '../servic
 import AdminCrudSection from './AdminCrudSection';
 import { motion } from 'framer-motion';
 
-type TabType = 'visual_dna' | 'editorial' | 'marketplace' | 'orders' | 'settings';
+type TabType = 'visual_dna' | 'editorial' | 'marketplace' | 'orders' | 'settings' | 'users';
 
 const ADMIN_VERSION = "v18.9-SOVEREIGN-MASTER";
 
@@ -17,6 +17,7 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => {
   const [activeTab, setActiveTab] = useState<TabType>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -27,6 +28,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       const config = await fetchSiteConfig();
       setSiteConfig(config);
       if (activeTab === 'orders') loadOrders();
+      if (activeTab === 'users') loadUsers();
     };
     init();
   }, [activeTab]);
@@ -46,6 +48,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     }
   };
 
+  const loadUsers = async () => {
+    try {
+      const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      setProfiles(data || []);
+    } catch (e) {}
+  };
+
   const handleUpdateConfig = async (field: string, subfield: string, value: any) => {
     const newConfig = { ...siteConfig };
     if (!newConfig[field]) newConfig[field] = {};
@@ -59,7 +68,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
         value: value,
         updated_at: new Date().toISOString()
       });
-      // Injeta variáveis CSS em tempo real para preview
       const root = document.documentElement;
       if (field === 'theme' && subfield === 'primary') root.style.setProperty('--accent-blue', value);
       if (field === 'theme' && subfield === 'bg_dark') root.style.setProperty('--bg-navy', value);
@@ -114,7 +122,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     <div className="fixed inset-0 z-[1200] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-4 lg:p-10 overflow-hidden">
       <div className="bg-[#010309] border border-white/10 w-full max-w-[1900px] h-full rounded-[4rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl">
         
-        {/* Sidebar de Comando */}
         <aside className="w-full lg:w-96 bg-black/50 border-r border-white/5 p-12 flex flex-col gap-10 shrink-0">
           <div className="flex items-center gap-6">
             <div className="w-16 h-16 bg-blue-600 rounded-[1.8rem] flex items-center justify-center font-bold text-white text-3xl shadow-2xl">CT</div>
@@ -129,6 +136,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             <button onClick={() => setActiveTab('marketplace')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'marketplace' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Marketplace Editor</button>
             <button onClick={() => setActiveTab('editorial')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'editorial' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Editorial Forge</button>
             <button onClick={() => setActiveTab('visual_dna')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'visual_dna' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>DNA Visual</button>
+            <button onClick={() => setActiveTab('users')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'users' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Partners & CRM</button>
             <button onClick={() => setActiveTab('settings')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'settings' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Geral & SEO</button>
           </nav>
           
@@ -137,18 +145,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           </div>
         </aside>
 
-        {/* Canvas de Edição */}
         <main className="flex-1 overflow-y-auto p-12 lg:p-24 bg-grid relative custom-scrollbar">
           <div className="max-w-7xl mx-auto pb-40">
-            
-            {/* ORDERS TAB */}
             {activeTab === 'orders' && (
               <div className="space-y-12">
                 <div className="flex justify-between items-end">
                   <h2 className="text-6xl font-serif text-white italic tracking-tighter">Sales <span className="text-blue-600">Vault.</span></h2>
                   <button onClick={loadOrders} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-white transition-colors">Recarregar Ledger</button>
                 </div>
-                
                 <div className="grid gap-8">
                   {loadingOrders ? (
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs">Sincronizando transações...</div>
@@ -184,16 +188,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               </div>
             )}
 
-            {/* VISUAL DNA TAB */}
+            {activeTab === 'users' && (
+               <div className="space-y-16">
+                  <h2 className="text-6xl font-serif text-white italic tracking-tighter">Partners & <span className="text-blue-600">CRM.</span></h2>
+                  <div className="grid gap-6">
+                     {profiles.map(p => (
+                        <div key={p.id} className="p-8 bg-slate-900/40 border border-white/5 rounded-3xl flex justify-between items-center backdrop-blur-3xl">
+                           <div className="flex gap-6 items-center">
+                              <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center font-serif italic text-white text-xl border border-white/10">
+                                 {p.full_name?.charAt(0) || p.email?.charAt(0)}
+                              </div>
+                              <div>
+                                 <p className="text-white font-serif italic text-xl">{p.full_name || 'Usuário Sem Nome'}</p>
+                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{p.email} • {p.user_type}</p>
+                              </div>
+                           </div>
+                           <div className="text-[9px] font-mono text-slate-600 uppercase tracking-widest">UID: {p.id.slice(0,8)}</div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            )}
+
             {activeTab === 'visual_dna' && siteConfig && (
               <div className="space-y-16">
-                 <header className="space-y-4">
-                   <h2 className="text-6xl font-serif text-white italic tracking-tighter">DNA <span className="text-blue-600">Visual.</span></h2>
-                   <p className="text-slate-500 italic font-light text-xl">Calibre a estética soberana da Claudio Tonelli em tempo real.</p>
-                 </header>
-
+                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">DNA <span className="text-blue-600">Visual.</span></h2>
                  <div className="grid md:grid-cols-2 gap-12">
-                    {/* Cores */}
                     <div className="p-10 bg-slate-900/60 rounded-[3rem] border border-white/5 space-y-10 backdrop-blur-3xl">
                        <h3 className="text-xl font-bold text-white uppercase tracking-widest border-l-2 border-blue-600 pl-4">Paleta de Comando</h3>
                        <div className="space-y-8">
@@ -210,37 +230,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                           </div>
                        </div>
                     </div>
-
-                    {/* Tipografia */}
                     <div className="p-10 bg-slate-900/60 rounded-[3rem] border border-white/5 space-y-10 backdrop-blur-3xl">
                        <h3 className="text-xl font-bold text-white uppercase tracking-widest border-l-2 border-blue-600 pl-4">Escala Tipográfica</h3>
                        <div className="space-y-8">
                           <div>
                              <label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">Título Hero (H1) - ex: 9.5rem</label>
-                             <input type="text" value={siteConfig.typography.h1_size} onChange={e => handleUpdateConfig('typography', 'h1_size', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none focus:border-blue-600 transition-all font-mono" />
+                             <input type="text" value={siteConfig.typography.h1_size} onChange={e => handleUpdateConfig('typography', 'h1_size', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none focus:border-blue-600 font-mono" />
                           </div>
                           <div>
                              <label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">Corpo de Texto - ex: 1.125rem</label>
-                             <input type="text" value={siteConfig.typography.body_size} onChange={e => handleUpdateConfig('typography', 'body_size', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none focus:border-blue-600 transition-all font-mono" />
-                          </div>
-                       </div>
-                    </div>
-
-                    {/* Matrix UX Settings */}
-                    <div className="p-10 bg-slate-900/60 rounded-[3rem] border border-white/5 space-y-10 backdrop-blur-3xl md:col-span-2">
-                       <h3 className="text-xl font-bold text-white uppercase tracking-widest border-l-2 border-blue-600 pl-4">Experiência Imersiva (Matrix v18.9)</h3>
-                       <div className="grid md:grid-cols-3 gap-12">
-                          <div className="space-y-4">
-                             <label className="text-[10px] text-slate-500 uppercase tracking-widest block">Velocidade da Chuva ({siteConfig.ux.matrix_speed}x)</label>
-                             <input type="range" min="0.1" max="10" step="0.1" value={siteConfig.ux.matrix_speed} onChange={e => handleUpdateConfig('ux', 'matrix_speed', parseFloat(e.target.value))} className="w-full accent-blue-600" />
-                          </div>
-                          <div className="space-y-4">
-                             <label className="text-[10px] text-slate-500 uppercase tracking-widest block">Opacidade Matrix ({siteConfig.ux.matrix_opacity})</label>
-                             <input type="range" min="0" max="1" step="0.05" value={siteConfig.ux.matrix_opacity} onChange={e => handleUpdateConfig('ux', 'matrix_opacity', parseFloat(e.target.value))} className="w-full accent-blue-600" />
-                          </div>
-                          <div className="space-y-4">
-                             <label className="text-[10px] text-slate-500 uppercase tracking-widest block">Intensidade do Brilho ({siteConfig.ux.glow_intensity})</label>
-                             <input type="range" min="0.1" max="2" step="0.1" value={siteConfig.ux.glow_intensity} onChange={e => handleUpdateConfig('ux', 'glow_intensity', e.target.value)} className="w-full accent-blue-600" />
+                             <input type="text" value={siteConfig.typography.body_size} onChange={e => handleUpdateConfig('typography', 'body_size', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none focus:border-blue-600 font-mono" />
                           </div>
                        </div>
                     </div>
@@ -248,122 +247,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               </div>
             )}
 
-            {/* MARKETPLACE TAB */}
             {activeTab === 'marketplace' && (
               <div className="space-y-20">
-                 <header className="space-y-4">
-                   <h2 className="text-6xl font-serif text-white italic tracking-tighter">Marketplace <span className="text-blue-600">Forge.</span></h2>
-                   <p className="text-slate-500 italic font-light text-xl">Gerencie ativos digitais, planos e blocos de conteúdo do V8 Matrix Edition.</p>
-                 </header>
-                 
-                 <AdminCrudSection 
-                   tableName="products" 
-                   title="Ativos Digitais" 
-                   fields={[
-                     { key: 'title', label: 'Título do Ativo (ex: V8 Matrix Edition)' }, 
-                     { key: 'slug', label: 'Slug / URL (ex: v8-matrix)' }, 
-                     { key: 'subtitle', label: 'Lead Curto (subtítulo)', type: 'textarea' }, 
-                     { key: 'description', label: 'Descrição Completa', type: 'textarea' }, 
-                     { key: 'image_url', label: 'URL da Imagem Principal' },
-                     { key: 'pricing_type', label: 'Tipo de Preço (subscription/one_time)' }
-                   ]} 
-                   displayColumns={['title', 'slug']} 
-                 />
-
+                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">Marketplace <span className="text-blue-600">Forge.</span></h2>
+                 <AdminCrudSection tableName="products" title="Ativos Digitais" fields={[{ key: 'title', label: 'Título do Ativo (ex: V8 Matrix Edition)' }, { key: 'slug', label: 'Slug / URL (ex: v8-matrix)' }, { key: 'subtitle', label: 'Lead Curto (subtítulo)', type: 'textarea' }, { key: 'description', label: 'Descrição Completa', type: 'textarea' }, { key: 'image_url', label: 'URL da Imagem Principal' }, { key: 'pricing_type', label: 'Tipo (subscription/one_time)' }]} displayColumns={['title', 'slug']} />
                  <div className="h-px bg-white/5 my-10"></div>
-
-                 <AdminCrudSection 
-                   tableName="product_variants" 
-                   title="Planos e Variantes" 
-                   fields={[
-                     { key: 'product_id', label: 'ID do Produto Pai (UUID)' }, 
-                     { key: 'name', label: 'Nome do Plano (ex: Plano Mensal)' }, 
-                     { key: 'price', label: 'Preço Nominal (R$)', type: 'number' },
-                     { key: 'interval', label: 'Intervalo (month/semester/year)' },
-                     { key: 'order_index', label: 'Ordem de Exibição', type: 'number' }
-                   ]} 
-                   displayColumns={['name', 'price']} 
-                 />
+                 <AdminCrudSection tableName="product_variants" title="Planos e Variantes" fields={[{ key: 'product_id', label: 'ID do Produto Pai (UUID)' }, { key: 'name', label: 'Nome do Plano' }, { key: 'price', label: 'Preço Nominal (R$)', type: 'number' }, { key: 'interval', label: 'Intervalo (month/semester/year)' }, { key: 'order_index', label: 'Ordem', type: 'number' }]} displayColumns={['name', 'price']} />
               </div>
             )}
 
-            {/* EDITORIAL TAB */}
             {activeTab === 'editorial' && (
                <div className="space-y-20">
-                  <header className="space-y-4">
-                    <h2 className="text-6xl font-serif text-white italic tracking-tighter">Editorial <span className="text-blue-600">Forge.</span></h2>
-                    <p className="text-slate-500 italic font-light text-xl">Publique insights estratégicos e atualize métricas de impacto global.</p>
-                  </header>
-
-                  <AdminCrudSection 
-                    tableName="insights" 
-                    title="Insights & Artigos" 
-                    fields={[
-                      { key: 'title', label: 'Título da Edição' }, 
-                      { key: 'category', label: 'Editoria (ex: ESTRATÉGIA)' }, 
-                      { key: 'image_url', label: 'URL da Mídia Editorial' }, 
-                      { key: 'excerpt', label: 'Lead Editorial (Resumo)', type: 'textarea' }, 
-                      { key: 'content', label: 'Corpo do Artigo (HTML)', type: 'rich-text' }
-                    ]} 
-                    displayColumns={['title', 'category']} 
-                  />
-
+                  <h2 className="text-6xl font-serif text-white italic tracking-tighter">Editorial <span className="text-blue-600">Forge.</span></h2>
+                  <AdminCrudSection tableName="insights" title="Insights & Artigos" fields={[{ key: 'title', label: 'Título da Edição' }, { key: 'category', label: 'Editoria' }, { key: 'image_url', label: 'URL da Mídia Editorial' }, { key: 'excerpt', label: 'Lead Editorial', type: 'textarea' }, { key: 'content', label: 'Corpo do Artigo (HTML)', type: 'rich-text' }]} displayColumns={['title', 'category']} />
                   <div className="h-px bg-white/5 my-10"></div>
-
-                  <AdminCrudSection 
-                    tableName="metrics" 
-                    title="Métricas de KPI" 
-                    fields={[
-                      { key: 'label', label: 'Rótulo da Métrica (ex: Países Atendidos)' }, 
-                      { key: 'value', label: 'Valor do KPI (ex: 25+)' }, 
-                      { key: 'display_order', label: 'Ordem', type: 'number' }
-                    ]} 
-                    displayColumns={['label', 'value']} 
-                  />
+                  <AdminCrudSection tableName="metrics" title="Métricas de KPI" fields={[{ key: 'label', label: 'Rótulo do KPI' }, { key: 'value', label: 'Valor (ex: 25+)' }, { key: 'display_order', label: 'Ordem', type: 'number' }]} displayColumns={['label', 'value']} />
                </div>
             )}
 
-            {/* SETTINGS TAB */}
             {activeTab === 'settings' && siteConfig && (
               <div className="space-y-16">
-                 <header className="space-y-4">
-                   <h2 className="text-6xl font-serif text-white italic tracking-tighter">Geral & <span className="text-blue-600">SEO.</span></h2>
-                   <p className="text-slate-500 italic font-light text-xl">Identidade corporativa e visibilidade em motores de busca.</p>
-                 </header>
-
+                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">Geral & <span className="text-blue-600">SEO.</span></h2>
                  <div className="grid md:grid-cols-2 gap-12">
                     <div className="p-10 bg-slate-900/60 rounded-[3rem] border border-white/5 space-y-10 backdrop-blur-3xl">
                        <h3 className="text-xl font-bold text-white uppercase tracking-widest border-l-2 border-blue-600 pl-4">Canais de Conexão</h3>
                        <div className="space-y-8">
-                          <div>
-                             <label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">E-mail Corporativo</label>
-                             <input type="text" value={siteConfig.contact.email} onChange={e => handleUpdateConfig('contact', 'email', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none focus:border-blue-600 transition-all" />
-                          </div>
-                          <div>
-                             <label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">WhatsApp Oficial</label>
-                             <input type="text" value={siteConfig.contact.whatsapp} onChange={e => handleUpdateConfig('contact', 'whatsapp', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none focus:border-blue-600 transition-all" />
-                          </div>
+                          <div><label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">E-mail Corporativo</label><input type="text" value={siteConfig.contact.email} onChange={e => handleUpdateConfig('contact', 'email', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none" /></div>
+                          <div><label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">WhatsApp Oficial</label><input type="text" value={siteConfig.contact.whatsapp} onChange={e => handleUpdateConfig('contact', 'whatsapp', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none" /></div>
                        </div>
                     </div>
-
                     <div className="p-10 bg-slate-900/60 rounded-[3rem] border border-white/5 space-y-10 backdrop-blur-3xl">
                        <h3 className="text-xl font-bold text-white uppercase tracking-widest border-l-2 border-blue-600 pl-4">Visibilidade do Kernel</h3>
                        <div className="grid grid-cols-2 gap-6">
                           {Object.keys(siteConfig.visibility).map(key => (
-                            <button 
-                              key={key} 
-                              onClick={() => handleUpdateConfig('visibility', key, !siteConfig.visibility[key])}
-                              className={`px-6 py-4 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border ${siteConfig.visibility[key] ? 'bg-blue-600 text-white border-blue-400' : 'bg-black text-slate-600 border-white/5'}`}
-                            >
-                              {key.replace('_', ' ')}: {siteConfig.visibility[key] ? 'ON' : 'OFF'}
-                            </button>
+                            <button key={key} onClick={() => handleUpdateConfig('visibility', key, !siteConfig.visibility[key])} className={`px-6 py-4 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border ${siteConfig.visibility[key] ? 'bg-blue-600 text-white border-blue-400' : 'bg-black text-slate-600 border-white/5'}`}>{key.replace('_', ' ')}: {siteConfig.visibility[key] ? 'ON' : 'OFF'}</button>
                           ))}
                        </div>
                     </div>
                  </div>
               </div>
             )}
-
           </div>
         </main>
       </div>

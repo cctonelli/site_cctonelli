@@ -31,9 +31,9 @@ A segurança é garantida por camadas de **Row Level Security (RLS)** e um model
 
 Para manter a Soberania de Marca:
 
-1.  **DNA Visual:** Ajuste o `Acento Primário` para mudar o tom de toda a interface (Neon Matrix ou Blue Advisory).
+1.  **DNA Visual:** Ajuste o `Acento Primário` para mudar o tom de toda a interface (Verde Matrix ou Azul Advisory).
 2.  **Visibilidade:** Ative ou desative seções inteiras do site (Métricas, Depoimentos, etc.) na aba **Geral & SEO**.
-3.  **Auditoria:** Acesse o **Sales Vault** para monitorar transações PIX pendentes.
+3.  **Auditoria:** Acesse o **Sales Vault** para monitorar transações PIX pendentes e liberar acessos.
 
 **Claudio Tonelli Consultoria**  
 *Excelência estratégica forjada em código soberano.*
