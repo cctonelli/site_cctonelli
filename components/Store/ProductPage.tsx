@@ -138,10 +138,10 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
                   <motion.div 
                     key={i} 
                     whileHover={{ y: -15, scale: 1.02 }} 
-                    className="p-12 rounded-[3.5rem] bg-slate-900/40 border border-white/5 hover:border-white/20 transition-all group backdrop-blur-xl relative overflow-hidden" 
+                    className={`p-12 rounded-[3.5rem] bg-slate-900/40 border border-white/5 hover:border-white/20 transition-all group backdrop-blur-xl relative overflow-hidden ${content.style === 'glitch_grid' ? 'hover:shadow-[0_0_30px_rgba(0,255,65,0.2)]' : ''}`} 
                   >
                     <div className="w-20 h-20 rounded-[1.8rem] bg-white/5 flex items-center justify-center text-4xl mb-10 group-hover:rotate-12 duration-500 transition-all" style={{ backgroundColor: `${blockColor}15`, color: blockColor, boxShadow: `inset 0 0 25px ${blockColor}20` }}>
-                      {item.icon === 'brain' ? '🧠' : item.icon === 'shield' ? '🛡️' : item.icon === 'zap' ? '⚡' : item.icon === 'robot' ? '🤖' : '⚙️'}
+                      {item.icon === 'brain' ? '🧠' : item.icon === 'shield' ? '🛡️' : item.icon === 'zap' ? '⚡' : item.icon === 'robot' ? '🤖' : item.icon === 'lock' ? '🔒' : '⚙️'}
                     </div>
                     <p className="text-slate-400 text-lg md:text-xl font-light italic leading-relaxed group-hover:text-white transition-colors">
                       {item.text}
@@ -175,9 +175,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
       case 'video':
         return (
           <section key={block.id} className="py-32 md:py-48 bg-slate-950 border-b border-white/5">
-             <div className="container mx-auto px-6 max-w-6xl">
-                <h3 className="text-center text-4xl md:text-6xl font-serif italic text-white mb-24">{content.title || 'Demo Exclusiva'}</h3>
-                <div className="aspect-video rounded-[4rem] overflow-hidden border-4 border-white/5 shadow-[0_0_100px_rgba(0,0,0,1)] relative group">
+             <div className="container mx-auto px-6 max-w-6xl text-center">
+                <h3 className="text-4xl md:text-6xl font-serif italic text-white mb-24">{content.title || 'Demo Exclusiva'}</h3>
+                <div className={`aspect-video rounded-[4rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] relative group border-4 ${content.style === 'matrix_border' ? 'border-green-500/30 shadow-[0_0_40px_rgba(0,255,65,0.2)]' : 'border-white/5'}`}>
                    <iframe src={content.video_url} className="w-full h-full" frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen></iframe>
                 </div>
              </div>
@@ -188,13 +188,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
         return (
           <section key={block.id} className="py-48 bg-gradient-to-b from-black to-slate-900 border-b border-white/5 text-center">
              <div className="container mx-auto px-6 space-y-12">
-                <h2 className="text-5xl md:text-[6rem] font-serif italic text-white tracking-tighter leading-none">{content.title || 'Pronto para a Transição?'}</h2>
+                <h2 className={`text-5xl md:text-[6rem] font-serif italic text-white tracking-tighter leading-none ${content.style === 'glitch_activation' ? 'glitch-text' : ''}`} data-text={content.title}>{content.title || 'Pronto para a Transição?'}</h2>
                 <button 
                   onClick={() => scrollToSection('precos')}
                   className="px-20 py-8 rounded-3xl font-black uppercase tracking-[0.5em] text-[11px] shadow-2xl transition-all hover:scale-110 active:scale-95"
                   style={{ backgroundColor: blockColor, color: '#000' }}
                 >
-                   {content.button_text || 'ATVAR PROTOCOLO'}
+                   {content.button_text || 'ATIVAR PROTOCOLO'}
                 </button>
              </div>
           </section>
@@ -206,7 +206,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
             <div className="container mx-auto px-6 relative z-10">
               <header className="text-center mb-32 md:mb-40 space-y-10">
                 <div className="text-[10px] font-black uppercase tracking-[0.8em] text-slate-500">Tier Selection // Operational Access</div>
-                <h3 className={`text-6xl md:text-[9rem] font-serif italic text-white tracking-tighter ${isMatrixSlug ? 'glitch-text' : ''}`} data-text={content.title || 'Níveis de Poder'}>
+                <h3 className={`text-6xl md:text-[9rem] font-serif italic text-white tracking-tighter ${isMatrixSlug || content.style === 'terminal_matrix' ? 'glitch-text' : ''}`} data-text={content.title || 'Níveis de Poder'}>
                   {content.title || 'Níveis de Poder'}
                 </h3>
               </header>
@@ -252,7 +252,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ language, t, resolveTranslati
 
   return (
     <div className="min-h-screen bg-black transition-colors relative selection:bg-white selection:text-black">
-      {/* Persistência do Matrix Rain na Product Page V8 */}
+      {/* Persistência do Matrix Rain na Product Page V8/Simulator */}
       {isMatrixSlug && (
         <MatrixRain 
           color={blockColor} 

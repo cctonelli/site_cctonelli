@@ -3,7 +3,7 @@ import { Product, ProductVariant, ProductContentBlock, Insight } from '../types'
 
 export type Language = 'pt' | 'en' | 'es';
 
-// --- KERNEL VISUAL & NARRATIVO TOTAL v18.9-SOVEREIGN ---
+// --- KERNEL VISUAL & NARRATIVO TOTAL v18.9-SOVEREIGN-MASTER ---
 export const SITE_CONFIG = {
   theme: {
     primary: '#00ff41', // Verde Matrix Neon
@@ -80,7 +80,7 @@ export const LOCAL_PRODUCTS: Product[] = [
     slug: 'matrix-strategy-simulator',
     title: 'Matrix Strategy Simulator',
     subtitle: 'Simule estratégias de elite com IA MATRIX',
-    description: 'Ferramenta de simulação para CEOs — cenários reais, resultados instantâneos.',
+    description: 'Ferramenta de simulação para CEOs — cenários reais, resultados instantâneos baseados em IA generativa de alta performance.',
     image_url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop',
     featured: true,
     pricing_type: 'subscription',
@@ -268,7 +268,7 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
           { icon: "brain", text: "Simulações ilimitadas com IA Gemini" },
           { icon: "shield", text: "Cenários personalizados para CEOs" },
           { icon: "zap", text: "Threads paralelas para análises rápidas" },
-          { icon: "robot", text: "Dados criptografados e seguros" }
+          { icon: "lock", text: "Dados criptografados e seguros" }
         ]
       }
     },
@@ -298,8 +298,19 @@ export const LOCAL_BLOCKS: Record<string, ProductContentBlock[]> = {
     {
       id: 'ms-b5',
       product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
-      block_type: 'cta',
+      block_type: 'video',
       order: 5,
+      content: {
+        title: "Demo Completa",
+        video_url: "https://www.youtube.com/embed/dQw4w9WgXcQ", // Placeholder
+        style: "matrix_border"
+      }
+    },
+    {
+      id: 'ms-b6',
+      product_id: 'c7b7d8d8-9d9d-4d4d-8d8d-7d7d7d7d7d7d',
+      block_type: 'cta',
+      order: 6,
       content: {
         style: "glitch_activation",
         title: "Ativar Simulador MATRIX",
