@@ -5,7 +5,7 @@ import { fetchAllOrders, fetchSiteConfig, supabase, upsertItem, checkTableVisibi
 import AdminCrudSection from './AdminCrudSection';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type TabType = 'visual_dna' | 'editorial' | 'marketplace' | 'orders' | 'settings' | 'users';
+type TabType = 'visual_dna' | 'editorial' | 'marketplace' | 'orders' | 'settings' | 'users' | 'infra';
 
 const ADMIN_VERSION = "v18.9-SOVEREIGN-MASTER-EXT";
 
@@ -27,6 +27,78 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [isRepairing, setIsRepairing] = useState(false);
   const [tableStatus, setTableStatus] = useState<Record<string, { visible: boolean; error?: string; code?: string }>>({});
 
+  const SQL_PROVISION_SCRIPT = `-- SUPABASE SOVEREIGN PROVISIONING SCRIPT v18.9
+-- Execute este script no SQL Editor do seu Supabase Dashboard
+
+-- 1. Tabela de Perfis
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+    full_name TEXT,
+    email TEXT,
+    cpf_cnpj TEXT,
+    whatsapp TEXT,
+    gender TEXT,
+    user_type TEXT DEFAULT 'client',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Tabela de Traduções (Correção para erro 42P01)
+CREATE TABLE IF NOT EXISTS public.translations (
+    id BIGSERIAL PRIMARY KEY,
+    key TEXT NOT NULL,
+    lang TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(key, lang)
+);
+
+-- 3. Tabela de Conteúdo de Site
+CREATE TABLE IF NOT EXISTS public.site_content (
+    id BIGSERIAL PRIMARY KEY,
+    page TEXT DEFAULT 'home',
+    key TEXT NOT NULL,
+    value JSONB,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Tabela de Produtos
+CREATE TABLE IF NOT EXISTS public.products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    subtitle TEXT,
+    description TEXT,
+    image_url TEXT,
+    featured BOOLEAN DEFAULT FALSE,
+    pricing_type TEXT DEFAULT 'subscription',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. Tabela de Pedidos
+CREATE TABLE IF NOT EXISTS public.orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.profiles(id),
+    product_id UUID REFERENCES public.products(id),
+    amount DECIMAL NOT NULL,
+    status TEXT DEFAULT 'pending',
+    payment_method TEXT DEFAULT 'pix',
+    pix_qrcode_url TEXT,
+    approved_by_admin BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. Habilitar RLS e Permissões
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.translations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+NOTIFY pgrst, 'reload schema';`;
+
   const checkIntegrity = async () => {
     const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'tools'];
     const statusResults: Record<string, any> = {};
@@ -40,7 +112,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     setIsRepairing(true);
     const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'tools'];
     try {
-      // O Supabase às vezes requer requisições HEAD sucessivas para invalidar o cache desatualizado
       for (const t of tables) {
         await supabase.from(t).select('count', { count: 'exact', head: true });
         await new Promise(r => setTimeout(r, 200));
@@ -89,7 +160,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     } catch (e: any) {
       const errorMsg = e.message || e.details || JSON.stringify(e);
       if (errorMsg.includes('PGRST205') || errorMsg.includes('404')) {
-         setOrderError("CACHE_MISMATCH_DETECTED: O servidor Supabase está com o cache de schema corrompido. Execute o protocolo de Reparo.");
+         setOrderError("CACHE_MISMATCH: API desatualizada. Execute o Repair Protocol.");
+      } else if (errorMsg.includes('42P01') || errorMsg.includes('does not exist')) {
+         setOrderError("PROVISION_MISSING: Tabelas vitais não existem. Acesse a aba INFRA.");
       } else {
          setOrderError(errorMsg);
       }
@@ -130,6 +203,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   };
 
   const hasSchemaErrors = Object.values(tableStatus).some((s: any) => !s.visible);
+  const isMissingTables = Object.values(tableStatus).some((s: any) => s.code === '42P01');
 
   if (!profile || profile.user_type !== 'admin') return null;
 
@@ -150,22 +224,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             <button onClick={() => setActiveTab('orders')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'orders' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Sales Vault</button>
             <button onClick={() => setActiveTab('marketplace')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'marketplace' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Marketplace Forge</button>
             <button onClick={() => setActiveTab('editorial')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'editorial' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Editorial Forge</button>
-            <button onClick={() => setActiveTab('visual_dna')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'visual_dna' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>DNA Visual</button>
             <button onClick={() => setActiveTab('users')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'users' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Partners & CRM</button>
-            <button onClick={() => setActiveTab('settings')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'settings' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Geral & SEO</button>
+            <button onClick={() => setActiveTab('infra')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'infra' ? 'bg-red-600 text-white border-red-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Infra & DB {isMissingTables && "!"}</button>
           </nav>
           
           <div className="pt-8 border-t border-white/5 space-y-4">
              <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Integrity Check</p>
-                  <button onClick={forceHardSync} className="text-[7px] text-blue-500 hover:text-white transition-colors">HARD SYNC</button>
+                  <button onClick={forceHardSync} className="text-[7px] text-blue-500 hover:text-white transition-colors">RE-SYNC</button>
                 </div>
                 <div className="space-y-2">
                    {Object.entries(tableStatus).map(([name, status]) => (
                      <div key={name} className="flex justify-between items-center group">
                         <span className="text-[9px] text-slate-400 uppercase font-mono group-hover:text-white transition-colors">{name}</span>
-                        <div className={`w-2 h-2 rounded-full shadow-[0_0_8px] ${(status as any).visible ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500 shadow-red-500/50 animate-pulse'}`}></div>
+                        <div className={`w-2 h-2 rounded-full shadow-[0_0_8px] ${(status as any).visible ? 'bg-green-500 shadow-green-500/50' : (status as any).code === '42P01' ? 'bg-orange-500 shadow-orange-500/50 animate-pulse' : 'bg-red-500 shadow-red-500/50'}`}></div>
                      </div>
                    ))}
                 </div>
@@ -176,101 +249,60 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
 
         <main className="flex-1 overflow-y-auto p-12 lg:p-24 bg-grid relative custom-scrollbar">
           <div className="max-w-7xl mx-auto pb-40">
-            {/* SCHEMA INTEGRITY ALERT */}
-            <AnimatePresence>
-              {(hasSchemaErrors || orderError?.includes('CACHE')) && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="mb-12 p-10 bg-red-600/10 border border-red-600/30 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 backdrop-blur-xl"
-                >
-                  <div className="flex items-center gap-8">
-                    <div className="w-16 h-16 bg-red-600 rounded-3xl flex items-center justify-center text-white font-bold text-3xl shadow-[0_0_30px_rgba(239,68,68,0.4)]">!</div>
-                    <div className="space-y-1">
-                      <h4 className="text-white font-serif italic text-2xl">Cache Crítico PGRST205</h4>
-                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">O Supabase perdeu a referência física das tabelas.</p>
+            
+            {activeTab === 'infra' && (
+              <div className="space-y-16">
+                 <div className="space-y-4">
+                    <h2 className="text-6xl font-serif text-white italic tracking-tighter">Database <span className="text-red-600">Provisioning.</span></h2>
+                    <p className="text-slate-500 text-xl font-light italic">Se você está vendo erros 42P01 (Tabela não encontrada), copie o script abaixo e execute no SQL Editor do Supabase.</p>
+                 </div>
+
+                 <div className="p-10 bg-black/60 border border-white/5 rounded-[3rem] space-y-10 shadow-inner">
+                    <div className="flex justify-between items-center">
+                       <span className="text-[10px] font-black uppercase tracking-[0.6em] text-blue-500">UNIFIED_PROVISION_SCRIPT.sql</span>
+                       <button onClick={() => { navigator.clipboard.writeText(SQL_PROVISION_SCRIPT); alert("Script SQL Copiado!"); }} className="bg-blue-600 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-blue-500 transition-all">COPIAR SCRIPT</button>
                     </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <button 
-                      onClick={autoRepairCache} 
-                      disabled={isRepairing}
-                      className="px-8 py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all disabled:opacity-50"
-                    >
-                      {isRepairing ? 'REPARANDO...' : 'EXECUTAR AUTO-REPAIR'}
-                    </button>
-                    <button onClick={() => setShowDoctor(true)} className="px-10 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-600/20">Protocolo SQL</button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    <code className="block w-full h-[500px] bg-black p-8 rounded-2xl overflow-y-auto custom-scrollbar text-[11px] text-green-500 font-mono leading-relaxed select-all whitespace-pre">
+                      {SQL_PROVISION_SCRIPT}
+                    </code>
+                 </div>
+
+                 <div className="grid md:grid-cols-3 gap-10">
+                    <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
+                       <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 01</h4>
+                       <p className="text-xs text-slate-500">Abra o painel do Supabase e clique no ícone "SQL Editor" na barra lateral esquerda.</p>
+                    </div>
+                    <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
+                       <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 02</h4>
+                       <p className="text-xs text-slate-500">Clique em "New Query", cole o script acima e clique em "Run" (botão azul).</p>
+                    </div>
+                    <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
+                       <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 03</h4>
+                       <p className="text-xs text-slate-500">Volte aqui e clique no botão "HARD SYNC" no painel lateral para recarregar a API.</p>
+                    </div>
+                 </div>
+              </div>
+            )}
 
             {activeTab === 'orders' && (
               <div className="space-y-12">
                 <div className="flex justify-between items-end">
                   <div className="space-y-2">
                     <h2 className="text-6xl font-serif text-white italic tracking-tighter">Sales <span className="text-blue-600">Vault.</span></h2>
-                    <div className="flex items-center gap-4">
-                       <button onClick={() => setShowDoctor(!showDoctor)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-500 transition-colors">Infra Doctor {showDoctor ? '▲' : '▼'}</button>
-                    </div>
                   </div>
                   <div className="flex gap-6">
-                    <button onClick={() => { setUseMockData(!useMockData); loadOrders(); }} className={`text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-all ${useMockData ? 'bg-yellow-500 text-black border-yellow-400' : 'text-slate-600 border-white/5'}`}>
-                      {useMockData ? 'Sair do Mock' : 'Ativar Mock'}
-                    </button>
                     <button onClick={loadOrders} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-white transition-colors">Recarregar Ledger</button>
                   </div>
                 </div>
 
-                <AnimatePresence>
-                {showDoctor && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="p-10 bg-slate-900 border border-red-600/20 rounded-[3rem] overflow-hidden space-y-10 backdrop-blur-md">
-                    <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-                       <h4 className="text-[12px] font-black uppercase tracking-widest text-blue-500">SUPABASE INFRA REPAIR KIT (PGRST205)</h4>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-12">
-                       <div className="space-y-6">
-                          <p className="text-[11px] text-white uppercase tracking-widest font-bold">SCRIPT 01: RECARGA DE SCHEMA (RÁPIDO)</p>
-                          <p className="text-xs text-slate-500 italic">Força o PostgREST a reconstruir o mapa de tabelas.</p>
-                          <code className="block bg-black p-6 rounded-2xl text-[11px] text-green-500 font-mono leading-relaxed select-all border border-green-500/20 shadow-inner">
-                            NOTIFY pgrst, 'reload schema';
-                          </code>
-                       </div>
-                       
-                       <div className="space-y-6">
-                          <p className="text-[11px] text-white uppercase tracking-widest font-bold">SCRIPT 02: PERMISSÕES TOTAIS</p>
-                          <p className="text-xs text-slate-500 italic">Corrige permissões de proprietário se o warmup falhar.</p>
-                          <code className="block bg-black p-6 rounded-2xl text-[10px] text-blue-400 font-mono leading-relaxed select-all border border-blue-500/20">
-                            ALTER TABLE public.products OWNER TO postgres;<br/>
-                            ALTER TABLE public.profiles OWNER TO postgres;<br/>
-                            ALTER TABLE public.orders OWNER TO postgres;<br/>
-                            ALTER TABLE public.site_content OWNER TO postgres;<br/>
-                            ALTER TABLE public.translations OWNER TO postgres;<br/>
-                            ALTER TABLE public.tools OWNER TO postgres;<br/>
-                            GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;<br/>
-                            NOTIFY pgrst, 'reload schema';
-                          </code>
-                       </div>
-                    </div>
-                  </motion.div>
-                )}
-                </AnimatePresence>
-
                 <div className="grid gap-8">
                   {loadingOrders ? (
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs italic">Sincronizando transações...</div>
-                  ) : orderError && !useMockData ? (
-                    <div className="p-16 border border-red-500/30 bg-red-500/5 rounded-[4rem] text-center space-y-10 animate-in zoom-in-95 duration-500 shadow-2xl">
-                      <h3 className="text-2xl font-serif text-white italic">Protocolo de Cache Interrompido</h3>
+                  ) : orderError ? (
+                    <div className="p-16 border border-red-500/30 bg-red-500/5 rounded-[4rem] text-center space-y-10">
+                      <h3 className="text-2xl font-serif text-white italic">Protocolo Interrompido</h3>
                       <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">{orderError}</p>
-                      <div className="max-w-xl mx-auto p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-left space-y-6">
-                         <p className="text-[11px] text-slate-400 leading-relaxed italic">"O erro PGRST205 significa que o banco de dados mudou mas a API ainda está 'viciada' no modelo antigo. O Kernel ativou o Auto-Repair. Se persistir, use o SQL Protocol."</p>
-                         <div className="flex gap-4">
-                            <button onClick={autoRepairCache} disabled={isRepairing} className="flex-1 bg-blue-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">Tentar Auto-Repair</button>
-                            <button onClick={() => setShowDoctor(true)} className="bg-red-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all">SQL Repair</button>
-                         </div>
-                      </div>
+                      <button onClick={() => setActiveTab('infra')} className="bg-red-600 text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase">Ir para Infra & Provisioning</button>
                     </div>
                   ) : orders.length === 0 ? (
                     <div className="p-20 border border-dashed border-white/5 rounded-[4rem] text-center text-slate-600 uppercase tracking-widest text-xs italic">Nenhum protocolo pendente no ledger.</div>
@@ -281,13 +313,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                           <div className="space-y-6 relative z-10">
                              <div className="flex gap-5 items-center">
                                 <span className={`text-[8px] font-black px-5 py-1.5 rounded-full ${order.status === 'pending' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-500'}`}>{order.status.toUpperCase()}</span>
-                                <span className="text-white font-serif italic text-2xl">{(order as any).profiles?.full_name || (order as any).profiles?.email || 'Partner (Join Fallback)'}</span>
+                                <span className="text-white font-serif italic text-2xl">{(order as any).profiles?.full_name || (order as any).profiles?.email || 'Partner'}</span>
                              </div>
                              <div className="grid grid-cols-2 md:grid-cols-4 gap-10 text-[10px] text-slate-500 uppercase tracking-widest font-mono">
                                 <div className="space-y-2"><p className="opacity-50">Ativo</p><p className="text-slate-300">{order.product_id}</p></div>
                                 <div className="space-y-2"><p className="opacity-50">Investimento</p><p className="text-slate-300 font-bold">R$ {order.amount.toFixed(2)}</p></div>
                                 <div className="space-y-2"><p className="opacity-50">Transação</p><p className="text-blue-500">#{order.id.slice(0,8)}</p></div>
-                                <div className="space-y-2"><p className="opacity-50">WhatsApp</p><p className="text-slate-300">{(order as any).profiles?.whatsapp || 'N/A'}</p></div>
                              </div>
                           </div>
                           {order.status === 'pending' && (
@@ -300,6 +331,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+            
+            {activeTab === 'marketplace' && (
+              <div className="space-y-20">
+                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">Marketplace <span className="text-blue-600">Forge.</span></h2>
+                 <AdminCrudSection tableName="products" title="Ativos Digitais" fields={[{ key: 'title', label: 'Título' }, { key: 'slug', label: 'Slug' }, { key: 'pricing_type', label: 'Tipo' }]} displayColumns={['title', 'slug']} />
               </div>
             )}
 
@@ -322,33 +360,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                      ))}
                   </div>
                </div>
-            )}
-            
-            {activeTab === 'visual_dna' && siteConfig && (
-              <div className="space-y-16">
-                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">DNA <span className="text-blue-600">Visual.</span></h2>
-                 <div className="grid md:grid-cols-2 gap-12">
-                    <div className="p-10 bg-slate-900/60 rounded-[3rem] border border-white/5 space-y-10 backdrop-blur-3xl">
-                       <h3 className="text-xl font-bold text-white uppercase tracking-widest border-l-2 border-blue-600 pl-4">Paleta de Comando</h3>
-                       <div className="space-y-8">
-                          <div>
-                             <label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">Acento Primário</label>
-                             <div className="flex gap-4 items-center">
-                               <input type="color" value={siteConfig.theme.primary} onChange={e => handleUpdateConfig('theme', 'primary', e.target.value)} className="w-20 h-20 bg-black rounded-2xl border-none cursor-pointer p-1" />
-                               <input type="text" value={siteConfig.theme.primary} onChange={e => handleUpdateConfig('theme', 'primary', e.target.value)} className="flex-1 bg-black text-white px-6 py-5 rounded-2xl border border-white/5 font-mono text-xs" />
-                             </div>
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-            )}
-            
-            {activeTab === 'marketplace' && (
-              <div className="space-y-20">
-                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">Marketplace <span className="text-blue-600">Forge.</span></h2>
-                 <AdminCrudSection tableName="products" title="Ativos Digitais" fields={[{ key: 'title', label: 'Título' }, { key: 'slug', label: 'Slug' }, { key: 'pricing_type', label: 'Tipo' }]} displayColumns={['title', 'slug']} />
-              </div>
             )}
           </div>
         </main>

@@ -16,7 +16,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
  */
 async function forceWarmup(tableName: string) {
   try {
-    // Requisição HEAD é leve e costuma disparar o refresh do cache no Supabase
     await supabase.from(tableName).select('count', { count: 'exact', head: true });
   } catch (e) {
     console.debug(`[Warmup] Falha silenciosa em ${tableName}`);
@@ -24,12 +23,12 @@ async function forceWarmup(tableName: string) {
 }
 
 /**
- * Motor de Resiliência Avançado com detecção de PGRST205
+ * Motor de Resiliência Avançado v3.0
  */
 async function fetchWithRetry<T>(
   fetcher: () => Promise<{ data: T | null; error: any }>,
-  retries = 5,
-  initialDelay = 1200
+  retries = 3,
+  initialDelay = 1000
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
   for (let i = 0; i < retries; i++) {
@@ -37,15 +36,17 @@ async function fetchWithRetry<T>(
     if (!result.error) return result;
     
     lastError = result.error;
-    const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
+    
+    // Se a tabela não existe (42P01), não adianta tentar novamente. Ativamos redundância local.
+    if (lastError.code === '42P01') {
+      console.warn(`[Kernel] Tabela não encontrada no Supabase (42P01). Ativando Modo Offline.`);
+      return { data: null, error: lastError };
+    }
 
+    const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
     if (isCacheError) {
-      // Se for erro de cache, tentamos o warmup em tabelas críticas para forçar o reload do PostgREST
       if (i === 0) await forceWarmup('products');
-      if (i === 1) await forceWarmup('site_content');
-      
-      const waitTime = initialDelay * Math.pow(1.8, i);
-      console.warn(`[Kernel] Sincronia de cache falhou (${lastError.code}). Tentativa ${i + 1}/${retries} em ${waitTime}ms...`);
+      const waitTime = initialDelay * Math.pow(2, i);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     } else {
       break; 
@@ -62,7 +63,7 @@ export const checkTableVisibility = async (tableName: string): Promise<{ visible
     }
     return { visible: true };
   } catch (e: any) {
-    return { visible: false, error: e.message };
+    return { visible: false, error: e.message, code: 'UNKNOWN' };
   }
 };
 
@@ -88,7 +89,7 @@ export const fetchSiteConfig = async () => {
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
-    const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order');
+    const { data, error } = await fetchWithRetry<Metric[]>(() => supabase.from('metrics').select('*').eq('is_active', true).order('display_order'));
     if (error) throw error;
     return data || [];
   } catch (e) { return []; }
@@ -96,7 +97,7 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
 
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
-    const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
+    const { data, error } = await fetchWithRetry<CarouselImage[]>(() => supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order'));
     if (error) throw error;
     return data || [];
   } catch (e) { return []; }
@@ -104,18 +105,16 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Tenta carregar do banco de dados com protocolo de retentativa para PGRST205
     const { data, error } = await fetchWithRetry<Product[]>(() => 
       supabase.from('products').select('*').order('title')
     );
     
     if (error) {
-      console.error(`[Kernel] Erro Crítico na tabela 'products' (${error.code}). Ativando Cache Local de Contingência.`);
+      console.error(`[Kernel] Erro Crítico na tabela 'products' (${error.code}). Ativando Cache Local.`);
       return LOCAL_PRODUCTS;
     }
     
     const dbProducts = data || [];
-    // Mescla dados do DB com fallback local para garantir que itens críticos (V8) sempre existam
     const merged = [...(dbProducts as Product[])];
     LOCAL_PRODUCTS.forEach(lp => {
       if (!merged.find(p => (p as any).id === lp.id || p.slug === lp.slug)) {
@@ -124,7 +123,6 @@ export const fetchProducts = async (): Promise<Product[]> => {
     });
     return merged.sort((a, b) => (a.featured === b.featured) ? 0 : a.featured ? -1 : 1);
   } catch (e) {
-    console.error("[Kernel] Exceção em fetchProducts. Ativando Redundância.");
     return LOCAL_PRODUCTS;
   }
 };
@@ -184,6 +182,7 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
       .order('created_at', { ascending: false });
     
     if (error) {
+      if (error.code === '42P01') throw new Error("A tabela 'orders' ainda não foi provisionada no banco de dados.");
       const { data: simpleData, error: simpleError } = await supabase
         .from('orders')
         .select('*')
