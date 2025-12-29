@@ -24,6 +24,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [siteConfig, setSiteConfig] = useState<any>(null);
   const [useMockData, setUseMockData] = useState(false);
   const [showDoctor, setShowDoctor] = useState(false);
+  const [isRepairing, setIsRepairing] = useState(false);
   const [tableStatus, setTableStatus] = useState<Record<string, { visible: boolean; error?: string; code?: string }>>({});
 
   const checkIntegrity = async () => {
@@ -35,10 +36,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     setTableStatus(statusResults);
   };
 
+  const autoRepairCache = async () => {
+    setIsRepairing(true);
+    const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'tools'];
+    try {
+      // O Supabase às vezes requer requisições HEAD sucessivas para invalidar o cache desatualizado
+      for (const t of tables) {
+        await supabase.from(t).select('count', { count: 'exact', head: true });
+        await new Promise(r => setTimeout(r, 200));
+      }
+      await checkIntegrity();
+      await loadOrders();
+    } catch (e) {
+      console.error("Auto-repair failed", e);
+    } finally {
+      setIsRepairing(false);
+    }
+  };
+
   const forceHardSync = async () => {
     setLoadingOrders(true);
     await checkIntegrity();
-    // Tenta carregar os pedidos novamente para forçar o PostgREST a recarregar o schema
     await loadOrders();
     setLoadingOrders(false);
   };
@@ -71,7 +89,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     } catch (e: any) {
       const errorMsg = e.message || e.details || JSON.stringify(e);
       if (errorMsg.includes('PGRST205') || errorMsg.includes('404')) {
-         setOrderError("CACHE_MISMATCH: O PostgREST não reconhece a estrutura desta tabela. Use o Hard Sync.");
+         setOrderError("CACHE_MISMATCH_DETECTED: O servidor Supabase está com o cache de schema corrompido. Execute o protocolo de Reparo.");
       } else {
          setOrderError(errorMsg);
       }
@@ -160,7 +178,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           <div className="max-w-7xl mx-auto pb-40">
             {/* SCHEMA INTEGRITY ALERT */}
             <AnimatePresence>
-              {hasSchemaErrors && (
+              {(hasSchemaErrors || orderError?.includes('CACHE')) && (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -169,12 +187,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                   <div className="flex items-center gap-8">
                     <div className="w-16 h-16 bg-red-600 rounded-3xl flex items-center justify-center text-white font-bold text-3xl shadow-[0_0_30px_rgba(239,68,68,0.4)]">!</div>
                     <div className="space-y-1">
-                      <h4 className="text-white font-serif italic text-2xl">Sincronia Interrompida (PGRST205)</h4>
-                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">O Supabase requer um re-aquecimento do schema cache.</p>
+                      <h4 className="text-white font-serif italic text-2xl">Cache Crítico PGRST205</h4>
+                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">O Supabase perdeu a referência física das tabelas.</p>
                     </div>
                   </div>
                   <div className="flex gap-4">
-                    <button onClick={forceHardSync} className="px-8 py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">Executar Hard Sync</button>
+                    <button 
+                      onClick={autoRepairCache} 
+                      disabled={isRepairing}
+                      className="px-8 py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all disabled:opacity-50"
+                    >
+                      {isRepairing ? 'REPARANDO...' : 'EXECUTAR AUTO-REPAIR'}
+                    </button>
                     <button onClick={() => setShowDoctor(true)} className="px-10 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-600/20">Protocolo SQL</button>
                   </div>
                 </motion.div>
@@ -202,7 +226,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                 {showDoctor && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="p-10 bg-slate-900 border border-red-600/20 rounded-[3rem] overflow-hidden space-y-10 backdrop-blur-md">
                     <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-                       <h4 className="text-[12px] font-black uppercase tracking-widest text-blue-500">SUPABASE INFRA REPAIR KIT</h4>
+                       <h4 className="text-[12px] font-black uppercase tracking-widest text-blue-500">SUPABASE INFRA REPAIR KIT (PGRST205)</h4>
                     </div>
                     
                     <div className="grid md:grid-cols-2 gap-12">
@@ -215,11 +239,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                        </div>
                        
                        <div className="space-y-6">
-                          <p className="text-[11px] text-white uppercase tracking-widest font-bold">SCRIPT 02: PERMISSÕES DE PROPRIEDADE</p>
-                          <p className="text-xs text-slate-500 italic">Corrige permissões se o Hard Sync falhar repetidamente.</p>
+                          <p className="text-[11px] text-white uppercase tracking-widest font-bold">SCRIPT 02: PERMISSÕES TOTAIS</p>
+                          <p className="text-xs text-slate-500 italic">Corrige permissões de proprietário se o warmup falhar.</p>
                           <code className="block bg-black p-6 rounded-2xl text-[10px] text-blue-400 font-mono leading-relaxed select-all border border-blue-500/20">
                             ALTER TABLE public.products OWNER TO postgres;<br/>
                             ALTER TABLE public.profiles OWNER TO postgres;<br/>
+                            ALTER TABLE public.orders OWNER TO postgres;<br/>
+                            ALTER TABLE public.site_content OWNER TO postgres;<br/>
+                            ALTER TABLE public.translations OWNER TO postgres;<br/>
+                            ALTER TABLE public.tools OWNER TO postgres;<br/>
                             GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;<br/>
                             NOTIFY pgrst, 'reload schema';
                           </code>
@@ -234,13 +262,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs italic">Sincronizando transações...</div>
                   ) : orderError && !useMockData ? (
                     <div className="p-16 border border-red-500/30 bg-red-500/5 rounded-[4rem] text-center space-y-10 animate-in zoom-in-95 duration-500 shadow-2xl">
-                      <h3 className="text-2xl font-serif text-white italic">Erro de Sincronia de Dados</h3>
+                      <h3 className="text-2xl font-serif text-white italic">Protocolo de Cache Interrompido</h3>
                       <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">{orderError}</p>
                       <div className="max-w-xl mx-auto p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-left space-y-6">
-                         <p className="text-[11px] text-slate-400 leading-relaxed italic">"O erro PGRST205 é resolvido em 90% dos casos clicando em HARD SYNC no painel lateral ou aguardando 1 minuto para o cache do Supabase expirar."</p>
+                         <p className="text-[11px] text-slate-400 leading-relaxed italic">"O erro PGRST205 significa que o banco de dados mudou mas a API ainda está 'viciada' no modelo antigo. O Kernel ativou o Auto-Repair. Se persistir, use o SQL Protocol."</p>
                          <div className="flex gap-4">
-                            <button onClick={forceHardSync} className="flex-1 bg-blue-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">Tentar Hard Sync Agora</button>
-                            <button onClick={() => setShowDoctor(true)} className="bg-red-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all">SQL Protocol</button>
+                            <button onClick={autoRepairCache} disabled={isRepairing} className="flex-1 bg-blue-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">Tentar Auto-Repair</button>
+                            <button onClick={() => setShowDoctor(true)} className="bg-red-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all">SQL Repair</button>
                          </div>
                       </div>
                     </div>

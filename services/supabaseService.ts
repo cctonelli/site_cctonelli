@@ -12,12 +12,24 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Motor de Resiliência Avançado: Tenta recuperar o cache do PostgREST automaticamente.
+ * Protocolo de Cold Boot: Tenta forçar o PostgREST a recarregar o schema.
+ */
+async function forceWarmup(tableName: string) {
+  try {
+    // Requisição HEAD é leve e costuma disparar o refresh do cache no Supabase
+    await supabase.from(tableName).select('count', { count: 'exact', head: true });
+  } catch (e) {
+    console.debug(`[Warmup] Falha silenciosa em ${tableName}`);
+  }
+}
+
+/**
+ * Motor de Resiliência Avançado com detecção de PGRST205
  */
 async function fetchWithRetry<T>(
   fetcher: () => Promise<{ data: T | null; error: any }>,
   retries = 5,
-  initialDelay = 1000
+  initialDelay = 1200
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
   for (let i = 0; i < retries; i++) {
@@ -25,9 +37,14 @@ async function fetchWithRetry<T>(
     if (!result.error) return result;
     
     lastError = result.error;
-    // Erros de cache (PGRST205) ou tabelas recém-criadas/alteradas (404)
-    if (lastError.code === 'PGRST205' || lastError.status === 404) {
-      const waitTime = initialDelay * Math.pow(1.5, i);
+    const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
+
+    if (isCacheError) {
+      // Se for erro de cache, tentamos o warmup em tabelas críticas para forçar o reload do PostgREST
+      if (i === 0) await forceWarmup('products');
+      if (i === 1) await forceWarmup('site_content');
+      
+      const waitTime = initialDelay * Math.pow(1.8, i);
       console.warn(`[Kernel] Sincronia de cache falhou (${lastError.code}). Tentativa ${i + 1}/${retries} em ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     } else {
@@ -87,6 +104,7 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
+    // Tenta carregar do banco de dados com protocolo de retentativa para PGRST205
     const { data, error } = await fetchWithRetry<Product[]>(() => 
       supabase.from('products').select('*').order('title')
     );
@@ -97,9 +115,10 @@ export const fetchProducts = async (): Promise<Product[]> => {
     }
     
     const dbProducts = data || [];
+    // Mescla dados do DB com fallback local para garantir que itens críticos (V8) sempre existam
     const merged = [...(dbProducts as Product[])];
     LOCAL_PRODUCTS.forEach(lp => {
-      if (!merged.find(p => p.id === lp.id || p.slug === lp.slug)) {
+      if (!merged.find(p => (p as any).id === lp.id || p.slug === lp.slug)) {
         merged.push(lp);
       }
     });
