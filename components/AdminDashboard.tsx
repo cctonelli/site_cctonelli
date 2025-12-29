@@ -75,7 +75,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       if (field === 'typography' && subfield === 'h1_size') root.style.setProperty('--h1-size', value);
       if (field === 'typography' && subfield === 'body_size') root.style.setProperty('--body-size', value);
       
-      // Inject Custom CSS in real-time
       if (field === 'theme' && subfield === 'custom_css') {
         let styleTag = document.getElementById('sovereign-custom-css');
         if (!styleTag) {
@@ -172,6 +171,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                     <div className="p-12 border border-red-500/30 bg-red-500/5 rounded-[3rem] text-center space-y-6">
                       <p className="text-red-500 font-black uppercase tracking-widest text-xs">Erro Crítico de Sincronização</p>
                       <p className="text-slate-400 text-sm">{orderError}</p>
+                      {orderError.includes('schema cache') && (
+                        <div className="mt-8 p-6 bg-black/40 rounded-2xl text-[10px] text-slate-500 font-mono text-left space-y-4">
+                          <p className="text-blue-500 uppercase font-black">SOLUÇÃO RECOMENDADA:</p>
+                          <p>A tabela 'public.orders' não foi detectada no cache do Supabase. Por favor, execute o DDL de criação da tabela 'orders' e em seguida o comando:</p>
+                          <code className="block bg-slate-900 p-4 rounded text-blue-400">NOTIFY pgrst, 'reload schema';</code>
+                        </div>
+                      )}
                     </div>
                   ) : orders.length === 0 ? (
                     <div className="p-20 border border-dashed border-white/5 rounded-[3rem] text-center text-slate-600 uppercase tracking-widest text-xs">Nenhum pedido pendente de auditoria.</div>
