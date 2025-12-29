@@ -12,46 +12,60 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Protocolo de Cold Boot: Tenta forçar o PostgREST a recarregar o schema.
+ * Protocolo de Warmup v5.0: Força o PostgREST a recarregar o schema cache de forma agressiva.
  */
-async function forceWarmup(tableName: string) {
+async function forceAggressiveWarmup() {
+  const tables = ['products', 'site_content', 'translations', 'orders', 'profiles'];
   try {
-    await supabase.from(tableName).select('count', { count: 'exact', head: true });
+    // Disparar requisições em série com pequenos delays para garantir que o PostgREST processe a invalidação
+    for (const table of tables) {
+      await supabase.from(table).select('count', { count: 'exact', head: true });
+      await new Promise(r => setTimeout(r, 100));
+    }
+    console.debug("[Kernel] Protocolo de Warmup de Schema concluído.");
   } catch (e) {
-    console.debug(`[Warmup] Falha silenciosa em ${tableName}`);
+    console.debug("[Kernel] Warmup interrompido (provavelmente tabelas inexistentes).");
   }
 }
 
 /**
- * Motor de Resiliência Avançado v3.0
+ * Motor de Resiliência v5.0 - Ultra-High Availability
+ * Focado em mitigar erros persistentes de PGRST205 (Schema Cache Mismatch).
  */
 async function fetchWithRetry<T>(
-  fetcher: () => Promise<{ data: T | null; error: any }>,
-  retries = 3,
-  initialDelay = 1000
+  fetcher: (attempt: number) => Promise<{ data: T | null; error: any }>,
+  retries = 7,
+  initialDelay = 1200
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
+  
   for (let i = 0; i < retries; i++) {
-    const result = await fetcher();
+    const result = await fetcher(i);
     if (!result.error) return result;
     
     lastError = result.error;
     
-    // Se a tabela não existe (42P01), não adianta tentar novamente. Ativamos redundância local.
+    // Erro 42P01: Tabela realmente não existe no banco. Ativar redundância imediatamente.
     if (lastError.code === '42P01') {
-      console.warn(`[Kernel] Tabela não encontrada no Supabase (42P01). Ativando Modo Offline.`);
       return { data: null, error: lastError };
     }
 
     const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
+    
     if (isCacheError) {
-      if (i === 0) await forceWarmup('products');
+      // Warmup nas primeiras tentativas
+      if (i === 0 || i === 2) await forceAggressiveWarmup();
+      
+      // Delay exponencial agressivo
       const waitTime = initialDelay * Math.pow(2, i);
+      console.warn(`[Kernel] PGRST205 Detectado. Protocolo de Sincronia de Cache em curso. Tentativa ${i + 1}/${retries} em ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     } else {
+      // Outros erros (Auth, Rede, etc)
       break; 
     }
   }
+  
   return { data: null, error: lastError };
 }
 
@@ -105,22 +119,36 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    const { data, error } = await fetchWithRetry<Product[]>(() => 
-      supabase.from('products').select('*').order('title')
-    );
+    // Usamos um "cache-buster" lógico em retentativas (filtros que não alteram o resultado mas mudam a query hash)
+    const { data, error } = await fetchWithRetry<Product[]>((attempt) => {
+      let query = supabase.from('products').select('*');
+      if (attempt > 0) {
+        // Injeção de redundância lógica para forçar bypass de cache de query
+        query = query.neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+      return query.order('title');
+    });
     
     if (error) {
-      console.error(`[Kernel] Erro Crítico na tabela 'products' (${error.code}). Ativando Cache Local.`);
+      if (error.code === '42P01') {
+        console.debug("[Kernel] Tabelas não provisionadas. Operando em modo Local Redundancy.");
+      } else if (error.code === 'PGRST205') {
+        console.error(`[Kernel] ERRO PGRST205 PERSISTENTE: O cache do servidor Supabase está corrompido ou desatualizado após 7 tentativas. Ativando Contingência Local.`);
+      } else {
+        console.error(`[Kernel] Falha de Sincronia em 'products' (${error.code}). Ativando contingência.`);
+      }
       return LOCAL_PRODUCTS;
     }
     
     const dbProducts = data || [];
     const merged = [...(dbProducts as Product[])];
+    
     LOCAL_PRODUCTS.forEach(lp => {
       if (!merged.find(p => (p as any).id === lp.id || p.slug === lp.slug)) {
         merged.push(lp);
       }
     });
+    
     return merged.sort((a, b) => (a.featured === b.featured) ? 0 : a.featured ? -1 : 1);
   } catch (e) {
     return LOCAL_PRODUCTS;
