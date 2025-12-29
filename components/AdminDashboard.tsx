@@ -24,7 +24,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [siteConfig, setSiteConfig] = useState<any>(null);
   const [useMockData, setUseMockData] = useState(false);
   const [showDoctor, setShowDoctor] = useState(false);
-  const [tableStatus, setTableStatus] = useState<Record<string, { visible: boolean; error?: string }>>({});
+  const [tableStatus, setTableStatus] = useState<Record<string, { visible: boolean; error?: string; code?: string }>>({});
+
+  const checkIntegrity = async () => {
+    const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'tools'];
+    const statusResults: Record<string, any> = {};
+    for (const t of tables) {
+      statusResults[t] = await checkTableVisibility(t);
+    }
+    setTableStatus(statusResults);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -32,13 +41,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       setSiteConfig(config);
       if (activeTab === 'orders') loadOrders();
       if (activeTab === 'users') loadUsers();
-      
-      const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'tools'];
-      const statusResults: Record<string, any> = {};
-      for (const t of tables) {
-        statusResults[t] = await checkTableVisibility(t);
-      }
-      setTableStatus(statusResults);
+      checkIntegrity();
     };
     init();
   }, [activeTab]);
@@ -59,7 +62,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       setOrders(data);
     } catch (e: any) {
       const errorMsg = e.message || e.details || JSON.stringify(e);
-      setOrderError(errorMsg.includes('PGRST205') || errorMsg.includes('404') ? "PGRST205/404: Tabela invisível no cache do PostgREST." : errorMsg);
+      if (errorMsg.includes('PGRST205') || errorMsg.includes('404')) {
+         setOrderError("CACHE_MISMATCH: O PostgREST não reconhece a estrutura desta tabela. Siga o protocolo Infra Doctor.");
+      } else {
+         setOrderError(errorMsg);
+      }
       setOrders([]);
     } finally {
       setLoadingOrders(false);
@@ -96,6 +103,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     } catch (e: any) { alert(`Erro: ${e.message}`); } finally { setProcessingId(null); }
   };
 
+  const hasSchemaErrors = Object.values(tableStatus).some((s: any) => !s.visible);
+
   if (!profile || profile.user_type !== 'admin') return null;
 
   return (
@@ -122,12 +131,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           
           <div className="pt-8 border-t border-white/5 space-y-4">
              <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-4">Kernel Integrity Check</p>
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Integrity Check</p>
+                  <button onClick={checkIntegrity} className="text-[7px] text-blue-500 hover:text-white transition-colors">REFRESH</button>
+                </div>
                 <div className="space-y-2">
                    {Object.entries(tableStatus).map(([name, status]) => (
                      <div key={name} className="flex justify-between items-center group">
                         <span className="text-[9px] text-slate-400 uppercase font-mono group-hover:text-white transition-colors">{name}</span>
-                        <div className={`w-2 h-2 rounded-full shadow-[0_0_8px] ${(status as { visible: boolean }).visible ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500 shadow-red-500/50 animate-pulse'}`}></div>
+                        <div className={`w-2 h-2 rounded-full shadow-[0_0_8px] ${(status as any).visible ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500 shadow-red-500/50 animate-pulse'}`}></div>
                      </div>
                    ))}
                 </div>
@@ -138,6 +150,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
 
         <main className="flex-1 overflow-y-auto p-12 lg:p-24 bg-grid relative custom-scrollbar">
           <div className="max-w-7xl mx-auto pb-40">
+            {/* SCHEMA INTEGRITY ALERT */}
+            <AnimatePresence>
+              {hasSchemaErrors && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mb-12 p-10 bg-red-600/10 border border-red-600/30 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 backdrop-blur-xl"
+                >
+                  <div className="flex items-center gap-8">
+                    <div className="w-16 h-16 bg-red-600 rounded-3xl flex items-center justify-center text-white font-bold text-3xl shadow-[0_0_30px_rgba(239,68,68,0.4)]">!</div>
+                    <div className="space-y-1">
+                      <h4 className="text-white font-serif italic text-2xl">Integridade de Cache Comprometida (PGRST205)</h4>
+                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">A API do Supabase está desincronizada com o banco de dados físico.</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowDoctor(true)} className="px-10 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-600/20">Protocolo de Reparo</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {activeTab === 'orders' && (
               <div className="space-y-12">
                 <div className="flex justify-between items-end">
@@ -157,43 +189,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
 
                 <AnimatePresence>
                 {showDoctor && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="p-10 bg-red-600/5 border border-red-600/20 rounded-[3rem] overflow-hidden space-y-8 backdrop-blur-md">
-                    <div className="flex items-center gap-4 border-b border-red-600/20 pb-4">
-                       <h4 className="text-[11px] font-black uppercase tracking-widest text-red-500">SQL EMERGENCY REPAIR (FIX 404 / PGRST205)</h4>
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="p-10 bg-slate-900 border border-red-600/20 rounded-[3rem] overflow-hidden space-y-10 backdrop-blur-md">
+                    <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+                       <h4 className="text-[12px] font-black uppercase tracking-widest text-blue-500">SUPABASE INFRA REPAIR KIT</h4>
                     </div>
                     
                     <div className="grid md:grid-cols-2 gap-12">
                        <div className="space-y-6">
-                          <p className="text-[10px] text-white uppercase tracking-widest font-bold">PROTOCOLO MASTER: RESET DE PERMISSÕES</p>
-                          <p className="text-xs text-slate-400 italic">Execute este script no SQL Editor do Supabase se as tabelas existirem mas o site retornar 404/PGRST205.</p>
-                          <code className="block bg-black p-4 rounded-xl text-[10px] text-blue-400 font-mono leading-relaxed select-all border border-blue-500/20">
-                            -- 1. Reset de Propriedade<br/>
-                            ALTER TABLE public.orders OWNER TO postgres;<br/>
-                            ALTER TABLE public.products OWNER TO postgres;<br/>
-                            ALTER TABLE public.profiles OWNER TO postgres;<br/>
-                            ALTER TABLE public.site_content OWNER TO postgres;<br/>
-                            ALTER TABLE public.translations OWNER TO postgres;<br/>
-                            ALTER TABLE public.tools OWNER TO postgres;<br/>
-                            <br/>
-                            -- 2. Conceder Acesso Universal ao Schema<br/>
-                            GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;<br/>
-                            GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;<br/>
-                            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;<br/>
-                            <br/>
-                            -- 3. Forçar Recarga do PostgREST<br/>
+                          <p className="text-[11px] text-white uppercase tracking-widest font-bold">SCRIPT 01: RECARGA DE SCHEMA (RÁPIDO)</p>
+                          <p className="text-xs text-slate-500 italic">Este comando força o PostgREST a reconstruir o mapa de tabelas. Resolva o PGRST205 instantaneamente.</p>
+                          <code className="block bg-black p-6 rounded-2xl text-[11px] text-green-500 font-mono leading-relaxed select-all border border-green-500/20 shadow-inner">
                             NOTIFY pgrst, 'reload schema';
                           </code>
                        </div>
                        
                        <div className="space-y-6">
-                          <p className="text-[10px] text-white uppercase tracking-widest font-bold">POR QUE O RESTART FALHOU?</p>
-                          <p className="text-xs text-slate-400 italic">O restart limpa o cache, mas se o OWNER das tabelas não for o administrador, o PostgREST pode ignorá-las por segurança.</p>
-                          <ul className="text-[9px] text-slate-500 uppercase tracking-widest space-y-3 font-mono">
-                             <li className="flex items-center gap-3"><div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div> 404 = Tabela não encontrada no schema cache</li>
-                             <li className="flex items-center gap-3"><div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div> 400 = Coluna inexistente ou erro de sintaxe</li>
-                             <li className="flex items-center gap-3"><div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div> Solução = GRANT SELECT em public</li>
-                          </ul>
+                          <p className="text-[11px] text-white uppercase tracking-widest font-bold">SCRIPT 02: PERMISSÕES DE PROPRIEDADE</p>
+                          <p className="text-xs text-slate-500 italic">Se o erro persistir, as tabelas podem estar sem dono correto. Rode isso para forçar o acesso.</p>
+                          <code className="block bg-black p-6 rounded-2xl text-[10px] text-blue-400 font-mono leading-relaxed select-all border border-blue-500/20">
+                            ALTER TABLE public.products OWNER TO postgres;<br/>
+                            ALTER TABLE public.profiles OWNER TO postgres;<br/>
+                            ALTER TABLE public.orders OWNER TO postgres;<br/>
+                            GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;<br/>
+                            NOTIFY pgrst, 'reload schema';
+                          </code>
                        </div>
+                    </div>
+                    
+                    <div className="p-8 bg-blue-600/5 rounded-3xl border border-blue-600/10">
+                       <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.4em] mb-4">Diagnostic Log</p>
+                       <ul className="text-[9px] font-mono text-slate-500 space-y-2">
+                          {Object.entries(tableStatus).map(([name, status]) => (
+                            <li key={name} className="flex gap-4">
+                               <span className="text-slate-600">[{new Date().toLocaleTimeString()}]</span>
+                               <span className="uppercase">{name}:</span>
+                               {/* Fix: Explicitly cast status to any to access visible and code properties */}
+                               <span className={(status as any).visible ? 'text-green-500' : 'text-red-500'}>
+                                 {(status as any).visible ? 'SYNC_OK' : `FAIL_${(status as any).code || 'UNKNOWN'}`}
+                               </span>
+                            </li>
+                          ))}
+                       </ul>
                     </div>
                   </motion.div>
                 )}
@@ -206,9 +242,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                     <div className="p-16 border border-red-500/30 bg-red-500/5 rounded-[4rem] text-center space-y-10 animate-in zoom-in-95 duration-500 shadow-2xl">
                       <h3 className="text-2xl font-serif text-white italic">Protocolo de Dados Interrompido</h3>
                       <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">{orderError}</p>
-                      <div className="max-w-xl mx-auto p-6 bg-black/40 rounded-3xl border border-white/5 text-left space-y-4">
-                         <p className="text-[11px] text-slate-400 leading-relaxed italic">"O erro 404 ou PGRST205 significa que as tabelas existem fisicamente, mas a API não tem permissão de leitura ou o cache do schema está preso."</p>
-                         <button onClick={() => setShowDoctor(true)} className="bg-red-600 text-white px-8 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500 transition-all">Abrir SQL Repair</button>
+                      <div className="max-w-xl mx-auto p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-left space-y-6">
+                         <p className="text-[11px] text-slate-400 leading-relaxed italic">"O PostgREST (camada de API) perdeu a referência física das suas tabelas. Isso acontece após restarts do Supabase ou migrações de schema. O Kernel está operando em redundância local."</p>
+                         <button onClick={() => setShowDoctor(true)} className="w-full bg-red-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all">Abrir Supabase Infra Repair</button>
                       </div>
                     </div>
                   ) : orders.length === 0 ? (
@@ -242,7 +278,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               </div>
             )}
 
-            {/* Outras abas permanecem com a mesma lógica robusta */}
+            {/* Outras abas (users, visual_dna, marketplace) seguem a mesma lógica de integridade */}
             {activeTab === 'users' && (
                <div className="space-y-16">
                   <h2 className="text-6xl font-serif text-white italic tracking-tighter">Partners & <span className="text-blue-600">CRM.</span></h2>
