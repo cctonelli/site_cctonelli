@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Profile, Order } from '../types';
-import { fetchAllOrders, fetchSiteConfig, supabase, upsertItem } from '../services/supabaseService';
+import { fetchAllOrders, fetchSiteConfig, supabase, upsertItem, checkTableVisibility } from '../services/supabaseService';
 import AdminCrudSection from './AdminCrudSection';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,6 +24,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [siteConfig, setSiteConfig] = useState<any>(null);
   const [useMockData, setUseMockData] = useState(false);
   const [showDoctor, setShowDoctor] = useState(false);
+  const [tableStatus, setTableStatus] = useState<Record<string, { visible: boolean; error?: string }>>({});
 
   useEffect(() => {
     const init = async () => {
@@ -31,6 +32,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       setSiteConfig(config);
       if (activeTab === 'orders') loadOrders();
       if (activeTab === 'users') loadUsers();
+      
+      // Diagnóstico inicial de infraestrutura
+      const tables = ['orders', 'profiles', 'products', 'site_content'];
+      const statusResults: Record<string, any> = {};
+      for (const t of tables) {
+        statusResults[t] = await checkTableVisibility(t);
+      }
+      setTableStatus(statusResults);
     };
     init();
   }, [activeTab]);
@@ -63,9 +72,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       setOrders(data);
     } catch (e: any) {
       console.error("[SalesVault] Erro capturado na UI:", e);
-      // Identificar erro de cache específico do PostgREST
-      const isCacheError = e.code === 'PGRST205' || e.message?.includes('schema cache') || e.message?.includes('PGRST205');
-      setOrderError(isCacheError ? "PGRST205: Desvio de Schema detectado. O cache do PostgREST está corrompido." : e.message || "Erro desconhecido na sincronia.");
+      const errorMsg = e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
+      const isCacheError = errorMsg.includes('PGRST205') || errorMsg.includes('schema cache');
+      setOrderError(isCacheError ? "PGRST205: Tabela não encontrada no cache do schema." : errorMsg);
       setOrders([]);
     } finally {
       setLoadingOrders(false);
@@ -138,7 +147,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             <button onClick={() => setActiveTab('settings')} className={`px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em] text-left transition-all border ${activeTab === 'settings' ? 'bg-blue-600 text-white border-blue-400' : 'text-slate-600 border-white/5 hover:bg-white/5'}`}>Geral & SEO</button>
           </nav>
           
-          <div className="pt-8 border-t border-white/5">
+          <div className="pt-8 border-t border-white/5 space-y-4">
+             <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                <p className="text-[7px] font-black uppercase tracking-widest text-slate-500 mb-2">Infra Status</p>
+                <div className="space-y-1">
+                   {Object.entries(tableStatus).map(([name, status]) => (
+                     <div key={name} className="flex justify-between items-center">
+                        <span className="text-[8px] text-slate-400 uppercase font-mono">{name}</span>
+                        {/* Fix: Explicitly cast status to access 'visible' property if inference fails */}
+                        <div className={`w-1.5 h-1.5 rounded-full ${(status as { visible: boolean }).visible ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                     </div>
+                   ))}
+                </div>
+             </div>
              <button onClick={onClose} className="w-full text-slate-700 hover:text-red-500 text-[11px] font-black uppercase tracking-[0.6em] transition-colors">Encerrar Protocolo Admin</button>
           </div>
         </aside>
@@ -175,28 +196,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                        <div className="space-y-6">
                           <p className="text-[10px] text-white uppercase tracking-widest font-bold">SOLUÇÃO DEFINITIVA (RESTART PROJECT)</p>
                           <p className="text-xs text-slate-400 leading-relaxed italic">
-                            O cache do PostgREST pode estar corrompido ou zumbi. O "Restart Project" reinicia todos os containers do Supabase (DB, API, Auth), limpando 100% o cache do schema sem apagar dados.
+                            O erro PGRST205 ocorre quando o PostgREST (API) não sincronizou o schema físico do Postgres. O simples reload nem sempre basta.
                           </p>
                           <div className="p-6 bg-black/40 rounded-2xl border border-blue-500/20 space-y-4">
-                             <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Procedimento Dashboard:</p>
-                             <p className="text-[10px] text-slate-300">1. Settings > General > Project Settings</p>
-                             <p className="text-[10px] text-slate-300">2. Role até o fim e clique em <span className="text-red-500 font-bold">"Restart Project"</span>.</p>
-                             <p className="text-[10px] text-slate-300">3. Aguarde 60 segundos até o status ficar "Active".</p>
+                             <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Procedimento Dashboard Supabase:</p>
+                             <ul className="text-[10px] text-slate-300 space-y-2">
+                                <li>1. Vá em <strong>Project Settings > General</strong>.</li>
+                                <li>2. Clique no botão vermelho <strong>"Restart Project"</strong>.</li>
+                                <li>3. Isso reinicia o DB e a API limpando 100% o cache.</li>
+                                <li>4. Aguarde 60s até o status ficar <strong>"Active"</strong>.</li>
+                             </ul>
                           </div>
                        </div>
                        
                        <div className="space-y-6">
-                          <p className="text-[10px] text-white uppercase tracking-widest font-bold">SOLUÇÃO VIA SQL (SCHEMA DOCTOR)</p>
+                          <p className="text-[10px] text-white uppercase tracking-widest font-bold">ANATOMIA DO RESTART</p>
                           <p className="text-xs text-slate-400 leading-relaxed italic">
-                            Se não puder reiniciar o projeto, force o PostgREST a recarregar as permissões e o schema via SQL:
+                            O que acontece durante o Restart?
                           </p>
-                          <code className="block bg-black p-4 rounded-xl text-[10px] text-green-500 font-mono leading-relaxed select-all border border-green-500/20">
-                            -- 1. Forçar Reload Schema<br/>
-                            NOTIFY pgrst, 'reload schema';<br/>
-                            -- 2. Garantir Permissões RLS<br/>
-                            GRANT ALL ON TABLE public.orders TO postgres, anon, authenticated, service_role;<br/>
-                            GRANT ALL ON TABLE public.profiles TO postgres, anon, authenticated, service_role;
-                          </code>
+                          <ul className="text-[9px] text-slate-500 uppercase tracking-widest space-y-3 font-mono">
+                             <li className="flex items-center gap-3"><div className="w-1 h-1 bg-blue-600 rounded-full"></div> Reinicia PostgreSQL (DB)</li>
+                             <li className="flex items-center gap-3"><div className="w-1 h-1 bg-blue-600 rounded-full"></div> Reinicia PostgREST (API Cache)</li>
+                             <li className="flex items-center gap-3"><div className="w-1 h-1 bg-blue-600 rounded-full"></div> Reinicia Auth & Realtime</li>
+                             <li className="flex items-center gap-3"><div className="w-1 h-1 bg-blue-600 rounded-full"></div> Zero perda de dados</li>
+                          </ul>
                        </div>
                     </div>
                   </motion.div>
@@ -207,26 +230,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                   {loadingOrders ? (
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs">Acessando Banco Central...</div>
                   ) : orderError && !useMockData ? (
-                    <div className="p-16 border border-red-500/30 bg-red-500/5 rounded-[4rem] text-center space-y-10 animate-in zoom-in-95 duration-500 shadow-2xl">
-                      <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500 mb-4 animate-pulse">
+                    <div className="p-16 border border-red-500/30 bg-red-500/5 rounded-[4rem] text-center space-y-10 animate-in zoom-in-95 duration-500 shadow-2xl overflow-hidden relative">
+                      <div className="absolute inset-0 bg-grid opacity-10"></div>
+                      <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500 mb-4 animate-pulse relative z-10">
                          <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                       </div>
-                      <div className="space-y-4">
-                        <h3 className="text-2xl font-serif text-white italic">Protocolo Interrompido: Cache Desatualizado</h3>
-                        <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">CÓDIGO DE ERRO: {orderError.includes('PGRST205') ? 'PGRST205 (Schema Missing)' : 'SYNC_FAIL'}</p>
-                        <p className="text-slate-400 text-sm max-w-2xl mx-auto italic leading-relaxed">O Supabase não está enxergando a tabela 'orders' no cache da API. O banco de dados físico está íntegro, mas a "ponte" PostgREST está corrompida.</p>
+                      <div className="space-y-4 relative z-10">
+                        <h3 className="text-2xl font-serif text-white italic">Protocolo Interrompido: PGRST205 Detectado</h3>
+                        <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">Falha Crítica na Visibilidade da Tabela 'orders'</p>
+                        <p className="text-slate-400 text-sm max-w-2xl mx-auto italic leading-relaxed">O servidor PostgREST perdeu a referência física da tabela. Siga o protocolo de reinicialização total para restaurar o Command Center.</p>
                       </div>
                       
-                      <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                        <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-left space-y-4">
-                           <p className="text-blue-500 uppercase font-black tracking-widest text-[9px]">Ação Recomendada (Eficácia 100%)</p>
-                           <p className="text-[11px] text-slate-300">Faça o <span className="text-white font-bold">Restart Project</span> nas configurações do Supabase. Isso limpa todos os processos zumbis do PostgREST.</p>
-                           <button onClick={() => setShowDoctor(true)} className="text-[9px] font-black uppercase text-blue-400 hover:text-white transition-colors">Como fazer o Restart?</button>
+                      <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto relative z-10">
+                        <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-left space-y-4 group hover:border-blue-500/30 transition-all">
+                           <p className="text-blue-500 uppercase font-black tracking-widest text-[9px]">Ação Master: RESTART PROJECT</p>
+                           <p className="text-[11px] text-slate-300">Reinicie o projeto via Supabase Settings. É o único comando que limpa 100% o cache de workers zumbis.</p>
+                           <button onClick={() => setShowDoctor(true)} className="text-[9px] font-black uppercase text-blue-400 hover:text-white transition-colors border-b border-blue-400/20 pb-1">Ver Instruções do Dashboard</button>
                         </div>
-                        <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-left space-y-4">
-                           <p className="text-yellow-500 uppercase font-black tracking-widest text-[9px]">Ação Emergencial (Visual Only)</p>
-                           <p className="text-[11px] text-slate-300">Ative o <span className="text-white font-bold">Modo Mock</span> para auditar dados locais enquanto o servidor reinicia.</p>
-                           <button onClick={() => setUseMockData(true)} className="bg-yellow-500/10 text-yellow-500 px-6 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-all">Ativar Mock</button>
+                        <div className="p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-left space-y-4 group hover:border-yellow-500/30 transition-all">
+                           <p className="text-yellow-500 uppercase font-black tracking-widest text-[9px]">Ação Emergencial: MOCK DATA</p>
+                           <p className="text-[11px] text-slate-300">Trabalhe em modo de simulação visual enquanto o servidor é restaurado pela equipe de infra.</p>
+                           <button onClick={() => setUseMockData(true)} className="bg-yellow-500/10 text-yellow-500 px-6 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-all border border-yellow-500/20">Ativar Modo Mock</button>
                         </div>
                       </div>
                     </div>
@@ -261,7 +285,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               </div>
             )}
 
-            {/* Outras abas mantidas... */}
             {activeTab === 'users' && (
                <div className="space-y-16">
                   <h2 className="text-6xl font-serif text-white italic tracking-tighter">Partners & <span className="text-blue-600">CRM.</span></h2>
@@ -321,7 +344,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               </div>
             )}
             
-            {/* Abas Marketplace, Editorial e Settings permanecem conforme o padrão original */}
+            {activeTab === 'marketplace' && (
+              <div className="space-y-20">
+                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">Marketplace <span className="text-blue-600">Forge.</span></h2>
+                 <AdminCrudSection 
+                      tableName="products" 
+                      title="Ativos Digitais" 
+                      fields={[
+                        { key: 'title', label: 'Título do Ativo', placeholder: 'ex: V8 Matrix Edition' }, 
+                        { key: 'slug', label: 'Slug / URL', placeholder: 'ex: v8-matrix' }, 
+                        { key: 'subtitle', label: 'Lead Curto (subtítulo)', type: 'textarea' }, 
+                        { key: 'image_url', label: 'URL da Imagem Principal' }, 
+                        { key: 'pricing_type', label: 'Tipo (subscription/one_time)' }
+                      ]} 
+                      displayColumns={['title', 'slug']} 
+                   />
+              </div>
+            )}
+
+            {activeTab === 'editorial' && (
+               <div className="space-y-20">
+                  <h2 className="text-6xl font-serif text-white italic tracking-tighter">Editorial <span className="text-blue-600">Forge.</span></h2>
+                  <AdminCrudSection tableName="insights" title="Insights & Artigos" fields={[{ key: 'title', label: 'Título da Edição' }, { key: 'category', label: 'Editoria' }, { key: 'image_url', label: 'URL da Mídia Editorial' }, { key: 'excerpt', label: 'Lead Editorial', type: 'textarea' }, { key: 'content', label: 'Corpo do Artigo (HTML)', type: 'rich-text' }]} displayColumns={['title', 'category']} />
+               </div>
+            )}
+
+            {activeTab === 'settings' && siteConfig && (
+              <div className="space-y-16">
+                 <h2 className="text-6xl font-serif text-white italic tracking-tighter">Geral & <span className="text-blue-600">SEO.</span></h2>
+                 <div className="grid md:grid-cols-2 gap-12">
+                    <div className="p-10 bg-slate-900/60 rounded-[3rem] border border-white/5 space-y-10 backdrop-blur-3xl">
+                       <h3 className="text-xl font-bold text-white uppercase tracking-widest border-l-2 border-blue-600 pl-4">Canais de Conexão</h3>
+                       <div className="space-y-8">
+                          <div><label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">E-mail Corporativo</label><input type="text" value={siteConfig.contact.email} onChange={e => handleUpdateConfig('contact', 'email', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none" /></div>
+                          <div><label className="text-[10px] text-slate-500 uppercase tracking-widest block mb-4">WhatsApp Oficial</label><input type="text" value={siteConfig.contact.whatsapp} onChange={e => handleUpdateConfig('contact', 'whatsapp', e.target.value)} className="w-full bg-black text-white px-6 py-5 rounded-2xl border border-white/5 outline-none" /></div>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+            )}
           </div>
         </main>
       </div>

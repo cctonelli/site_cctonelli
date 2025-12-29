@@ -11,6 +11,22 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+/**
+ * Diagnóstico de Schema: Verifica se uma tabela é visível para o PostgREST.
+ * Útil para identificar o erro PGRST205 em tempo real.
+ */
+export const checkTableVisibility = async (tableName: string): Promise<{ visible: boolean; error?: string }> => {
+  try {
+    const { error } = await supabase.from(tableName).select('count', { count: 'exact', head: true });
+    if (error) {
+      return { visible: false, error: `${error.code}: ${error.message}` };
+    }
+    return { visible: true };
+  } catch (e: any) {
+    return { visible: false, error: e.message };
+  }
+};
+
 export const fetchSiteConfig = async () => {
   try {
     const { data } = await supabase.from('site_content').select('*').eq('page', 'config');
@@ -28,7 +44,6 @@ export const fetchSiteConfig = async () => {
   return SITE_CONFIG;
 };
 
-// Added fix for missing fetchMetrics
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
     const { data } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order');
@@ -38,7 +53,6 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
   }
 };
 
-// Added fix for missing fetchCarouselImages
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
     const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
@@ -50,7 +64,11 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    const { data } = await supabase.from('products').select('*').order('title');
+    const { data, error } = await supabase.from('products').select('*').order('title');
+    if (error) {
+      console.warn("[Kernel] Falha ao carregar produtos (Provável PGRST205):", error.message);
+      return LOCAL_PRODUCTS;
+    }
     const dbProducts = data || [];
     const merged = [...dbProducts];
     LOCAL_PRODUCTS.forEach(lp => {
@@ -85,7 +103,6 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   return (data && data.length > 0) ? data : LOCAL_INSIGHTS;
 };
 
-// Added fix for missing fetchInsightById
 export const fetchInsightById = async (id: string): Promise<Insight | null> => {
   try {
     const { data } = await supabase.from('insights').select('*').eq('id', id).maybeSingle();
@@ -104,16 +121,16 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
     .order('created_at', { ascending: false });
   
   if (error) {
-    console.error("[SalesVault] Erro PGRST detectado:", error.code, error.message);
+    console.error("[SalesVault] Erro na consulta de ordens:", error.code, error.message);
     
-    // Fallback agressivo: Tentar sem Join para descartar erro de FK corrompida no cache
+    // Fallback: Tentar sem Join para descartar erro de FK corrompida no cache
     const { data: simpleData, error: simpleError } = await supabase
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (simpleError) {
-      console.error("[SalesVault] Falha total em ordens (mesmo sem join):", simpleError.code, simpleError.message);
+      console.error("[SalesVault] Falha total em ordens:", simpleError.code, simpleError.message);
       throw simpleError;
     }
     
@@ -146,10 +163,14 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
 };
 
 export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
-  const { data } = await supabase.from('translations').select('*').eq('lang', lang);
-  const transMap: Record<string, string> = {};
-  data?.forEach(item => { transMap[item.key] = item.value; });
-  return transMap;
+  try {
+    const { data } = await supabase.from('translations').select('*').eq('lang', lang);
+    const transMap: Record<string, string> = {};
+    data?.forEach(item => { transMap[item.key] = item.value; });
+    return transMap;
+  } catch (e) {
+    return {};
+  }
 };
 
 export const signIn = async (email: string, password: string) => {
@@ -196,8 +217,12 @@ export const fetchUsageByProduct = async (userProductId: string): Promise<V8Matr
 };
 
 export const fetchTools = async (): Promise<Tool[]> => {
-  const { data } = await supabase.from('tools').select('*').eq('is_active', true).order('name');
-  return data || [];
+  try {
+    const { data } = await supabase.from('tools').select('*').eq('is_active', true).order('name');
+    return data || [];
+  } catch (e) {
+    return [];
+  }
 };
 
 export const submitContact = async (contact: Contact): Promise<boolean> => {
