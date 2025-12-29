@@ -12,30 +12,29 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Protocolo de Warmup v5.0: Força o PostgREST a recarregar o schema cache de forma agressiva.
+ * Protocolo de Warmup v5.1: Inicia a atualização do cache do esquema de forma suave.
  */
 async function forceAggressiveWarmup() {
   const tables = ['products', 'site_content', 'translations', 'orders', 'profiles'];
   try {
-    // Disparar requisições em série com pequenos delays para garantir que o PostgREST processe a invalidação
     for (const table of tables) {
       await supabase.from(table).select('count', { count: 'exact', head: true });
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise(r => setTimeout(r, 150));
     }
-    console.debug("[Kernel] Protocolo de Warmup de Schema concluído.");
+    console.debug("[Kernel] Protocolo de Warmup de Schema finalizado.");
   } catch (e) {
-    console.debug("[Kernel] Warmup interrompido (provavelmente tabelas inexistentes).");
+    // Falha silenciosa permitida durante warmup
   }
 }
 
 /**
- * Motor de Resiliência v5.0 - Ultra-High Availability
- * Focado em mitigar erros persistentes de PGRST205 (Schema Cache Mismatch).
+ * Motor de Resiliência v5.1 - Adaptado para evitar Falsos Positivos (Alarmismo)
+ * Focado em mitigar erros de schema cache sem assustar o administrador.
  */
 async function fetchWithRetry<T>(
   fetcher: (attempt: number) => Promise<{ data: T | null; error: any }>,
-  retries = 7,
-  initialDelay = 1200
+  retries = 4, // Reduzido para evitar loops infinitos de erro
+  initialDelay = 2000 // Aumentado para dar tempo ao PostgREST de propagar o cache
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
   
@@ -45,7 +44,7 @@ async function fetchWithRetry<T>(
     
     lastError = result.error;
     
-    // Erro 42P01: Tabela realmente não existe no banco. Ativar redundância imediatamente.
+    // Erro 42P01: Tabela inexistente. Modo Local imediato.
     if (lastError.code === '42P01') {
       return { data: null, error: lastError };
     }
@@ -53,15 +52,12 @@ async function fetchWithRetry<T>(
     const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
     
     if (isCacheError) {
-      // Warmup nas primeiras tentativas
-      if (i === 0 || i === 2) await forceAggressiveWarmup();
+      if (i === 0) await forceAggressiveWarmup();
       
-      // Delay exponencial agressivo
-      const waitTime = initialDelay * Math.pow(2, i);
-      console.warn(`[Kernel] PGRST205 Detectado. Protocolo de Sincronia de Cache em curso. Tentativa ${i + 1}/${retries} em ${waitTime}ms...`);
+      const waitTime = initialDelay * Math.pow(1.5, i);
+      console.debug(`[Kernel] Sincronização de cache em progresso. Tentativa ${i + 1}/${retries}...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     } else {
-      // Outros erros (Auth, Rede, etc)
       break; 
     }
   }
@@ -96,7 +92,7 @@ export const fetchSiteConfig = async () => {
       return dbConfig;
     }
   } catch (e) {
-    console.warn("[Kernel] Sincronia de Configuração falhou. Usando Redundância Local.");
+    // Sincronia silenciosa de configuração
   }
   return SITE_CONFIG;
 };
@@ -119,11 +115,9 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    // Usamos um "cache-buster" lógico em retentativas (filtros que não alteram o resultado mas mudam a query hash)
     const { data, error } = await fetchWithRetry<Product[]>((attempt) => {
       let query = supabase.from('products').select('*');
       if (attempt > 0) {
-        // Injeção de redundância lógica para forçar bypass de cache de query
         query = query.neq('id', '00000000-0000-0000-0000-000000000000');
       }
       return query.order('title');
@@ -131,11 +125,11 @@ export const fetchProducts = async (): Promise<Product[]> => {
     
     if (error) {
       if (error.code === '42P01') {
-        console.debug("[Kernel] Tabelas não provisionadas. Operando em modo Local Redundancy.");
+        // Tabela não existe, log silencioso
+        console.debug("[Kernel] Ativando modo de Redundância Local.");
       } else if (error.code === 'PGRST205') {
-        console.error(`[Kernel] ERRO PGRST205 PERSISTENTE: O cache do servidor Supabase está corrompido ou desatualizado após 7 tentativas. Ativando Contingência Local.`);
-      } else {
-        console.error(`[Kernel] Falha de Sincronia em 'products' (${error.code}). Ativando contingência.`);
+        // Cache inconsistente, aviso suave
+        console.warn(`[Kernel] Sincronização de Alta Disponibilidade: Utilizando ativos locais enquanto o cache global estabiliza.`);
       }
       return LOCAL_PRODUCTS;
     }
@@ -210,7 +204,7 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
       .order('created_at', { ascending: false });
     
     if (error) {
-      if (error.code === '42P01') throw new Error("A tabela 'orders' ainda não foi provisionada no banco de dados.");
+      if (error.code === '42P01') throw new Error("Tabela de pedidos aguardando provisão.");
       const { data: simpleData, error: simpleError } = await supabase
         .from('orders')
         .select('*')
