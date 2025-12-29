@@ -6,20 +6,6 @@ import {
 } from '../types';
 import { LOCAL_PRODUCTS, LOCAL_VARIANTS, LOCAL_BLOCKS, LOCAL_INSIGHTS, SITE_CONFIG } from './localRegistry';
 
-/**
- * DATABASE POLICIES REQUIREMENTS (RLS):
- * 1. profiles: users can CRUD own, admin ALL.
- * 2. orders: users can Select/Insert own, admin ALL.
- * 3. products/insights/content: public SELECT, admin ALL.
- * 4. contacts: public INSERT, admin ALL.
- * 5. user_products: users select own, admin ALL.
- * 
- * Helper SQL for admin check:
- * CREATE OR REPLACE FUNCTION is_admin() RETURNS boolean AS $$
- * BEGIN RETURN (SELECT user_type FROM profiles WHERE id = auth.uid()) = 'admin'; END;
- * $$ LANGUAGE plpgsql SECURITY DEFINER;
- */
-
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
@@ -43,8 +29,24 @@ export const fetchSiteConfig = async () => {
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
-  const { data } = await supabase.from('products').select('*').order('title');
-  return (data && data.length > 0) ? data : LOCAL_PRODUCTS;
+  try {
+    const { data } = await supabase.from('products').select('*').order('title');
+    const dbProducts = data || [];
+    
+    // Merge Strategy: Combine DB products with Local Registry products
+    // Local products take precedence if IDs match for consistency, 
+    // but we add everything missing from LOCAL_PRODUCTS to ensure the Simulator appears.
+    const merged = [...dbProducts];
+    LOCAL_PRODUCTS.forEach(lp => {
+      if (!merged.find(p => p.id === lp.id || p.slug === lp.slug)) {
+        merged.push(lp);
+      }
+    });
+    
+    return merged.sort((a, b) => (a.featured === b.featured) ? 0 : a.featured ? -1 : 1);
+  } catch (e) {
+    return LOCAL_PRODUCTS;
+  }
 };
 
 export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
@@ -83,10 +85,6 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   return data || [];
 };
 
-/**
- * Fetches all orders with an explicit error throwing mechanism 
- * to allow UI components to handle and display error messages.
- */
 export const fetchAllOrders = async (): Promise<Order[]> => {
   const { data, error } = await supabase
     .from('orders')

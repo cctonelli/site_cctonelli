@@ -22,6 +22,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [orderError, setOrderError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [siteConfig, setSiteConfig] = useState<any>(null);
+  const [useMockData, setUseMockData] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -37,6 +38,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     setLoadingOrders(true);
     setOrderError(null);
     try {
+      if (useMockData) {
+        // Simulação de dados para quando o PostgREST falha
+        const mock: Order[] = [
+          {
+            id: 'mock-1',
+            user_id: 'user-1',
+            product_id: 'v8-matrix-edition',
+            variant_id: 'v8-semestral',
+            status: 'pending',
+            amount: 599.00,
+            approved_by_admin: false,
+            payment_method: 'pix',
+            pix_qrcode_url: null,
+            download_link: null,
+            // Added missing gender property to satisfy Profile interface
+            profiles: { id: 'user-1', full_name: 'John Doe (Sovereign Partner)', email: 'john@matrix.com', whatsapp: '+55 11 99999-9999', user_type: 'client', cpf_cnpj: '000.000.000-00', gender: null }
+          }
+        ];
+        setTimeout(() => { setOrders(mock); setLoadingOrders(false); }, 1000);
+        return;
+      }
+
       const data = await fetchAllOrders();
       setOrders(data);
     } catch (e: any) {
@@ -90,6 +113,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   };
 
   const approveOrder = async (order: Order) => {
+    if (useMockData) {
+      alert("MOCK MODE: Aprovação simulada com sucesso.");
+      return;
+    }
+
     const clientName = (order as any).profiles?.full_name || (order as any).profiles?.email || 'Partner';
     if (!confirm(`Confirmar liberação de ativo para ${clientName}?`)) return;
     
@@ -161,28 +189,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             {activeTab === 'orders' && (
               <div className="space-y-12">
                 <div className="flex justify-between items-end">
-                  <h2 className="text-6xl font-serif text-white italic tracking-tighter">Sales <span className="text-blue-600">Vault.</span></h2>
-                  <button onClick={loadOrders} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-white transition-colors">Recarregar Ledger</button>
+                  <div className="space-y-2">
+                    <h2 className="text-6xl font-serif text-white italic tracking-tighter">Sales <span className="text-blue-600">Vault.</span></h2>
+                    {useMockData && <p className="text-[10px] text-yellow-500 font-black uppercase tracking-widest">Atenção: Modo Simulação Ativo (Kernel Local)</p>}
+                  </div>
+                  <div className="flex gap-6">
+                    <button 
+                      onClick={() => { setUseMockData(!useMockData); loadOrders(); }} 
+                      className={`text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-all ${useMockData ? 'bg-yellow-500 text-black border-yellow-400' : 'text-slate-600 border-white/5'}`}
+                    >
+                      {useMockData ? 'Sair do Mock' : 'Ativar Mock'}
+                    </button>
+                    <button onClick={loadOrders} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-white transition-colors">Recarregar Ledger</button>
+                  </div>
                 </div>
                 <div className="grid gap-8">
                   {loadingOrders ? (
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs">Sincronizando transações...</div>
-                  ) : orderError ? (
-                    <div className="p-12 border border-red-500/30 bg-red-500/5 rounded-[3rem] text-center space-y-6">
-                      <p className="text-red-500 font-black uppercase tracking-widest text-xs">Erro Crítico de Sincronização</p>
+                  ) : orderError && !useMockData ? (
+                    <div className="p-12 border border-red-500/30 bg-red-500/5 rounded-[3rem] text-center space-y-6 animate-in zoom-in-95 duration-500">
+                      <p className="text-red-500 font-black uppercase tracking-widest text-xs">Erro Crítico de Sincronização (PGRST205)</p>
                       <p className="text-slate-400 text-sm">{orderError}</p>
-                      {orderError.includes('schema cache') && (
-                        <div className="mt-8 p-6 bg-black/40 rounded-2xl text-[10px] text-slate-500 font-mono text-left space-y-4">
-                          <p className="text-blue-500 uppercase font-black">SOLUÇÃO RECOMENDADA:</p>
-                          <p>A tabela 'public.orders' não foi detectada no cache do Supabase. Por favor, execute o DDL de criação da tabela 'orders' e em seguida o comando:</p>
-                          <code className="block bg-slate-900 p-4 rounded text-blue-400">NOTIFY pgrst, 'reload schema';</code>
+                      <div className="mt-8 p-10 bg-black/40 rounded-[2.5rem] text-[11px] text-slate-500 font-mono text-left space-y-6 border border-white/5">
+                        <p className="text-blue-500 uppercase font-black tracking-widest border-b border-blue-600/20 pb-4">PROTOCOLO DE REPARO MASTER:</p>
+                        <p>O cache do schema do Supabase (PostgREST) está corrompido ou dessincronizado. O comando NOTIFY pode falhar se houver workers zumbis.</p>
+                        <div className="space-y-4">
+                           <p className="text-white font-bold">PASSO 1 (Dashboard Supabase):</p>
+                           <p>Vá em <span className="text-blue-400">Database &gt; API Settings</span> e clique no botão <span className="bg-blue-600 text-white px-3 py-1 rounded">RESTART API</span>. Isso força o reload total de todos os workers.</p>
                         </div>
-                      )}
+                        <div className="space-y-4">
+                           <p className="text-white font-bold">PASSO 2 (Forçar Reload SQL):</p>
+                           <p>Rode este comando no SQL Editor para garantir:</p>
+                           <code className="block bg-slate-900 p-4 rounded text-green-500 select-all font-bold">NOTIFY pgrst, 'reload schema';</code>
+                        </div>
+                        <p className="text-[9px] opacity-50 italic">Dica Elite: Se o erro persistir, ative o "Modo Mock" acima para auditoria visual offline.</p>
+                      </div>
                     </div>
                   ) : orders.length === 0 ? (
                     <div className="p-20 border border-dashed border-white/5 rounded-[3rem] text-center text-slate-600 uppercase tracking-widest text-xs">Nenhum pedido pendente de auditoria.</div>
                   ) : orders.map(order => (
-                    <div key={order.id} className="p-12 bg-slate-900/40 border border-white/5 rounded-[4rem] flex flex-col lg:flex-row lg:items-center justify-between gap-10 group hover:border-blue-600/30 transition-all backdrop-blur-3xl">
+                    <div key={order.id} className="p-12 bg-slate-900/40 border border-white/5 rounded-[4rem] flex flex-col lg:flex-row lg:items-center justify-between gap-10 group hover:border-blue-600/30 transition-all backdrop-blur-3xl shadow-2xl">
                       <div className="space-y-6">
                          <div className="flex gap-5 items-center">
                             <span className={`text-[8px] font-black px-5 py-1.5 rounded-full ${order.status === 'pending' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-500'}`}>{order.status.toUpperCase()}</span>
