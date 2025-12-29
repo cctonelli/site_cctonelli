@@ -28,21 +28,36 @@ export const fetchSiteConfig = async () => {
   return SITE_CONFIG;
 };
 
+// Added fix for missing fetchMetrics
+export const fetchMetrics = async (): Promise<Metric[]> => {
+  try {
+    const { data } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order');
+    return data || [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// Added fix for missing fetchCarouselImages
+export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
+  try {
+    const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
+    return data || [];
+  } catch (e) {
+    return [];
+  }
+};
+
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data } = await supabase.from('products').select('*').order('title');
     const dbProducts = data || [];
-    
-    // Merge Strategy: Combine DB products with Local Registry products
-    // Local products take precedence if IDs match for consistency, 
-    // but we add everything missing from LOCAL_PRODUCTS to ensure the Simulator appears.
     const merged = [...dbProducts];
     LOCAL_PRODUCTS.forEach(lp => {
       if (!merged.find(p => p.id === lp.id || p.slug === lp.slug)) {
         merged.push(lp);
       }
     });
-    
     return merged.sort((a, b) => (a.featured === b.featured) ? 0 : a.featured ? -1 : 1);
   } catch (e) {
     return LOCAL_PRODUCTS;
@@ -70,31 +85,42 @@ export const fetchInsights = async (): Promise<Insight[]> => {
   return (data && data.length > 0) ? data : LOCAL_INSIGHTS;
 };
 
+// Added fix for missing fetchInsightById
 export const fetchInsightById = async (id: string): Promise<Insight | null> => {
-  const { data } = await supabase.from('insights').select('*').eq('id', id).maybeSingle();
-  return data;
-};
-
-export const fetchMetrics = async (): Promise<Metric[]> => {
-  const { data } = await supabase.from('metrics').select('*').order('display_order');
-  return data || [];
-};
-
-export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
-  const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
-  return data || [];
+  try {
+    const { data } = await supabase.from('insights').select('*').eq('id', id).maybeSingle();
+    if (data) return data;
+  } catch (e) {}
+  return LOCAL_INSIGHTS.find(i => String(i.id) === String(id)) || null;
 };
 
 export const fetchAllOrders = async (): Promise<Order[]> => {
+  console.log("[SalesVault] Iniciando fetch de ordens...");
+  
+  // TENTATIVA 1: Consulta Completa com Relacionamentos
   const { data, error } = await supabase
     .from('orders')
     .select('*, profiles (id, email, full_name, whatsapp)')
     .order('created_at', { ascending: false });
   
   if (error) {
-    console.error("[Supabase] fetchAllOrders Error Details:", error);
-    throw error;
+    console.error("[SalesVault] Erro PGRST detectado:", error.code, error.message);
+    
+    // Fallback agressivo: Tentar sem Join para descartar erro de FK corrompida no cache
+    const { data: simpleData, error: simpleError } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (simpleError) {
+      console.error("[SalesVault] Falha total em ordens (mesmo sem join):", simpleError.code, simpleError.message);
+      throw simpleError;
+    }
+    
+    console.log("[SalesVault] Fallback simples funcionou. O problema está no JOIN/Profiles.");
+    return simpleData || [];
   }
+  
   return data || [];
 };
 

@@ -23,6 +23,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [siteConfig, setSiteConfig] = useState<any>(null);
   const [useMockData, setUseMockData] = useState(false);
+  const [showDoctor, setShowDoctor] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -39,7 +40,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     setOrderError(null);
     try {
       if (useMockData) {
-        // Simulação de dados para quando o PostgREST falha
         const mock: Order[] = [
           {
             id: 'mock-1',
@@ -52,7 +52,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
             payment_method: 'pix',
             pix_qrcode_url: null,
             download_link: null,
-            // Added missing gender property to satisfy Profile interface
             profiles: { id: 'user-1', full_name: 'John Doe (Sovereign Partner)', email: 'john@matrix.com', whatsapp: '+55 11 99999-9999', user_type: 'client', cpf_cnpj: '000.000.000-00', gender: null }
           }
         ];
@@ -63,8 +62,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       const data = await fetchAllOrders();
       setOrders(data);
     } catch (e: any) {
-      const msg = e.message || e.details || "Erro desconhecido ao carregar pedidos.";
-      setOrderError(msg);
+      console.error("[SalesVault] Erro capturado na UI:", e);
+      setOrderError(e.message || e.details || "PGRST205: Tabela não encontrada no cache do servidor.");
       setOrders([]);
     } finally {
       setLoadingOrders(false);
@@ -191,7 +190,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                 <div className="flex justify-between items-end">
                   <div className="space-y-2">
                     <h2 className="text-6xl font-serif text-white italic tracking-tighter">Sales <span className="text-blue-600">Vault.</span></h2>
-                    {useMockData && <p className="text-[10px] text-yellow-500 font-black uppercase tracking-widest">Atenção: Modo Simulação Ativo (Kernel Local)</p>}
+                    <div className="flex items-center gap-4">
+                       {useMockData && <p className="text-[10px] text-yellow-500 font-black uppercase tracking-widest animate-pulse">Atenção: Modo Simulação Ativo</p>}
+                       <button onClick={() => setShowDoctor(!showDoctor)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-500 transition-colors">Diagnostic Suite {showDoctor ? '▲' : '▼'}</button>
+                    </div>
                   </div>
                   <div className="flex gap-6">
                     <button 
@@ -203,26 +205,60 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                     <button onClick={loadOrders} className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-white transition-colors">Recarregar Ledger</button>
                   </div>
                 </div>
+
+                {showDoctor && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-[2rem] overflow-hidden space-y-6">
+                    <h4 className="text-[11px] font-black uppercase tracking-widest text-blue-500">Emergency SQL Suite (Execute se PGRST205 persistir)</h4>
+                    <div className="grid md:grid-cols-2 gap-10">
+                       <div className="space-y-4">
+                          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Diagnóstico: Falha de Permissão / Visibilidade</p>
+                          <p className="text-xs text-slate-500 italic">Muitas vezes o PostgREST diz que a tabela não existe porque o papel 'anon' ou 'authenticated' não tem permissão de leitura global no schema public.</p>
+                          <code className="block bg-black p-4 rounded-xl text-[10px] text-blue-400 font-mono leading-relaxed select-all border border-blue-500/20">
+                            -- RESET DE PERMISSÕES GLOBAIS<br/>
+                            GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;<br/>
+                            GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;<br/>
+                            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;<br/>
+                            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;<br/>
+                            NOTIFY pgrst, 'reload schema';
+                          </code>
+                       </div>
+                       <div className="space-y-4">
+                          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Diagnóstico: Conflito de Relacionamento (Join)</p>
+                          <p className="text-xs text-slate-500 italic">Se a tabela existe mas o Join com profiles falha, o PostgREST pode dar erro 205. Este SQL reconstrói a ponte.</p>
+                          <code className="block bg-black p-4 rounded-xl text-[10px] text-green-500 font-mono leading-relaxed select-all border border-green-500/20">
+                            ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_user_id_fkey;<br/>
+                            ALTER TABLE public.orders ADD CONSTRAINT orders_user_id_fkey <br/>
+                            FOREIGN KEY (user_id) REFERENCES public.profiles(id) <br/>
+                            ON DELETE CASCADE;<br/>
+                            NOTIFY pgrst, 'reload schema';
+                          </code>
+                       </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 <div className="grid gap-8">
                   {loadingOrders ? (
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs">Sincronizando transações...</div>
                   ) : orderError && !useMockData ? (
                     <div className="p-12 border border-red-500/30 bg-red-500/5 rounded-[3rem] text-center space-y-6 animate-in zoom-in-95 duration-500">
+                      <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500 mb-4">
+                         <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      </div>
                       <p className="text-red-500 font-black uppercase tracking-widest text-xs">Erro Crítico de Sincronização (PGRST205)</p>
-                      <p className="text-slate-400 text-sm">{orderError}</p>
-                      <div className="mt-8 p-10 bg-black/40 rounded-[2.5rem] text-[11px] text-slate-500 font-mono text-left space-y-6 border border-white/5">
-                        <p className="text-blue-500 uppercase font-black tracking-widest border-b border-blue-600/20 pb-4">PROTOCOLO DE REPARO MASTER:</p>
-                        <p>O cache do schema do Supabase (PostgREST) está corrompido ou dessincronizado. O comando NOTIFY pode falhar se houver workers zumbis.</p>
-                        <div className="space-y-4">
-                           <p className="text-white font-bold">PASSO 1 (Dashboard Supabase):</p>
-                           <p>Vá em <span className="text-blue-400">Database &gt; API Settings</span> e clique no botão <span className="bg-blue-600 text-white px-3 py-1 rounded">RESTART API</span>. Isso força o reload total de todos os workers.</p>
+                      <p className="text-slate-400 text-sm max-w-2xl mx-auto">{orderError}</p>
+                      
+                      <div className="mt-8 p-10 bg-black/40 rounded-[2.5rem] text-[11px] text-slate-500 font-mono text-left space-y-8 border border-white/5 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                           <svg className="h-20 w-20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                         </div>
-                        <div className="space-y-4">
-                           <p className="text-white font-bold">PASSO 2 (Forçar Reload SQL):</p>
-                           <p>Rode este comando no SQL Editor para garantir:</p>
-                           <code className="block bg-slate-900 p-4 rounded text-green-500 select-all font-bold">NOTIFY pgrst, 'reload schema';</code>
+                        <p className="text-blue-500 uppercase font-black tracking-widest border-b border-blue-600/20 pb-4">ÚLTIMA INSTÂNCIA DE REPARO:</p>
+                        <p className="text-slate-300">Se o restart da API não funcionou, é quase certo que o problema é de **Permissão de Role** ou **Busca de Schema**. O banco de dados Supabase possui vários papéis internos. Execute o SQL de 'RESET DE PERMISSÕES GLOBAIS' no painel acima.</p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-6 pt-4">
+                           <button onClick={() => setShowDoctor(true)} className="bg-blue-600 text-white px-8 py-4 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-blue-500 transition-all">Ver SQL de Reparo</button>
+                           <button onClick={() => setUseMockData(true)} className="bg-white/5 text-slate-500 px-8 py-4 rounded-xl font-black text-[9px] uppercase tracking-widest hover:text-white transition-all border border-white/5">Ativar Mock de Segurança</button>
                         </div>
-                        <p className="text-[9px] opacity-50 italic">Dica Elite: Se o erro persistir, ative o "Modo Mock" acima para auditoria visual offline.</p>
                       </div>
                     </div>
                   ) : orders.length === 0 ? (
@@ -232,7 +268,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                       <div className="space-y-6">
                          <div className="flex gap-5 items-center">
                             <span className={`text-[8px] font-black px-5 py-1.5 rounded-full ${order.status === 'pending' ? 'bg-blue-600 text-white' : 'bg-white/10 text-slate-500'}`}>{order.status.toUpperCase()}</span>
-                            <span className="text-white font-serif italic text-2xl">{(order as any).profiles?.full_name || (order as any).profiles?.email || 'Partner'}</span>
+                            <span className="text-white font-serif italic text-2xl">{(order as any).profiles?.full_name || (order as any).profiles?.email || 'Partner (Join Fallback)'}</span>
                          </div>
                          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 text-[10px] text-slate-500 uppercase tracking-widest font-mono">
                             <div className="space-y-2"><p className="opacity-50">Ativo</p><p className="text-slate-300">{order.product_id}</p></div>
