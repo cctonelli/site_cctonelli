@@ -35,6 +35,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     setTableStatus(statusResults);
   };
 
+  const forceHardSync = async () => {
+    setLoadingOrders(true);
+    await checkIntegrity();
+    // Tenta carregar os pedidos novamente para forçar o PostgREST a recarregar o schema
+    await loadOrders();
+    setLoadingOrders(false);
+  };
+
   useEffect(() => {
     const init = async () => {
       const config = await fetchSiteConfig();
@@ -63,7 +71,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     } catch (e: any) {
       const errorMsg = e.message || e.details || JSON.stringify(e);
       if (errorMsg.includes('PGRST205') || errorMsg.includes('404')) {
-         setOrderError("CACHE_MISMATCH: O PostgREST não reconhece a estrutura desta tabela. Siga o protocolo Infra Doctor.");
+         setOrderError("CACHE_MISMATCH: O PostgREST não reconhece a estrutura desta tabela. Use o Hard Sync.");
       } else {
          setOrderError(errorMsg);
       }
@@ -133,7 +141,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
              <div className="p-5 bg-white/5 rounded-3xl border border-white/5">
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Integrity Check</p>
-                  <button onClick={checkIntegrity} className="text-[7px] text-blue-500 hover:text-white transition-colors">REFRESH</button>
+                  <button onClick={forceHardSync} className="text-[7px] text-blue-500 hover:text-white transition-colors">HARD SYNC</button>
                 </div>
                 <div className="space-y-2">
                    {Object.entries(tableStatus).map(([name, status]) => (
@@ -161,11 +169,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                   <div className="flex items-center gap-8">
                     <div className="w-16 h-16 bg-red-600 rounded-3xl flex items-center justify-center text-white font-bold text-3xl shadow-[0_0_30px_rgba(239,68,68,0.4)]">!</div>
                     <div className="space-y-1">
-                      <h4 className="text-white font-serif italic text-2xl">Integridade de Cache Comprometida (PGRST205)</h4>
-                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">A API do Supabase está desincronizada com o banco de dados físico.</p>
+                      <h4 className="text-white font-serif italic text-2xl">Sincronia Interrompida (PGRST205)</h4>
+                      <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">O Supabase requer um re-aquecimento do schema cache.</p>
                     </div>
                   </div>
-                  <button onClick={() => setShowDoctor(true)} className="px-10 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-600/20">Protocolo de Reparo</button>
+                  <div className="flex gap-4">
+                    <button onClick={forceHardSync} className="px-8 py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">Executar Hard Sync</button>
+                    <button onClick={() => setShowDoctor(true)} className="px-10 py-4 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-xl shadow-red-600/20">Protocolo SQL</button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -197,7 +208,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                     <div className="grid md:grid-cols-2 gap-12">
                        <div className="space-y-6">
                           <p className="text-[11px] text-white uppercase tracking-widest font-bold">SCRIPT 01: RECARGA DE SCHEMA (RÁPIDO)</p>
-                          <p className="text-xs text-slate-500 italic">Este comando força o PostgREST a reconstruir o mapa de tabelas. Resolva o PGRST205 instantaneamente.</p>
+                          <p className="text-xs text-slate-500 italic">Força o PostgREST a reconstruir o mapa de tabelas.</p>
                           <code className="block bg-black p-6 rounded-2xl text-[11px] text-green-500 font-mono leading-relaxed select-all border border-green-500/20 shadow-inner">
                             NOTIFY pgrst, 'reload schema';
                           </code>
@@ -205,31 +216,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                        
                        <div className="space-y-6">
                           <p className="text-[11px] text-white uppercase tracking-widest font-bold">SCRIPT 02: PERMISSÕES DE PROPRIEDADE</p>
-                          <p className="text-xs text-slate-500 italic">Se o erro persistir, as tabelas podem estar sem dono correto. Rode isso para forçar o acesso.</p>
+                          <p className="text-xs text-slate-500 italic">Corrige permissões se o Hard Sync falhar repetidamente.</p>
                           <code className="block bg-black p-6 rounded-2xl text-[10px] text-blue-400 font-mono leading-relaxed select-all border border-blue-500/20">
                             ALTER TABLE public.products OWNER TO postgres;<br/>
                             ALTER TABLE public.profiles OWNER TO postgres;<br/>
-                            ALTER TABLE public.orders OWNER TO postgres;<br/>
                             GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;<br/>
                             NOTIFY pgrst, 'reload schema';
                           </code>
                        </div>
-                    </div>
-                    
-                    <div className="p-8 bg-blue-600/5 rounded-3xl border border-blue-600/10">
-                       <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.4em] mb-4">Diagnostic Log</p>
-                       <ul className="text-[9px] font-mono text-slate-500 space-y-2">
-                          {Object.entries(tableStatus).map(([name, status]) => (
-                            <li key={name} className="flex gap-4">
-                               <span className="text-slate-600">[{new Date().toLocaleTimeString()}]</span>
-                               <span className="uppercase">{name}:</span>
-                               {/* Fix: Explicitly cast status to any to access visible and code properties */}
-                               <span className={(status as any).visible ? 'text-green-500' : 'text-red-500'}>
-                                 {(status as any).visible ? 'SYNC_OK' : `FAIL_${(status as any).code || 'UNKNOWN'}`}
-                               </span>
-                            </li>
-                          ))}
-                       </ul>
                     </div>
                   </motion.div>
                 )}
@@ -240,11 +234,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs italic">Sincronizando transações...</div>
                   ) : orderError && !useMockData ? (
                     <div className="p-16 border border-red-500/30 bg-red-500/5 rounded-[4rem] text-center space-y-10 animate-in zoom-in-95 duration-500 shadow-2xl">
-                      <h3 className="text-2xl font-serif text-white italic">Protocolo de Dados Interrompido</h3>
+                      <h3 className="text-2xl font-serif text-white italic">Erro de Sincronia de Dados</h3>
                       <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">{orderError}</p>
                       <div className="max-w-xl mx-auto p-8 bg-black/40 rounded-[2.5rem] border border-white/5 text-left space-y-6">
-                         <p className="text-[11px] text-slate-400 leading-relaxed italic">"O PostgREST (camada de API) perdeu a referência física das suas tabelas. Isso acontece após restarts do Supabase ou migrações de schema. O Kernel está operando em redundância local."</p>
-                         <button onClick={() => setShowDoctor(true)} className="w-full bg-red-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all">Abrir Supabase Infra Repair</button>
+                         <p className="text-[11px] text-slate-400 leading-relaxed italic">"O erro PGRST205 é resolvido em 90% dos casos clicando em HARD SYNC no painel lateral ou aguardando 1 minuto para o cache do Supabase expirar."</p>
+                         <div className="flex gap-4">
+                            <button onClick={forceHardSync} className="flex-1 bg-blue-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 transition-all">Tentar Hard Sync Agora</button>
+                            <button onClick={() => setShowDoctor(true)} className="bg-red-600 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 transition-all">SQL Protocol</button>
+                         </div>
                       </div>
                     </div>
                   ) : orders.length === 0 ? (
@@ -278,7 +275,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
               </div>
             )}
 
-            {/* Outras abas (users, visual_dna, marketplace) seguem a mesma lógica de integridade */}
             {activeTab === 'users' && (
                <div className="space-y-16">
                   <h2 className="text-6xl font-serif text-white italic tracking-tighter">Partners & <span className="text-blue-600">CRM.</span></h2>

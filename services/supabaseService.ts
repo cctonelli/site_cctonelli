@@ -12,12 +12,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Função utilitária para retentativa de requisições críticas com Backoff Exponencial
+ * Motor de Resiliência Avançado: Tenta recuperar o cache do PostgREST automaticamente.
  */
 async function fetchWithRetry<T>(
   fetcher: () => Promise<{ data: T | null; error: any }>,
-  retries = 3,
-  delay = 800
+  retries = 5,
+  initialDelay = 1000
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
   for (let i = 0; i < retries; i++) {
@@ -25,10 +25,10 @@ async function fetchWithRetry<T>(
     if (!result.error) return result;
     
     lastError = result.error;
-    // PGRST205: Schema cache mismatch / 404: Table missing from cache
+    // Erros de cache (PGRST205) ou tabelas recém-criadas/alteradas (404)
     if (lastError.code === 'PGRST205' || lastError.status === 404) {
-      const waitTime = delay * Math.pow(2, i);
-      console.warn(`[Kernel] Desvio de Cache detectado (${lastError.code}). Tentativa ${i + 1}/${retries} em ${waitTime}ms...`);
+      const waitTime = initialDelay * Math.pow(1.5, i);
+      console.warn(`[Kernel] Sincronia de cache falhou (${lastError.code}). Tentativa ${i + 1}/${retries} em ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     } else {
       break; 
