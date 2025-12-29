@@ -40,6 +40,7 @@ const AppContent: React.FC = () => {
   const [siteConfig, setSiteConfig] = useState<any>(null);
   
   const [isLive, setIsLive] = useState(false);
+  const [isRecovery, setIsRecovery] = useState(false);
   const [systemLog, setSystemLog] = useState("KRNL_INIT_SUCCESS");
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'pt');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'dark');
@@ -72,6 +73,11 @@ const AppContent: React.FC = () => {
         fetchGlobalTranslations(language)
       ]);
 
+      let errorDetected = false;
+      results.forEach((res, idx) => {
+        if (res.status === 'rejected') errorDetected = true;
+      });
+
       if (results[0].status === 'fulfilled') setMetrics(results[0].value);
       if (results[1].status === 'fulfilled') setInsights(results[1].value);
       if (results[2].status === 'fulfilled') setProducts(results[2].value);
@@ -81,11 +87,13 @@ const AppContent: React.FC = () => {
       if (results[6].status === 'fulfilled') setDbTranslations(results[6].value);
       
       setIsLive(true);
-      setSystemLog("GATEWAY_ONLINE");
+      setIsRecovery(errorDetected);
+      setSystemLog(errorDetected ? "RECOVERY_MODE_ACTIVE" : "GATEWAY_ONLINE");
     } catch (err) {
       console.error(`[App Core] Sync Failure:`, err);
       setIsLive(true); 
-      setSystemLog("ERR_REDUNDANCY_ACTIVE");
+      setIsRecovery(true);
+      setSystemLog("CRITICAL_REDUNDANCY_ENABLED");
     }
   }, [language]);
 
@@ -128,17 +136,6 @@ const AppContent: React.FC = () => {
       root.style.setProperty('--bg-navy', siteConfig.theme.bg_dark);
       root.style.setProperty('--h1-size', siteConfig.typography.h1_size);
       root.style.setProperty('--body-size', siteConfig.typography.body_size);
-      
-      // Persist Custom CSS Injection
-      if (siteConfig.theme.custom_css) {
-        let styleTag = document.getElementById('sovereign-custom-css');
-        if (!styleTag) {
-          styleTag = document.createElement('style');
-          styleTag.id = 'sovereign-custom-css';
-          document.head.appendChild(styleTag);
-        }
-        styleTag.innerHTML = siteConfig.theme.custom_css;
-      }
     }
   }, [siteConfig]);
 
@@ -165,33 +162,22 @@ const AppContent: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
       
-      {/* Status Protocol v18.9 */}
+      {/* Status Protocol Badge */}
       <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none group">
         <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-          <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">SOVEREIGN COMMAND</span>
+          <div className={`w-1.5 h-1.5 rounded-full ${isRecovery ? 'bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]' : isLive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
+          <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
+            {isRecovery ? 'RECOVERY MODE' : 'SOVEREIGN COMMAND'}
+          </span>
           <div className="w-px h-2 bg-white/10 mx-1"></div>
-          <span className="text-[7px] font-mono text-green-500 font-bold">{APP_VERSION}</span>
+          <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
         </div>
         <div className="px-3 py-1 bg-black/40 backdrop-blur-md rounded-lg border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
            <span className="text-[6px] font-mono text-slate-500 uppercase tracking-widest">{systemLog}</span>
         </div>
       </div>
 
-      <Navbar 
-        onAdminClick={() => {
-          if (!userProfile) setIsAuthOpen(true);
-          else if (userProfile.user_type === 'admin') setIsAdminOpen(true);
-          else setIsClientPortalOpen(true);
-        }} 
-        userProfile={userProfile} 
-        onLogout={handleLogout} 
-        language={language}
-        setLanguage={setLanguage}
-        theme={theme}
-        setTheme={setTheme}
-      />
-
+      <Navbar onAdminClick={() => { if (!userProfile) setIsAuthOpen(true); else if (userProfile.user_type === 'admin') setIsAdminOpen(true); else setIsClientPortalOpen(true); }} userProfile={userProfile} onLogout={handleLogout} language={language} setLanguage={setLanguage} theme={theme} setTheme={setTheme} />
       {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={() => { refreshUser(); syncData(); }} />}
       {isAdminOpen && userProfile && <AdminDashboard profile={userProfile} onClose={() => setIsAdminOpen(false)} />}
       {isClientPortalOpen && userProfile && <ClientPortal profile={userProfile} products={products} onClose={() => setIsClientPortalOpen(false)} />}
@@ -200,7 +186,6 @@ const AppContent: React.FC = () => {
         <Route path="/" element={
           <main className="pt-20 lg:pt-24">
             {siteConfig.visibility?.hero && <HeroCarousel slides={carouselImages} t={t} resolveContent={resolveContent} language={language} isLive={isLive} />}
-            
             {siteConfig.visibility?.metrics && (
               <section id="metrics" className="py-24 bg-slate-50 dark:bg-[#010309] border-y border-slate-200 dark:border-white/5">
                 <div className="container mx-auto px-6">
@@ -215,7 +200,6 @@ const AppContent: React.FC = () => {
                 </div>
               </section>
             )}
-
             {siteConfig.visibility?.insights && (
               <section id="insights" className="py-32 bg-white dark:bg-[#010309]">
                 <div className="container mx-auto px-6">
@@ -224,12 +208,11 @@ const AppContent: React.FC = () => {
                       <div className="text-blue-500 dark:text-green-500 font-black uppercase tracking-[0.5em] text-[9px] mb-2">{resolveContent('insights_badge', t.insights_badge)}</div>
                       <h2 className="text-5xl md:text-[5rem] font-serif italic dark:text-white text-slate-900 leading-[0.9] tracking-tighter">{resolveContent('insights_title', t.insights_title)}</h2>
                     </div>
-                    <Link to="/wip" className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 dark:text-green-500 border-b-2 border-current pb-2 transition-all">Folhear Acervo</Link>
                   </div>
                   <div className="grid md:grid-cols-3 gap-16">
                     {insights.map(insight => (
                       <Link key={insight.id} to={`/insight/${insight.id}?lang=${language}`} className="group block space-y-8">
-                        <div className="aspect-[3/4] overflow-hidden bg-slate-900 border border-white/5 relative shadow-2xl" style={{ borderRadius: 'var(--global-radius)' }}>
+                        <div className="aspect-[3/4] overflow-hidden bg-slate-900 border border-white/5 relative shadow-2xl rounded-[3rem]">
                           <img src={insight.image_url || ''} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-1000" alt="" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
                           <div className="absolute bottom-8 left-8 right-8 text-white">
@@ -237,14 +220,12 @@ const AppContent: React.FC = () => {
                              <h3 className="text-3xl font-serif italic leading-tight">{resolveTranslation(insight, 'title', '')}</h3>
                           </div>
                         </div>
-                        <p className="text-slate-500 text-base font-light italic leading-relaxed line-clamp-2">{resolveTranslation(insight, 'excerpt', '')}</p>
                       </Link>
                     ))}
                   </div>
                 </div>
               </section>
             )}
-
             {siteConfig.visibility?.products && <ProductsSection products={products} language={language} resolveTranslation={resolveTranslation} t={t} />}
             {siteConfig.visibility?.strategy_map && <GlobalStrategyMap />}
             {siteConfig.visibility?.tools && <ToolsGrid />}
@@ -253,7 +234,6 @@ const AppContent: React.FC = () => {
           </main>
         } />
         <Route path="/loja" element={<StoreGrid language={language} t={t} resolveTranslation={resolveTranslation} />} />
-        <Route path="/ferramentas" element={<div className="pt-32"><ToolsGrid /></div>} />
         <Route path="/loja/:slug" element={<ProductPage language={language} t={t} resolveTranslation={resolveTranslation} />} />
         <Route path="/loja/:slug/checkout" element={<CheckoutPage profile={userProfile} onAuthRequest={() => setIsAuthOpen(true)} language={language} t={t} />} />
         <Route path="/insight/:id" element={<ArticlePage />} />

@@ -13,12 +13,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
  * Diagnóstico de Schema: Verifica se uma tabela é visível para o PostgREST.
- * Útil para identificar o erro PGRST205 em tempo real.
  */
 export const checkTableVisibility = async (tableName: string): Promise<{ visible: boolean; error?: string }> => {
   try {
     const { error } = await supabase.from(tableName).select('count', { count: 'exact', head: true });
     if (error) {
+      // PGRST205 ou 404 indicam que o cache do schema está quebrado ou a tabela não existe para a API
       return { visible: false, error: `${error.code}: ${error.message}` };
     }
     return { visible: true };
@@ -29,7 +29,8 @@ export const checkTableVisibility = async (tableName: string): Promise<{ visible
 
 export const fetchSiteConfig = async () => {
   try {
-    const { data } = await supabase.from('site_content').select('*').eq('page', 'config');
+    const { data, error } = await supabase.from('site_content').select('*').eq('page', 'config');
+    if (error) throw error;
     if (data && data.length > 0) {
       const dbConfig = { ...SITE_CONFIG };
       data.forEach(item => {
@@ -40,33 +41,33 @@ export const fetchSiteConfig = async () => {
       });
       return dbConfig;
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn("[Kernel] Usando SITE_CONFIG local devido a falha na sincronia.");
+  }
   return SITE_CONFIG;
 };
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
-    const { data } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order');
+    const { data, error } = await supabase.from('metrics').select('*').eq('is_active', true).order('display_order');
+    if (error) throw error;
     return data || [];
-  } catch (e) {
-    return [];
-  }
+  } catch (e) { return []; }
 };
 
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
-    const { data } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
+    const { data, error } = await supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order');
+    if (error) throw error;
     return data || [];
-  } catch (e) {
-    return [];
-  }
+  } catch (e) { return []; }
 };
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await supabase.from('products').select('*').order('title');
     if (error) {
-      console.warn("[Kernel] Falha ao carregar produtos (Provável PGRST205):", error.message);
+      console.error(`[Kernel] Erro na tabela 'products' (${error.code}). Ativando Local Fallback.`);
       return LOCAL_PRODUCTS;
     }
     const dbProducts = data || [];
@@ -78,29 +79,48 @@ export const fetchProducts = async (): Promise<Product[]> => {
     });
     return merged.sort((a, b) => (a.featured === b.featured) ? 0 : a.featured ? -1 : 1);
   } catch (e) {
+    console.error("[Kernel] Exceção crítica em fetchProducts. Ativando Local Fallback.");
     return LOCAL_PRODUCTS;
   }
 };
 
 export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
-  const { data } = await supabase.from('products').select('*').eq('slug', slug).maybeSingle();
-  if (data) return data;
+  try {
+    const { data, error } = await supabase.from('products').select('*').eq('slug', slug).maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+  } catch (e) {}
   return LOCAL_PRODUCTS.find(p => p.slug === slug) || null;
 };
 
 export const fetchProductVariants = async (productId: string): Promise<ProductVariant[]> => {
-  const { data } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('order_index');
-  return (data && data.length > 0) ? data : (LOCAL_VARIANTS[productId] || []);
+  try {
+    const { data, error } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('order_index');
+    if (error) throw error;
+    return (data && data.length > 0) ? data : (LOCAL_VARIANTS[productId] || []);
+  } catch (e) {
+    return LOCAL_VARIANTS[productId] || [];
+  }
 };
 
 export const fetchProductContentBlocks = async (productId: string): Promise<ProductContentBlock[]> => {
-  const { data } = await supabase.from('product_content_blocks').select('*').eq('product_id', productId).order('order');
-  return (data && data.length > 0) ? data : (LOCAL_BLOCKS[productId] || []);
+  try {
+    const { data, error } = await supabase.from('product_content_blocks').select('*').eq('product_id', productId).order('order');
+    if (error) throw error;
+    return (data && data.length > 0) ? data : (LOCAL_BLOCKS[productId] || []);
+  } catch (e) {
+    return LOCAL_BLOCKS[productId] || [];
+  }
 };
 
 export const fetchInsights = async (): Promise<Insight[]> => {
-  const { data } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
-  return (data && data.length > 0) ? data : LOCAL_INSIGHTS;
+  try {
+    const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
+    if (error) throw error;
+    return (data && data.length > 0) ? data : LOCAL_INSIGHTS;
+  } catch (e) {
+    return LOCAL_INSIGHTS;
+  }
 };
 
 export const fetchInsightById = async (id: string): Promise<Insight | null> => {
@@ -112,33 +132,27 @@ export const fetchInsightById = async (id: string): Promise<Insight | null> => {
 };
 
 export const fetchAllOrders = async (): Promise<Order[]> => {
-  console.log("[SalesVault] Iniciando fetch de ordens...");
-  
-  // TENTATIVA 1: Consulta Completa com Relacionamentos
-  const { data, error } = await supabase
-    .from('orders')
-    .select('*, profiles (id, email, full_name, whatsapp)')
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error("[SalesVault] Erro na consulta de ordens:", error.code, error.message);
-    
-    // Fallback: Tentar sem Join para descartar erro de FK corrompida no cache
-    const { data: simpleData, error: simpleError } = await supabase
+  try {
+    const { data, error } = await supabase
       .from('orders')
-      .select('*')
+      .select('*, profiles (id, email, full_name, whatsapp)')
       .order('created_at', { ascending: false });
-
-    if (simpleError) {
-      console.error("[SalesVault] Falha total em ordens:", simpleError.code, simpleError.message);
-      throw simpleError;
-    }
     
-    console.log("[SalesVault] Fallback simples funcionou. O problema está no JOIN/Profiles.");
-    return simpleData || [];
+    if (error) {
+      console.warn(`[SalesVault] Erro no fetch de ordens (${error.code}). Tentando fallback sem join.`);
+      const { data: simpleData, error: simpleError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (simpleError) throw simpleError;
+      return simpleData || [];
+    }
+    return data || [];
+  } catch (e: any) {
+    console.error("[SalesVault] Falha total no fetch de ordens:", e.message || e);
+    throw e;
   }
-  
-  return data || [];
 };
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
@@ -151,20 +165,30 @@ export const signOut = async () => {
 };
 
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
-  const { data } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
-  return data || [];
+  try {
+    const { data, error } = await supabase.from('testimonials').select('*').eq('approved', true).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (e) { return []; }
 };
 
 export const fetchSiteContent = async (page: string): Promise<Record<string, any>> => {
-  const { data } = await supabase.from('site_content').select('*').eq('page', page);
-  const contentMap: Record<string, any> = {};
-  data?.forEach(item => { contentMap[item.key] = item; });
-  return contentMap;
+  try {
+    const { data, error } = await supabase.from('site_content').select('*').eq('page', page);
+    if (error) throw error;
+    const contentMap: Record<string, any> = {};
+    data?.forEach(item => { contentMap[item.key] = item; });
+    return contentMap;
+  } catch (e) { return {}; }
 };
 
 export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
   try {
-    const { data } = await supabase.from('translations').select('*').eq('lang', lang);
+    const { data, error } = await supabase.from('translations').select('*').eq('lang', lang);
+    if (error) {
+      console.warn(`[I18n] Falha ao carregar traduções para '${lang}' (${error.code}).`);
+      return {};
+    }
     const transMap: Record<string, string> = {};
     data?.forEach(item => { transMap[item.key] = item.value; });
     return transMap;
@@ -218,7 +242,11 @@ export const fetchUsageByProduct = async (userProductId: string): Promise<V8Matr
 
 export const fetchTools = async (): Promise<Tool[]> => {
   try {
-    const { data } = await supabase.from('tools').select('*').eq('is_active', true).order('name');
+    const { data, error } = await supabase.from('tools').select('*').eq('is_active', true).order('name');
+    if (error) {
+      console.warn(`[Tools] Erro no fetch de ferramentas (${error.code}). Retornando lista vazia.`);
+      return [];
+    }
     return data || [];
   } catch (e) {
     return [];
