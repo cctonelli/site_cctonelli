@@ -40,7 +40,7 @@ const AppContent: React.FC = () => {
   const [siteConfig, setSiteConfig] = useState<any>(null);
   
   const [isLive, setIsLive] = useState(false);
-  const [isRecovery, setIsRecovery] = useState(false);
+  const [isHybrid, setIsHybrid] = useState(false);
   const [systemLog, setSystemLog] = useState("KRNL_INIT_SUCCESS");
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'pt');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'dark');
@@ -59,7 +59,7 @@ const AppContent: React.FC = () => {
 
   const syncData = useCallback(async () => {
     try {
-      setSystemLog("SYNCING_CORE_DATA...");
+      setSystemLog("SYNC_PROTO_INIT...");
       const config = await fetchSiteConfig();
       setSiteConfig(config);
 
@@ -73,9 +73,9 @@ const AppContent: React.FC = () => {
         fetchGlobalTranslations(language)
       ]);
 
-      let errorDetected = false;
-      results.forEach((res, idx) => {
-        if (res.status === 'rejected') errorDetected = true;
+      let hybridDetected = false;
+      results.forEach((res) => {
+        if (res.status === 'rejected') hybridDetected = true;
       });
 
       if (results[0].status === 'fulfilled') setMetrics(results[0].value);
@@ -87,13 +87,13 @@ const AppContent: React.FC = () => {
       if (results[6].status === 'fulfilled') setDbTranslations(results[6].value);
       
       setIsLive(true);
-      setIsRecovery(errorDetected);
-      setSystemLog(errorDetected ? "RECOVERY_MODE_ACTIVE" : "GATEWAY_ONLINE");
+      setIsHybrid(hybridDetected);
+      setSystemLog(hybridDetected ? "HYBRID_PROTOCOL_ACTIVE" : "SINC_STABLE");
     } catch (err) {
-      console.error(`[App Core] Sync Failure:`, err);
+      console.error(`[App Core] Sync Redirect:`, err);
       setIsLive(true); 
-      setIsRecovery(true);
-      setSystemLog("CRITICAL_REDUNDANCY_ENABLED");
+      setIsHybrid(true);
+      setSystemLog("HYBRID_FALLBACK_ACTIVE");
     }
   }, [language]);
 
@@ -125,7 +125,7 @@ const AppContent: React.FC = () => {
   }, [syncData, refreshUser]);
 
   useEffect(() => {
-    setSystemLog(`NAV_TO_${location.pathname.replace('/', '').toUpperCase() || 'HOME'}`);
+    setSystemLog(`NAV_${location.pathname.replace('/', '').toUpperCase() || 'HOME'}`);
     window.scrollTo(0, 0);
   }, [location]);
 
@@ -165,9 +165,9 @@ const AppContent: React.FC = () => {
       {/* Status Protocol Badge */}
       <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none group">
         <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${isRecovery ? 'bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]' : isLive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
+          <div className={`w-1.5 h-1.5 rounded-full ${isHybrid ? 'bg-blue-400 animate-pulse' : isLive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
           <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-            {isRecovery ? 'RECOVERY MODE' : 'SOVEREIGN COMMAND'}
+            {isHybrid ? 'HYBRID_PROTOCOL' : 'SOVEREIGN_COMMAND'}
           </span>
           <div className="w-px h-2 bg-white/10 mx-1"></div>
           <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>

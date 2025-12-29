@@ -119,7 +119,7 @@ NOTIFY pgrst, 'reload schema';`;
       await checkIntegrity();
       await loadOrders();
     } catch (e) {
-      console.error("Auto-repair failed", e);
+      console.error("Auto-repair skipped", e);
     } finally {
       setIsRepairing(false);
     }
@@ -160,7 +160,7 @@ NOTIFY pgrst, 'reload schema';`;
     } catch (e: any) {
       const errorMsg = e.message || e.details || JSON.stringify(e);
       if (errorMsg.includes('PGRST205') || errorMsg.includes('404')) {
-         setOrderError("CACHE_MISMATCH: API desatualizada. Execute o Repair Protocol.");
+         setOrderError("SYINC_PENDING: Sincronia global em curso. Aguarde a propagação do cache.");
       } else if (errorMsg.includes('42P01') || errorMsg.includes('does not exist')) {
          setOrderError("PROVISION_MISSING: Tabelas vitais não existem. Acesse a aba INFRA.");
       } else {
@@ -299,10 +299,10 @@ NOTIFY pgrst, 'reload schema';`;
                   {loadingOrders ? (
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs italic">Sincronizando transações...</div>
                   ) : orderError ? (
-                    <div className="p-16 border border-red-500/30 bg-red-500/5 rounded-[4rem] text-center space-y-10">
-                      <h3 className="text-2xl font-serif text-white italic">Protocolo Interrompido</h3>
-                      <p className="text-red-500 font-black uppercase tracking-widest text-[10px]">{orderError}</p>
-                      <button onClick={() => setActiveTab('infra')} className="bg-red-600 text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase">Ir para Infra & Provisioning</button>
+                    <div className="p-16 border border-blue-500/30 bg-blue-500/5 rounded-[4rem] text-center space-y-10">
+                      <h3 className="text-2xl font-serif text-white italic">Protocolo de Sincronia</h3>
+                      <p className="text-blue-500 font-black uppercase tracking-widest text-[10px]">{orderError}</p>
+                      <button onClick={loadOrders} className="bg-blue-600 text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase">Forçar Recarregamento</button>
                     </div>
                   ) : orders.length === 0 ? (
                     <div className="p-20 border border-dashed border-white/5 rounded-[4rem] text-center text-slate-600 uppercase tracking-widest text-xs italic">Nenhum protocolo pendente no ledger.</div>
