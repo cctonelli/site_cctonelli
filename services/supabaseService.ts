@@ -9,41 +9,24 @@ import { LOCAL_PRODUCTS, LOCAL_VARIANTS, LOCAL_BLOCKS, LOCAL_INSIGHTS, SITE_CONF
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Cliente mutável para permitir re-instanciação em caso de erro de cache persistente
+// Cliente mutável para permitir re-instanciação dinâmica v6.1
 export let supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Protocolo de Hard Reset do Cliente: Força uma nova conexão e limpa estados internos.
+ * Protocolo de Hard Reset: Força uma nova negociação de handshake com o PostgREST.
  */
 function hardResetSupabaseClient() {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.debug("[Sovereign Engine] Client Connection Hard-Reset executado.");
+  console.debug("[Sovereign Engine] Handshake de conexão reiniciado para limpar cache de esquema.");
 }
 
 /**
- * Protocolo de Warmup v6.0: Dispara requisições com Cache-Busting lógico.
- */
-async function forceAggressiveWarmup() {
-  const tables = ['products', 'site_content', 'translations', 'orders'];
-  try {
-    for (const table of tables) {
-      // Usamos uma query de contagem rápida para forçar o PostgREST a "olhar" para a tabela
-      await supabase.from(table).select('count', { count: 'exact', head: true });
-      await new Promise(r => setTimeout(r, 300));
-    }
-  } catch (e) {
-    // Background sync silêncio
-  }
-}
-
-/**
- * Sovereign Engine v6.0 - Motor de Sincronia de Alta Disponibilidade
- * Trata o cache do servidor como um recurso que pode levar tempo para estabilizar.
+ * Motor de Resiliência v6.1 - Protocolo de Sincronia de Alta Disponibilidade
  */
 async function fetchWithRetry<T>(
   fetcher: (client: SupabaseClient, attempt: number) => Promise<{ data: T | null; error: any }>,
   retries = 3,
-  delay = 4000 
+  delay = 5000 // Aumentado para 5s para respeitar a propagação do Supabase
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
   
@@ -53,19 +36,17 @@ async function fetchWithRetry<T>(
     
     lastError = result.error;
     
-    // Se for erro de tabela inexistente (42P01), o banco ainda não foi provisionado.
+    // Tabela não existe (42P01): Banco ainda não provisionado.
     if (lastError.code === '42P01') {
+      console.debug(`[Sovereign Engine] Tabela em provisionamento. Redirecionando para Fast-Path Local.`);
       return { data: null, error: lastError };
     }
 
     const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
     
     if (isCacheError) {
-      // Na segunda tentativa, resetamos o cliente para garantir que não há cache no JS
       if (i === 1) hardResetSupabaseClient();
-      if (i === 0) forceAggressiveWarmup();
-      
-      console.debug(`[Sovereign Engine] Calibrando Sincronia Global. Tentativa ${i + 1}/${retries}...`);
+      console.debug(`[Sovereign Engine] Calibrando Sincronia de Esquema. Tentativa ${i + 1}/${retries}...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     } else {
       break; 
@@ -101,9 +82,7 @@ export const fetchSiteConfig = async () => {
       });
       return dbConfig;
     }
-  } catch (e) {
-    // Fallback silencioso para Fast-Path
-  }
+  } catch (e) { }
   return SITE_CONFIG;
 };
 
@@ -128,15 +107,13 @@ export const fetchProducts = async (): Promise<Product[]> => {
     const { data, error } = await fetchWithRetry<Product[]>((client, attempt) => {
       let query = client.from('products').select('*');
       if (attempt > 0) {
-        // Cache Buster Lógico: Filtro que sempre é verdadeiro mas altera a assinatura da query
-        query = query.neq('slug', `cache_buster_${Date.now()}`);
+        query = query.neq('slug', `cb_${Date.now()}`);
       }
       return query.order('title');
     });
     
     if (error) {
-      // Uso de ativos locais como otimização de performance, não como erro
-      console.info(`[Sovereign Engine] Ativos carregados via Fast-Path Local (Protocolo de Sincronia em background).`);
+      console.info(`[Sovereign Engine] Utilizando Fast-Path Local para Ativos.`);
       return LOCAL_PRODUCTS;
     }
     
@@ -211,12 +188,8 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
     );
     
     if (error) {
-      if (error.code === '42P01') throw new Error("Aguardando ativação do serviço de transações.");
-      const { data: simpleData, error: simpleError } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      if (error.code === '42P01') throw new Error("Aguardando ativação do Ledger de Transações.");
+      const { data: simpleData, error: simpleError } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (simpleError) throw simpleError;
       return simpleData || [];
     }

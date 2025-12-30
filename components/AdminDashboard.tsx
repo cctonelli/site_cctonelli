@@ -23,14 +23,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [siteConfig, setSiteConfig] = useState<any>(null);
   const [useMockData, setUseMockData] = useState(false);
-  const [showDoctor, setShowDoctor] = useState(false);
-  const [isRepairing, setIsRepairing] = useState(false);
   const [tableStatus, setTableStatus] = useState<Record<string, { visible: boolean; error?: string; code?: string }>>({});
 
-  const SQL_PROVISION_SCRIPT = `-- SUPABASE SOVEREIGN PROVISIONING SCRIPT v18.9
+  const SQL_PROVISION_SCRIPT = `-- SUPABASE SOVEREIGN PROVISIONING SCRIPT v18.9.1 (FIXED RLS)
 -- Execute este script no SQL Editor do seu Supabase Dashboard
 
--- 1. Tabela de Perfis
+-- 1. Função de Segurança de Elite (ADMIN CHECK)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN (
+    SELECT (user_type = 'admin')
+    FROM public.profiles
+    WHERE id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2. Tabela de Perfis (Ajustada para Signup Seguro)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
     full_name TEXT,
@@ -42,40 +52,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Tabela de Traduções (Correção para erro 42P01)
-CREATE TABLE IF NOT EXISTS public.translations (
-    id BIGSERIAL PRIMARY KEY,
-    key TEXT NOT NULL,
-    lang TEXT NOT NULL,
-    value TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(key, lang)
-);
-
--- 3. Tabela de Conteúdo de Site
-CREATE TABLE IF NOT EXISTS public.site_content (
-    id BIGSERIAL PRIMARY KEY,
-    page TEXT DEFAULT 'home',
-    key TEXT NOT NULL,
-    value JSONB,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 4. Tabela de Produtos
-CREATE TABLE IF NOT EXISTS public.products (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    slug TEXT UNIQUE NOT NULL,
-    title TEXT NOT NULL,
-    subtitle TEXT,
-    description TEXT,
-    image_url TEXT,
-    featured BOOLEAN DEFAULT FALSE,
-    pricing_type TEXT DEFAULT 'subscription',
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 5. Tabela de Pedidos
+-- 3. Tabela de Pedidos (Ajustada para Auditoria)
 CREATE TABLE IF NOT EXISTS public.orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id),
@@ -88,41 +65,41 @@ CREATE TABLE IF NOT EXISTS public.orders (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. Habilitar RLS e Permissões
+-- 4. Habilitar RLS em tudo
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.translations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+-- (Adicione para as outras tabelas se necessário)
 
-GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+-- 5. UNIFICAÇÃO DE POLÍTICAS (Remoção de Redundâncias)
+DROP POLICY IF EXISTS "orders_standard" ON public.orders;
+DROP POLICY IF EXISTS "Usuários veem próprios pedidos" ON public.orders;
+DROP POLICY IF EXISTS "Admins veem tudo" ON public.orders;
 
+CREATE POLICY "orders_sovereign_policy" ON public.orders
+FOR ALL TO authenticated
+USING (auth.uid() = user_id OR is_admin())
+WITH CHECK (auth.uid() = user_id OR is_admin());
+
+DROP POLICY IF EXISTS "profiles_standard" ON public.profiles;
+CREATE POLICY "profiles_sovereign_policy" ON public.profiles
+FOR ALL TO authenticated
+USING (auth.uid() = id OR is_admin())
+WITH CHECK (auth.uid() = id OR is_admin());
+
+-- 6. Garantir Leitura Pública de Conteúdo
+CREATE POLICY "site_content_read" ON public.site_content FOR SELECT USING (true);
+CREATE POLICY "products_read" ON public.products FOR SELECT USING (true);
+
+-- 7. Recarregar Handshake do Servidor
 NOTIFY pgrst, 'reload schema';`;
 
   const checkIntegrity = async () => {
-    const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'tools'];
+    const tables = ['orders', 'profiles', 'products', 'site_content', 'translations'];
     const statusResults: Record<string, any> = {};
     for (const t of tables) {
       statusResults[t] = await checkTableVisibility(t);
     }
     setTableStatus(statusResults);
-  };
-
-  const autoRepairCache = async () => {
-    setIsRepairing(true);
-    const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'tools'];
-    try {
-      for (const t of tables) {
-        await supabase.from(t).select('count', { count: 'exact', head: true });
-        await new Promise(r => setTimeout(r, 200));
-      }
-      await checkIntegrity();
-      await loadOrders();
-    } catch (e) {
-      console.error("Auto-repair skipped", e);
-    } finally {
-      setIsRepairing(false);
-    }
   };
 
   const forceHardSync = async () => {
@@ -179,18 +156,6 @@ NOTIFY pgrst, 'reload schema';`;
     } catch (e) {}
   };
 
-  const handleUpdateConfig = async (field: string, subfield: string, value: any) => {
-    const newConfig = { ...siteConfig };
-    if (!newConfig[field]) newConfig[field] = {};
-    newConfig[field][subfield] = value;
-    setSiteConfig(newConfig);
-    try {
-      await upsertItem('site_content', {
-        page: 'config', key: `setting_${field}_${subfield}`, value: value, updated_at: new Date().toISOString()
-      });
-    } catch (e) {}
-  };
-
   const approveOrder = async (order: Order) => {
     if (useMockData) return;
     const clientName = (order as any).profiles?.full_name || (order as any).profiles?.email || 'Partner';
@@ -202,7 +167,6 @@ NOTIFY pgrst, 'reload schema';`;
     } catch (e: any) { alert(`Erro: ${e.message}`); } finally { setProcessingId(null); }
   };
 
-  const hasSchemaErrors = Object.values(tableStatus).some((s: any) => !s.visible);
   const isMissingTables = Object.values(tableStatus).some((s: any) => s.code === '42P01');
 
   if (!profile || profile.user_type !== 'admin') return null;
@@ -254,12 +218,12 @@ NOTIFY pgrst, 'reload schema';`;
               <div className="space-y-16">
                  <div className="space-y-4">
                     <h2 className="text-6xl font-serif text-white italic tracking-tighter">Database <span className="text-red-600">Provisioning.</span></h2>
-                    <p className="text-slate-500 text-xl font-light italic">Se você está vendo erros 42P01 (Tabela não encontrada), copie o script abaixo e execute no SQL Editor do Supabase.</p>
+                    <p className="text-slate-500 text-xl font-light italic">Se você está vendo erros 42P01 ou conflitos de RLS, use este script para unificar as políticas do Supabase.</p>
                  </div>
 
                  <div className="p-10 bg-black/60 border border-white/5 rounded-[3rem] space-y-10 shadow-inner">
                     <div className="flex justify-between items-center">
-                       <span className="text-[10px] font-black uppercase tracking-[0.6em] text-blue-500">UNIFIED_PROVISION_SCRIPT.sql</span>
+                       <span className="text-[10px] font-black uppercase tracking-[0.6em] text-blue-500">SOVEREIGN_UNIFIED_RLS.sql</span>
                        <button onClick={() => { navigator.clipboard.writeText(SQL_PROVISION_SCRIPT); alert("Script SQL Copiado!"); }} className="bg-blue-600 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-blue-500 transition-all">COPIAR SCRIPT</button>
                     </div>
                     <code className="block w-full h-[500px] bg-black p-8 rounded-2xl overflow-y-auto custom-scrollbar text-[11px] text-green-500 font-mono leading-relaxed select-all whitespace-pre">
@@ -270,15 +234,15 @@ NOTIFY pgrst, 'reload schema';`;
                  <div className="grid md:grid-cols-3 gap-10">
                     <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
                        <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 01</h4>
-                       <p className="text-xs text-slate-500">Abra o painel do Supabase e clique no ícone "SQL Editor" na barra lateral esquerda.</p>
+                       <p className="text-xs text-slate-500">Abra o painel do Supabase e cole este script no SQL Editor.</p>
                     </div>
                     <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
                        <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 02</h4>
-                       <p className="text-xs text-slate-500">Clique em "New Query", cole o script acima e clique em "Run" (botão azul).</p>
+                       <p className="text-xs text-slate-500">Execute o script. Isso criará a função is_admin() e unificará as políticas.</p>
                     </div>
                     <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
                        <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 03</h4>
-                       <p className="text-xs text-slate-500">Volte aqui e clique no botão "HARD SYNC" no painel lateral para recarregar a API.</p>
+                       <p className="text-xs text-slate-500">O comando NOTIFY ao final limpará o cache do PostgREST automaticamente.</p>
                     </div>
                  </div>
               </div>
