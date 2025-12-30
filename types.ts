@@ -1,6 +1,6 @@
 
 export interface CarouselImage {
-  id: string | number;
+  id: string | number; // Mantido flexível pois carousel_images no manual é bigint
   url: string;
   title: string | null;
   subtitle: string | null;
@@ -12,7 +12,7 @@ export interface CarouselImage {
 }
 
 export interface Metric {
-  id: string | number;
+  id: string; // UUID v20.0.1
   label: string;
   value: string;
   icon: string | null;
@@ -21,7 +21,7 @@ export interface Metric {
 }
 
 export interface Insight {
-  id: string | number;
+  id: string; // UUID v20.0.1
   title: string;
   subtitle?: string | null;
   excerpt: string | null;
@@ -45,7 +45,7 @@ export interface Tool {
 }
 
 export interface Product {
-  id: string;
+  id: string; // UUID
   slug: string;
   title: string;
   subtitle: string | null;
@@ -59,7 +59,7 @@ export interface Product {
 }
 
 export interface ProductVariant {
-  id: string;
+  id: string; // UUID
   product_id: string;
   name: string;
   price: number;
@@ -73,7 +73,7 @@ export interface ProductVariant {
 }
 
 export interface ProductContentBlock {
-  id: string;
+  id: string; // UUID
   product_id: string;
   block_type: 'hero' | 'text' | 'video' | 'image_gallery' | 'comparison' | 'faq' | 'cta' | 'testimonials' | 'custom' | 'features';
   order: number;
@@ -81,51 +81,51 @@ export interface ProductContentBlock {
 }
 
 export interface Order {
-  id: string;
+  id: string; // UUID
   user_id: string;
   product_id: string;
-  variant_id: string;
+  variant_id?: string;
   status: 'pending' | 'paid' | 'approved' | 'rejected' | 'delivered';
-  payment_method: string;
-  pix_qrcode_url: string | null;
+  payment_method?: string;
+  pix_qrcode_url?: string | null;
   amount: number;
   approved_by_admin: boolean;
-  download_link: string | null;
+  download_link?: string | null;
   created_at?: string;
   profiles?: Profile;
 }
 
 export interface UserProduct {
-  id: string;
+  id: string; // UUID
   user_id: string;
   product_id: string;
-  variant_id: string | null;
+  variant_id?: string | null;
   status: 'pending' | 'active' | 'expired' | 'trial' | 'canceled';
   expires_at: string | null;
-  access_token: string | null;
+  access_token?: string | null;
   approved_by_admin: boolean;
   download_link?: string | null;
   created_at?: string;
 }
 
-export interface AppVersion {
-  id: string;
-  app_name: string;
-  version_code: string;
-  download_url: string;
-  is_forced: boolean;
-  release_notes: string | null;
-  created_at?: string;
-}
-
+// Added V8MatrixUsage interface to support usage data in ClientPortal
 export interface V8MatrixUsage {
   id: string;
   user_product_id: string;
-  remaining_disparos: number;
-  threads: number;
-  daily_count: number;
   total_count: number;
-  last_reset: string;
+  remaining_disparos: number;
+  last_used_at?: string;
+}
+
+export interface Profile {
+  id: string; // UUID do Auth
+  full_name: string | null;
+  email: string | null;
+  cpf_cnpj: string | null;
+  gender?: 'Masculino' | 'Feminino' | 'Outro' | 'Prefiro não informar' | null;
+  whatsapp: string | null;
+  user_type: 'client' | 'admin';
+  created_at?: string;
 }
 
 export interface Testimonial {
@@ -135,17 +135,6 @@ export interface Testimonial {
   quote: string;
   approved: boolean;
   created_at: string;
-}
-
-export interface Profile {
-  id: string;
-  full_name: string | null;
-  email: string | null;
-  cpf_cnpj: string | null;
-  gender: 'Masculino' | 'Feminino' | 'Outro' | 'Prefiro não informar' | null;
-  whatsapp: string | null;
-  user_type: 'client' | 'admin';
-  created_at?: string;
 }
 
 export interface Contact {

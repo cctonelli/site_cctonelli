@@ -2,90 +2,63 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
-  Profile, Contact, CarouselImage, Tool, V8MatrixUsage, Testimonial
+  Profile, Contact, CarouselImage, Tool, Testimonial, V8MatrixUsage
 } from '../types';
 import { LOCAL_PRODUCTS, LOCAL_VARIANTS, LOCAL_BLOCKS, LOCAL_INSIGHTS, SITE_CONFIG } from './localRegistry';
 
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Cliente dinâmico v6.2 - Permite reset de handshake
 export let supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/**
- * Protocolo de Hard Reset Master: Força a invalidação de qualquer cache de conexão local.
- */
 export function masterHandshakeReset() {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   console.debug("[Sovereign Engine] Master Handshake executado: Conexão reiniciada.");
 }
 
-/**
- * Motor de Resiliência v6.2 - Camada de Sincronia Master (Fetches)
- */
 async function fetchWithRetry<T>(
   fetcher: (client: SupabaseClient, attempt: number) => Promise<{ data: T | null; error: any }>,
   retries = 3,
   delay = 4000 
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
-  
   for (let i = 0; i < retries; i++) {
     const result = await fetcher(supabase, i);
     if (!result.error) return result;
-    
     lastError = result.error;
-    
     if (lastError.code === '42P01') return { data: null, error: lastError };
-
     const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
-    
     if (isCacheError) {
       if (i === 1) masterHandshakeReset();
-      console.debug(`[Kernel] Calibrando Sincronia de Esquema Master (Tentativa ${i + 1}/${retries})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
-    } else {
-      break; 
-    }
+    } else break;
   }
-  
   return { data: null, error: lastError };
 }
 
-/**
- * Motor de Mutação v2.0 - Garante que updates/inserts lidem com cache teimoso
- */
 export async function mutateWithRetry(
   operation: (client: SupabaseClient) => Promise<{ data: any; error: any }>,
   retries = 2
 ): Promise<{ data: any; error: any }> {
   let lastError: any;
-  
   for (let i = 0; i < retries; i++) {
     const result = await operation(supabase);
     if (!result.error) return result;
-    
     lastError = result.error;
-    
-    // Erro de Cache (PGRST205): Coluna não encontrada mas sabemos que existe
     if (lastError.code === 'PGRST205' || lastError.message?.includes('column')) {
       masterHandshakeReset();
       await new Promise(resolve => setTimeout(resolve, 2000));
       continue;
     }
-    
     break;
   }
-  
   return { data: null, error: lastError };
 }
 
 export const checkTableVisibility = async (tableName: string): Promise<{ visible: boolean; error?: string; code?: string }> => {
   try {
     const { error } = await supabase.from(tableName).select('count', { count: 'exact', head: true });
-    if (error) {
-      return { visible: false, error: error.message, code: error.code };
-    }
+    if (error) return { visible: false, error: error.message, code: error.code };
     return { visible: true };
   } catch (e: any) {
     return { visible: false, error: e.message, code: 'UNKNOWN' };
@@ -99,7 +72,9 @@ export const fetchSiteConfig = async () => {
     if (data && data.length > 0) {
       const dbConfig = { ...SITE_CONFIG };
       data.forEach(item => {
-        const [field, subfield] = item.key.replace('setting_', '').split('_');
+        const keyParts = item.key.replace('setting_', '').split('_');
+        const field = keyParts[0];
+        const subfield = keyParts.slice(1).join('_');
         if (field && subfield && (dbConfig as any)[field]) {
           (dbConfig as any)[field][subfield] = item.value;
         }
@@ -130,11 +105,10 @@ export const fetchProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await fetchWithRetry<Product[]>((client) => client.from('products').select('*').order('title'));
     if (error) return LOCAL_PRODUCTS;
-    
     const dbProducts = data || [];
     const merged = [...(dbProducts as Product[])];
     LOCAL_PRODUCTS.forEach(lp => {
-      if (!merged.find(p => (p as any).id === lp.id || p.slug === lp.slug)) merged.push(lp);
+      if (!merged.find(p => p.id === lp.id || p.slug === lp.slug)) merged.push(lp);
     });
     return merged.sort((a, b) => (a.featured === b.featured) ? 0 : a.featured ? -1 : 1);
   } catch (e) { return LOCAL_PRODUCTS; }
@@ -167,7 +141,7 @@ export const fetchProductContentBlocks = async (productId: string): Promise<Prod
 
 export const fetchInsights = async (): Promise<Insight[]> => {
   try {
-    const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
+    const { data, error } = await fetchWithRetry<Insight[]>((client) => client.from('insights').select('*').eq('is_active', true).order('display_order'));
     if (error) throw error;
     return (data && data.length > 0) ? data : LOCAL_INSIGHTS;
   } catch (e) { return LOCAL_INSIGHTS; }
@@ -184,7 +158,7 @@ export const fetchInsightById = async (id: string): Promise<Insight | null> => {
 export const fetchAllOrders = async (): Promise<Order[]> => {
   try {
     const { data, error } = await fetchWithRetry<Order[]>((client) => 
-      client.from('orders').select('*, profiles (id, email, full_name, whatsapp)').order('created_at', { ascending: false })
+      client.from('orders').select('*, profiles:user_id (id, email, full_name, whatsapp)').order('created_at', { ascending: false })
     );
     if (error) return [];
     return data || [];
@@ -218,10 +192,11 @@ export const fetchSiteContent = async (page: string): Promise<Record<string, any
 
 export const fetchGlobalTranslations = async (lang: string): Promise<Record<string, string>> => {
   try {
-    const { data, error } = await supabase.from('translations').select('*').eq('lang', lang);
+    const { data, error } = await fetchWithRetry<Record<string, string>>((client) => client.from('translations').select('*').eq('lang', lang));
     if (error) return {};
     const transMap: Record<string, string> = {};
-    data?.forEach(item => { transMap[item.key] = item.value; });
+    const results = (data as any) || [];
+    results.forEach((item: any) => { transMap[item.key] = item.value; });
     return transMap;
   } catch (e) { return {}; }
 };
@@ -260,9 +235,13 @@ export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> 
   return data || [];
 };
 
+// Added fetchUsageByProduct to fix the error in ClientPortal.tsx
 export const fetchUsageByProduct = async (userProductId: string): Promise<V8MatrixUsage | null> => {
-  const { data } = await supabase.from('v8_matrix_usage').select('*').eq('user_product_id', userProductId).maybeSingle();
-  return data;
+  try {
+    const { data, error } = await supabase.from('v8_usage').select('*').eq('user_product_id', userProductId).maybeSingle();
+    if (error) throw error;
+    return data;
+  } catch (e) { return null; }
 };
 
 export const fetchTools = async (): Promise<Tool[]> => {

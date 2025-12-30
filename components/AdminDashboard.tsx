@@ -10,9 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 type TabType = 'dashboard' | 'products' | 'canvas' | 'variants' | 'insights' | 'users' | 'orders' | 'accesses' | 'config' | 'infra' | 'logs';
 
-const ADMIN_VERSION = "v20.0-SOVEREIGN-ULTRA";
+const ADMIN_VERSION = "v20.0.1-SOVEREIGN-ULTRA";
 
-// SQL_PROVISION_SCRIPT definido para fixar erro de cache e tipos de coluna
 const SQL_PROVISION_SCRIPT = `-- CLAUDIO TONELLI ADVISORY - SOVEREIGN MASTER DB PROVISIONING
 -- VERSION 20.0.1 (Cache Fix)
 
@@ -152,6 +151,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       const channel = supabase.channel('admin-master-monitor')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => loadAllData())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'site_content' }, () => loadAllData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'insights' }, () => loadAllData())
         .subscribe();
 
       return () => { supabase.removeChannel(channel); };
@@ -177,14 +177,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   };
 
   const approveOrder = async (order: Order) => {
-    if (!confirm(`Confirmar ativação do protocolo para ${(order as any).profiles?.full_name || 'Partner'}?`)) return;
+    if (!confirm(`Confirmar ativação do protocolo para ${order.profiles?.full_name || 'Partner'}?`)) return;
     try {
       setLoading(true);
       await supabase.from('orders').update({ status: 'approved', approved_by_admin: true }).eq('id', order.id);
       await upsertItem('user_products', {
         user_id: order.user_id,
         product_id: order.product_id,
-        variant_id: order.variant_id,
+        variant_id: (order as any).variant_id,
         status: 'active',
         approved_by_admin: true
       });
@@ -217,7 +217,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   return (
     <div className="fixed inset-0 z-[2000] bg-[#010309] flex flex-col overflow-hidden animate-in fade-in duration-500">
       
-      {/* TOP BAR MASTER */}
       <header className="h-24 bg-black/80 backdrop-blur-3xl border-b border-white/5 px-10 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-6">
           <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white text-2xl shadow-xl">CT</div>
@@ -238,7 +237,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* SIDEBAR */}
         <aside className="w-80 bg-black/40 border-r border-white/5 p-8 flex flex-col gap-6 shrink-0 overflow-y-auto custom-scrollbar">
           <NavItem tab="dashboard" label="Dashboard" icon="📊" />
           <NavItem tab="orders" label="Sales Vault" icon="💰" />
@@ -255,7 +253,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
              <div className="p-5 bg-blue-600/5 rounded-3xl border border-blue-600/10 space-y-4">
                 <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">System Integrity</p>
                 <div className="space-y-2">
-                   {['orders', 'profiles', 'site_content'].map(t => (
+                   {['orders', 'profiles', 'insights', 'site_content'].map(t => (
                      <div key={t} className="flex justify-between items-center">
                         <span className="text-[8px] font-mono text-slate-600">{t}</span>
                         <div className={`w-1.5 h-1.5 rounded-full ${tableStatus[t]?.visible ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -267,12 +265,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           </div>
         </aside>
 
-        {/* MAIN STAGE */}
         <main className="flex-1 overflow-y-auto p-12 lg:p-20 bg-grid relative custom-scrollbar">
           <div className="max-w-7xl mx-auto pb-40">
-            
             <AnimatePresence mode="wait">
-              
               {activeTab === 'dashboard' && (
                 <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-16">
                   <header className="space-y-4">
@@ -308,8 +303,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                     </div>
                     <div className="p-12 bg-blue-600/10 border border-blue-600/20 rounded-[4rem] flex flex-col justify-center items-center text-center space-y-6">
                        <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-4xl shadow-2xl shadow-blue-600/40">🚀</div>
-                       <h4 className="text-2xl font-serif italic text-white">Protocolo v20.0 Ativo</h4>
-                       <p className="text-slate-500 text-sm font-light italic px-10">O cérebro estratégico está pronto para processar novas ordens e publicações editoriais.</p>
+                       <h4 className="text-2xl font-serif italic text-white">Protocolo v20.0.1 Ativo</h4>
+                       <p className="text-slate-500 text-sm font-light italic px-10">Sincronia completa detectada. O Kernel está operando com IDs UUID estáveis.</p>
                        <button onClick={exportRegistry} className="px-12 py-4 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-blue-600 hover:text-white transition-all">Hard Build Export</button>
                     </div>
                   </div>
@@ -335,11 +330,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                               </div>
                               <div className="space-y-3">
                                  <div className="flex items-center gap-4">
-                                    <h4 className="text-3xl font-serif italic text-white">{(order as any).profiles?.full_name || 'Partner ID'}</h4>
+                                    <h4 className="text-3xl font-serif italic text-white">{order.profiles?.full_name || 'Partner ID'}</h4>
                                     <span className="text-[9px] font-black px-4 py-1.5 bg-white/5 text-slate-500 rounded-full uppercase tracking-widest"># {order.id.slice(0,8)}</span>
                                  </div>
                                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
-                                   Ativo: <span className="text-slate-300">{order.product_id}</span> • Investimento: <span className="text-blue-500">R$ {order.amount.toLocaleString()}</span>
+                                   E-mail: <span className="text-slate-300">{order.profiles?.email}</span> • Investimento: <span className="text-blue-500">R$ {order.amount.toLocaleString()}</span>
                                  </p>
                               </div>
                            </div>
@@ -375,24 +370,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                                   <input type="text" value={siteConfig?.theme?.primary} onChange={(e) => setSiteConfig({...siteConfig, theme: {...siteConfig.theme, primary: e.target.value}})} className="bg-black border border-white/10 rounded-xl px-6 py-4 text-white font-mono text-sm uppercase" />
                                </div>
                             </div>
-                            <div>
-                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-6">Escala H1: {siteConfig?.typography?.h1_size}</label>
-                               <input type="range" className="w-full accent-blue-600" min="4" max="15" step="0.5" value={parseFloat(siteConfig?.typography?.h1_size)} onChange={(e) => setSiteConfig({...siteConfig, typography: {...siteConfig.typography, h1_size: `${e.target.value}rem` }})} />
-                            </div>
-                         </div>
-                      </div>
-
-                      <div className="p-12 bg-slate-900/40 border border-white/5 rounded-[4rem] space-y-12">
-                         <h4 className="text-2xl font-serif italic text-white">Matrix Protocol</h4>
-                         <div className="space-y-10">
-                            <div className="flex justify-between items-center">
-                               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">Matrix Rain Ativo</span>
-                               <button onClick={() => setSiteConfig({...siteConfig, ux: {...siteConfig.ux, matrix_mode: !siteConfig.ux.matrix_mode}})} className={`w-16 h-8 rounded-full transition-all relative px-1 flex items-center ${siteConfig?.ux?.matrix_mode ? 'bg-blue-600 justify-end' : 'bg-slate-800 justify-start'}`}><div className="w-6 h-6 bg-white rounded-full shadow-lg"></div></button>
-                            </div>
-                            <div>
-                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-6">Velocidade da Chuva: {siteConfig?.ux?.matrix_speed}</label>
-                               <input type="range" className="w-full accent-green-600" min="0.1" max="5" step="0.1" value={siteConfig?.ux?.matrix_speed} onChange={(e) => setSiteConfig({...siteConfig, ux: {...siteConfig.ux, matrix_speed: parseFloat(e.target.value)}})} />
-                            </div>
                          </div>
                       </div>
                    </div>
@@ -406,14 +383,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                          {syncStatus === 'syncing' ? 'SINCRONIZANDO COM SUPABASE...' : 'PERSISTIR DNA VISUAL'}
                       </button>
                       {syncStatus === 'success' && <p className="text-center text-green-500 text-[9px] font-black uppercase tracking-widest animate-pulse">Sincronia Completa! O site irá atualizar no próximo load.</p>}
-                      {syncStatus === 'cache_warning' && <p className="text-center text-orange-500 text-[9px] font-black uppercase tracking-widest animate-pulse">Aviso: Schema Cache Desatualizado no Servidor. O banco foi atualizado, mas a API pode levar 1 min para refletir.</p>}
                    </div>
-                </motion.div>
-              )}
-
-              {activeTab === 'products' && (
-                <motion.div key="products" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                   <AdminCrudSection tableName="products" title="Ativos da Loja" fields={[{ key: 'title', label: 'Título' }, { key: 'slug', label: 'Slug' }, { key: 'subtitle', label: 'Subtítulo', type: 'textarea' }, { key: 'image_url', label: 'URL Imagem' }, { key: 'featured', label: 'Destaque', type: 'toggle' }, { key: 'pricing_type', label: 'Tipo de Preço (subscription/one_time)' }]} displayColumns={['title', 'slug']} />
                 </motion.div>
               )}
 
@@ -440,19 +410,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                    </div>
                 </motion.div>
               )}
-
             </AnimatePresence>
           </div>
         </main>
       </div>
 
-      {/* STATUS FOOTER */}
       <footer className="h-14 bg-black border-t border-white/5 px-10 flex items-center justify-between shrink-0 z-[2001]">
          <div className="flex gap-10 text-[8px] font-black uppercase tracking-widest text-slate-700">
             <span>Kernel Status: <span className="text-green-500">ONLINE_SOVEREIGN</span></span>
             <span>Handshake: <span className="text-blue-500">0xULTRA_2025</span></span>
          </div>
-         <p className="text-[8px] font-black uppercase tracking-[0.6em] text-slate-800 italic">Claudio Tonelli Consultoria // Strategy Core // Command Center v20.0-ULTRA</p>
+         <p className="text-[8px] font-black uppercase tracking-[0.6em] text-slate-800 italic">Claudio Tonelli Consultoria // Strategy Core // Command Center v20.0.1-ULTRA</p>
       </footer>
     </div>
   );
