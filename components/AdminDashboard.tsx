@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 type TabType = 'visual_dna' | 'editorial' | 'marketplace' | 'orders' | 'settings' | 'users' | 'infra';
 
-const ADMIN_VERSION = "v18.9-SOVEREIGN-MASTER-EXT";
+const ADMIN_VERSION = "v18.9.2-SOVEREIGN-FINAL";
 
 interface AdminDashboardProps {
   onClose: () => void;
@@ -25,10 +25,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   const [useMockData, setUseMockData] = useState(false);
   const [tableStatus, setTableStatus] = useState<Record<string, { visible: boolean; error?: string; code?: string }>>({});
 
-  const SQL_PROVISION_SCRIPT = `-- SUPABASE SOVEREIGN PROVISIONING SCRIPT v18.9.1 (FIXED RLS)
--- Execute este script no SQL Editor do seu Supabase Dashboard
+  const SQL_PROVISION_SCRIPT = `-- SUPABASE SOVEREIGN PROVISIONING SCRIPT v18.9.2-FINAL
+-- Execute este script no SQL Editor para estabilizar seu banco de dados.
 
--- 1. Função de Segurança de Elite (ADMIN CHECK)
+-- 1. Função de Segurança Master (ADMIN CHECK)
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -40,7 +40,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2. Tabela de Perfis (Ajustada para Signup Seguro)
+-- 2. Tabela de Perfis
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
     full_name TEXT,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Tabela de Pedidos (Ajustada para Auditoria)
+-- 3. Tabela de Pedidos
 CREATE TABLE IF NOT EXISTS public.orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.profiles(id),
@@ -68,33 +68,42 @@ CREATE TABLE IF NOT EXISTS public.orders (
 -- 4. Habilitar RLS em tudo
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
--- (Adicione para as outras tabelas se necessário)
 
--- 5. UNIFICAÇÃO DE POLÍTICAS (Remoção de Redundâncias)
-DROP POLICY IF EXISTS "orders_standard" ON public.orders;
-DROP POLICY IF EXISTS "Usuários veem próprios pedidos" ON public.orders;
-DROP POLICY IF EXISTS "Admins veem tudo" ON public.orders;
-
+-- 5. POLÍTICAS SOBERANAS UNIFICADAS
+DROP POLICY IF EXISTS "orders_sovereign_policy" ON public.orders;
 CREATE POLICY "orders_sovereign_policy" ON public.orders
 FOR ALL TO authenticated
 USING (auth.uid() = user_id OR is_admin())
 WITH CHECK (auth.uid() = user_id OR is_admin());
 
-DROP POLICY IF EXISTS "profiles_standard" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_sovereign_policy" ON public.profiles;
 CREATE POLICY "profiles_sovereign_policy" ON public.profiles
 FOR ALL TO authenticated
 USING (auth.uid() = id OR is_admin())
 WITH CHECK (auth.uid() = id OR is_admin());
 
--- 6. Garantir Leitura Pública de Conteúdo
-CREATE POLICY "site_content_read" ON public.site_content FOR SELECT USING (true);
-CREATE POLICY "products_read" ON public.products FOR SELECT USING (true);
+-- 6. Ativos Digitais (User Products)
+CREATE TABLE IF NOT EXISTS public.user_products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.profiles(id),
+    product_id UUID REFERENCES public.products(id),
+    variant_id TEXT,
+    approved_by_admin BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.user_products ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "user_products_sovereign" ON public.user_products;
+CREATE POLICY "user_products_sovereign" ON public.user_products
+FOR ALL TO authenticated
+USING (auth.uid() = user_id OR is_admin())
+WITH CHECK (auth.uid() = user_id OR is_admin());
 
 -- 7. Recarregar Handshake do Servidor
 NOTIFY pgrst, 'reload schema';`;
 
   const checkIntegrity = async () => {
-    const tables = ['orders', 'profiles', 'products', 'site_content', 'translations'];
+    const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'user_products'];
     const statusResults: Record<string, any> = {};
     for (const t of tables) {
       statusResults[t] = await checkTableVisibility(t);
@@ -137,9 +146,9 @@ NOTIFY pgrst, 'reload schema';`;
     } catch (e: any) {
       const errorMsg = e.message || e.details || JSON.stringify(e);
       if (errorMsg.includes('PGRST205') || errorMsg.includes('404')) {
-         setOrderError("SYINC_PENDING: Sincronia global em curso. Aguarde a propagação do cache.");
+         setOrderError("SYNC_MASTER_WAIT: Calibrando Handshake com o PostgREST.");
       } else if (errorMsg.includes('42P01') || errorMsg.includes('does not exist')) {
-         setOrderError("PROVISION_MISSING: Tabelas vitais não existem. Acesse a aba INFRA.");
+         setOrderError("PROVISION_MISSING: Banco de dados aguardando o script de provisionamento.");
       } else {
          setOrderError(errorMsg);
       }
@@ -163,6 +172,15 @@ NOTIFY pgrst, 'reload schema';`;
     setProcessingId(order.id);
     try {
       await supabase.from('orders').update({ status: 'approved', approved_by_admin: true }).eq('id', order.id);
+      
+      // Criar o registro em user_products para liberação automática no Hub do Cliente
+      await supabase.from('user_products').insert([{
+        user_id: order.user_id,
+        product_id: order.product_id,
+        variant_id: order.variant_id,
+        approved_by_admin: true
+      }]);
+
       loadOrders();
     } catch (e: any) { alert(`Erro: ${e.message}`); } finally { setProcessingId(null); }
   };
@@ -218,32 +236,17 @@ NOTIFY pgrst, 'reload schema';`;
               <div className="space-y-16">
                  <div className="space-y-4">
                     <h2 className="text-6xl font-serif text-white italic tracking-tighter">Database <span className="text-red-600">Provisioning.</span></h2>
-                    <p className="text-slate-500 text-xl font-light italic">Se você está vendo erros 42P01 ou conflitos de RLS, use este script para unificar as políticas do Supabase.</p>
+                    <p className="text-slate-500 text-xl font-light italic">Execute o script v18.9.2 para estabilizar as políticas RLS e as tabelas de ativos.</p>
                  </div>
 
                  <div className="p-10 bg-black/60 border border-white/5 rounded-[3rem] space-y-10 shadow-inner">
                     <div className="flex justify-between items-center">
-                       <span className="text-[10px] font-black uppercase tracking-[0.6em] text-blue-500">SOVEREIGN_UNIFIED_RLS.sql</span>
+                       <span className="text-[10px] font-black uppercase tracking-[0.6em] text-blue-500">SOVEREIGN_MASTER_FINAL.sql</span>
                        <button onClick={() => { navigator.clipboard.writeText(SQL_PROVISION_SCRIPT); alert("Script SQL Copiado!"); }} className="bg-blue-600 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-blue-500 transition-all">COPIAR SCRIPT</button>
                     </div>
                     <code className="block w-full h-[500px] bg-black p-8 rounded-2xl overflow-y-auto custom-scrollbar text-[11px] text-green-500 font-mono leading-relaxed select-all whitespace-pre">
                       {SQL_PROVISION_SCRIPT}
                     </code>
-                 </div>
-
-                 <div className="grid md:grid-cols-3 gap-10">
-                    <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
-                       <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 01</h4>
-                       <p className="text-xs text-slate-500">Abra o painel do Supabase e cole este script no SQL Editor.</p>
-                    </div>
-                    <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
-                       <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 02</h4>
-                       <p className="text-xs text-slate-500">Execute o script. Isso criará a função is_admin() e unificará as políticas.</p>
-                    </div>
-                    <div className="p-8 bg-blue-600/5 border border-blue-600/20 rounded-3xl space-y-4">
-                       <h4 className="text-white font-bold text-sm uppercase tracking-widest">Passo 03</h4>
-                       <p className="text-xs text-slate-500">O comando NOTIFY ao final limpará o cache do PostgREST automaticamente.</p>
-                    </div>
                  </div>
               </div>
             )}
@@ -264,9 +267,9 @@ NOTIFY pgrst, 'reload schema';`;
                     <div className="py-20 text-center animate-pulse text-blue-500 uppercase tracking-widest text-xs italic">Sincronizando transações...</div>
                   ) : orderError ? (
                     <div className="p-16 border border-blue-500/30 bg-blue-500/5 rounded-[4rem] text-center space-y-10">
-                      <h3 className="text-2xl font-serif text-white italic">Protocolo de Sincronia</h3>
+                      <h3 className="text-2xl font-serif text-white italic">Protocolo de Sincronia Master</h3>
                       <p className="text-blue-500 font-black uppercase tracking-widest text-[10px]">{orderError}</p>
-                      <button onClick={loadOrders} className="bg-blue-600 text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase">Forçar Recarregamento</button>
+                      <button onClick={loadOrders} className="bg-blue-600 text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase">Forçar Handshake</button>
                     </div>
                   ) : orders.length === 0 ? (
                     <div className="p-20 border border-dashed border-white/5 rounded-[4rem] text-center text-slate-600 uppercase tracking-widest text-xs italic">Nenhum protocolo pendente no ledger.</div>
@@ -303,27 +306,6 @@ NOTIFY pgrst, 'reload schema';`;
                  <h2 className="text-6xl font-serif text-white italic tracking-tighter">Marketplace <span className="text-blue-600">Forge.</span></h2>
                  <AdminCrudSection tableName="products" title="Ativos Digitais" fields={[{ key: 'title', label: 'Título' }, { key: 'slug', label: 'Slug' }, { key: 'pricing_type', label: 'Tipo' }]} displayColumns={['title', 'slug']} />
               </div>
-            )}
-
-            {activeTab === 'users' && (
-               <div className="space-y-16">
-                  <h2 className="text-6xl font-serif text-white italic tracking-tighter">Partners & <span className="text-blue-600">CRM.</span></h2>
-                  <div className="grid gap-6">
-                     {profiles.map(p => (
-                        <div key={p.id} className="p-8 bg-slate-900/40 border border-white/5 rounded-3xl flex justify-between items-center backdrop-blur-3xl">
-                           <div className="flex gap-6 items-center">
-                              <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center font-serif italic text-white text-xl border border-white/10">
-                                 {p.full_name?.charAt(0) || p.email?.charAt(0)}
-                              </div>
-                              <div>
-                                 <p className="text-white font-serif italic text-xl">{p.full_name || 'Usuário Sem Nome'}</p>
-                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{p.email} • {p.user_type}</p>
-                              </div>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
             )}
           </div>
         </main>

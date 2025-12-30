@@ -9,24 +9,24 @@ import { LOCAL_PRODUCTS, LOCAL_VARIANTS, LOCAL_BLOCKS, LOCAL_INSIGHTS, SITE_CONF
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-// Cliente mutável para permitir re-instanciação dinâmica v6.1
+// Cliente dinâmico v6.2 - Permite reset de handshake
 export let supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Protocolo de Hard Reset: Força uma nova negociação de handshake com o PostgREST.
+ * Protocolo de Hard Reset Master: Força a invalidação de qualquer cache de conexão local.
  */
-function hardResetSupabaseClient() {
+function masterHandshakeReset() {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.debug("[Sovereign Engine] Handshake de conexão reiniciado para limpar cache de esquema.");
+  console.debug("[Sovereign Engine v6.2] Master Handshake executado: Conexão reiniciada.");
 }
 
 /**
- * Motor de Resiliência v6.1 - Protocolo de Sincronia de Alta Disponibilidade
+ * Motor de Resiliência v6.2 - Camada de Sincronia Master
  */
 async function fetchWithRetry<T>(
   fetcher: (client: SupabaseClient, attempt: number) => Promise<{ data: T | null; error: any }>,
   retries = 3,
-  delay = 5000 // Aumentado para 5s para respeitar a propagação do Supabase
+  delay = 4000 
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
   
@@ -36,17 +36,16 @@ async function fetchWithRetry<T>(
     
     lastError = result.error;
     
-    // Tabela não existe (42P01): Banco ainda não provisionado.
+    // Erro 42P01: Tabela inexistente. Silenciar e usar local.
     if (lastError.code === '42P01') {
-      console.debug(`[Sovereign Engine] Tabela em provisionamento. Redirecionando para Fast-Path Local.`);
       return { data: null, error: lastError };
     }
 
     const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
     
     if (isCacheError) {
-      if (i === 1) hardResetSupabaseClient();
-      console.debug(`[Sovereign Engine] Calibrando Sincronia de Esquema. Tentativa ${i + 1}/${retries}...`);
+      if (i === 1) masterHandshakeReset();
+      console.debug(`[Kernel] Calibrando Sincronia de Esquema Master (Tentativa ${i + 1}/${retries})...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     } else {
       break; 
@@ -107,13 +106,13 @@ export const fetchProducts = async (): Promise<Product[]> => {
     const { data, error } = await fetchWithRetry<Product[]>((client, attempt) => {
       let query = client.from('products').select('*');
       if (attempt > 0) {
-        query = query.neq('slug', `cb_${Date.now()}`);
+        query = query.neq('slug', `mb_${Date.now()}`); // Master Cache Buster
       }
       return query.order('title');
     });
     
     if (error) {
-      console.info(`[Sovereign Engine] Utilizando Fast-Path Local para Ativos.`);
+      console.info(`[Kernel] Ativos carregados via Soberania Local.`);
       return LOCAL_PRODUCTS;
     }
     
@@ -188,7 +187,7 @@ export const fetchAllOrders = async (): Promise<Order[]> => {
     );
     
     if (error) {
-      if (error.code === '42P01') throw new Error("Aguardando ativação do Ledger de Transações.");
+      if (error.code === '42P01') throw new Error("Aguardando ativação do Ledger de Vendas.");
       const { data: simpleData, error: simpleError } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (simpleError) throw simpleError;
       return simpleData || [];
@@ -272,7 +271,7 @@ export const deleteItem = async (table: string, id: string | number) => {
 };
 
 export const fetchUserProducts = async (userId: string): Promise<UserProduct[]> => {
-  const { data } = await supabase.from('user_products').select('*').eq('user_id', userId).eq('approved_by_admin', true);
+  const { data } = await supabase.from('user_products').select('*').eq('user_id', userId);
   return data || [];
 };
 

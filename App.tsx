@@ -27,7 +27,7 @@ import {
 import { Language, staticTranslations } from './services/i18nService';
 import { Metric, Insight, Product, Testimonial, Profile, CarouselImage } from './types';
 
-const APP_VERSION = "v18.9-SOVEREIGN";
+const APP_VERSION = "v18.9.2-SOVEREIGN-MASTER";
 
 const AppContent: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -59,7 +59,7 @@ const AppContent: React.FC = () => {
 
   const syncData = useCallback(async () => {
     try {
-      setSystemLog("SYNC_PROTO_INIT...");
+      setSystemLog("MASTER_HANDSHAKE_INIT...");
       const config = await fetchSiteConfig();
       setSiteConfig(config);
 
@@ -88,12 +88,12 @@ const AppContent: React.FC = () => {
       
       setIsLive(true);
       setIsHybrid(hybridDetected);
-      setSystemLog(hybridDetected ? "SOVEREIGN_ENGINE_STABLE" : "SINC_STABLE");
+      setSystemLog(hybridDetected ? "SOVEREIGN_MASTER_V6.2_STABLE" : "SINC_STABLE");
     } catch (err) {
-      console.debug(`[App Core] Fast-Path Sync Activated.`);
+      console.debug(`[App Core] Sovereign Hybrid Mode Active.`);
       setIsLive(true); 
       setIsHybrid(true);
-      setSystemLog("FAST_PATH_ACTIVE");
+      setSystemLog("SOVEREIGN_HYBRID_FALLBACK");
     }
   }, [language]);
 
@@ -162,12 +162,12 @@ const AppContent: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#010309] transition-colors duration-500" style={{ backgroundColor: 'var(--bg-navy)' }}>
       
-      {/* Status Protocol Badge */}
+      {/* Sovereign Telemetry Badge */}
       <div className="fixed bottom-6 left-6 z-[100] flex flex-col gap-1 pointer-events-none select-none group">
         <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${isHybrid ? 'bg-blue-400 animate-pulse' : isLive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
+          <div className={`w-1.5 h-1.5 rounded-full ${isHybrid ? 'bg-green-400 animate-pulse' : isLive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
           <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-            {isHybrid ? 'SOVEREIGN_ENGINE_STABLE' : 'SOVEREIGN_COMMAND'}
+            {isHybrid ? 'SOVEREIGN_MASTER_V6.2' : 'SOVEREIGN_COMMAND'}
           </span>
           <div className="w-px h-2 bg-white/10 mx-1"></div>
           <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
