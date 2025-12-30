@@ -2,7 +2,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
-  Profile, Contact, CarouselImage, Tool, AppVersion, V8MatrixUsage, Testimonial
+  Profile, Contact, CarouselImage, Tool, V8MatrixUsage, Testimonial
 } from '../types';
 import { LOCAL_PRODUCTS, LOCAL_VARIANTS, LOCAL_BLOCKS, LOCAL_INSIGHTS, SITE_CONFIG } from './localRegistry';
 

@@ -215,7 +215,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
   );
 
   return (
-    <div className="fixed inset-0 z-[2000] bg-[#010309] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[2000] bg-[#010309] flex flex-col overflow-hidden animate-in fade-in duration-500">
+      
+      {/* TOP BAR MASTER */}
       <header className="h-24 bg-black/80 backdrop-blur-3xl border-b border-white/5 px-10 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-6">
           <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-white text-2xl shadow-xl">CT</div>
@@ -235,6 +237,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       </header>
 
       <div className="flex-1 flex overflow-hidden">
+        
+        {/* SIDEBAR */}
         <aside className="w-80 bg-black/40 border-r border-white/5 p-8 flex flex-col gap-6 shrink-0 overflow-y-auto custom-scrollbar">
           <NavItem tab="dashboard" label="Dashboard" icon="📊" />
           <NavItem tab="orders" label="Sales Vault" icon="💰" />
@@ -246,17 +250,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           <NavItem tab="users" label="Partners CRM" icon="👥" />
           <NavItem tab="config" label="Identity & Visual" icon="⚙️" />
           <NavItem tab="infra" label="Kernel & DB" icon="🛠️" />
+          
+          <div className="mt-auto pt-8 border-t border-white/5">
+             <div className="p-5 bg-blue-600/5 rounded-3xl border border-blue-600/10 space-y-4">
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">System Integrity</p>
+                <div className="space-y-2">
+                   {['orders', 'profiles', 'site_content'].map(t => (
+                     <div key={t} className="flex justify-between items-center">
+                        <span className="text-[8px] font-mono text-slate-600">{t}</span>
+                        <div className={`w-1.5 h-1.5 rounded-full ${tableStatus[t]?.visible ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                     </div>
+                   ))}
+                </div>
+                <button onClick={loadAllData} className="w-full py-3 bg-blue-600 text-white text-[8px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-500">Forçar Re-Sync</button>
+             </div>
+          </div>
         </aside>
 
+        {/* MAIN STAGE */}
         <main className="flex-1 overflow-y-auto p-12 lg:p-20 bg-grid relative custom-scrollbar">
           <div className="max-w-7xl mx-auto pb-40">
+            
             <AnimatePresence mode="wait">
+              
               {activeTab === 'dashboard' && (
                 <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-16">
                   <header className="space-y-4">
                     <h2 className="text-7xl font-serif text-white italic tracking-tighter">System <span className="text-blue-600">Overview.</span></h2>
                     <p className="text-slate-500 text-xl font-light italic">Gestão unificada do ecossistema Claudio Tonelli.</p>
                   </header>
+
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     {[
                       { label: "Receita Master", value: `R$ ${orders.reduce((acc, o) => acc + o.amount, 0).toLocaleString()}`, color: 'text-blue-500' },
@@ -270,6 +293,67 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                       </div>
                     ))}
                   </div>
+
+                  <div className="grid lg:grid-cols-2 gap-10">
+                    <div className="p-12 bg-slate-900/40 border border-white/5 rounded-[4rem] space-y-8">
+                       <h4 className="text-2xl font-serif italic text-white">Sincronia de Ativos</h4>
+                       <div className="grid grid-cols-2 gap-6">
+                          {products.slice(0, 4).map(p => (
+                            <div key={p.id} className="p-6 bg-white/5 rounded-3xl border border-white/5 space-y-2">
+                               <p className="text-white font-bold text-sm truncate">{p.title}</p>
+                               <p className="text-[9px] font-black uppercase text-blue-500">{p.pricing_type}</p>
+                            </div>
+                          ))}
+                       </div>
+                    </div>
+                    <div className="p-12 bg-blue-600/10 border border-blue-600/20 rounded-[4rem] flex flex-col justify-center items-center text-center space-y-6">
+                       <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-4xl shadow-2xl shadow-blue-600/40">🚀</div>
+                       <h4 className="text-2xl font-serif italic text-white">Protocolo v20.0 Ativo</h4>
+                       <p className="text-slate-500 text-sm font-light italic px-10">O cérebro estratégico está pronto para processar novas ordens e publicações editoriais.</p>
+                       <button onClick={exportRegistry} className="px-12 py-4 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-blue-600 hover:text-white transition-all">Hard Build Export</button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'orders' && (
+                <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-12">
+                  <header className="flex justify-between items-end">
+                    <h2 className="text-7xl font-serif text-white italic tracking-tighter">Sales <span className="text-blue-600">Vault.</span></h2>
+                    <button onClick={loadAllData} className="text-[10px] font-black text-blue-500 hover:text-white uppercase tracking-widest">Re-Sync Ledger</button>
+                  </header>
+
+                  <div className="grid gap-6">
+                    {orders.length === 0 ? (
+                      <div className="py-40 text-center border-2 border-dashed border-white/5 rounded-[4rem] text-slate-700 font-black uppercase tracking-widest text-xs italic">Nenhum protocolo detectado no Ledger.</div>
+                    ) : (
+                      orders.map(order => (
+                        <div key={order.id} className="p-12 bg-slate-900/40 border border-white/5 rounded-[4rem] flex flex-col lg:flex-row items-center justify-between gap-10 group hover:border-blue-600/30 transition-all backdrop-blur-3xl shadow-2xl">
+                           <div className="flex items-center gap-10">
+                              <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center text-3xl ${order.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-green-500/10 text-green-500'}`}>
+                                {order.status === 'pending' ? '⏳' : '✅'}
+                              </div>
+                              <div className="space-y-3">
+                                 <div className="flex items-center gap-4">
+                                    <h4 className="text-3xl font-serif italic text-white">{(order as any).profiles?.full_name || 'Partner ID'}</h4>
+                                    <span className="text-[9px] font-black px-4 py-1.5 bg-white/5 text-slate-500 rounded-full uppercase tracking-widest"># {order.id.slice(0,8)}</span>
+                                 </div>
+                                 <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                                   Ativo: <span className="text-slate-300">{order.product_id}</span> • Investimento: <span className="text-blue-500">R$ {order.amount.toLocaleString()}</span>
+                                 </p>
+                              </div>
+                           </div>
+                           
+                           <div className="flex gap-4">
+                              {order.status === 'pending' && (
+                                <button onClick={() => approveOrder(order)} className="px-12 py-6 bg-blue-600 text-white rounded-3xl font-black uppercase text-[11px] tracking-widest hover:bg-blue-500 transition-all shadow-2xl shadow-blue-600/20 active:scale-95">LIBERAR ATIVO</button>
+                              )}
+                              <button className="px-12 py-6 bg-white/5 text-slate-500 rounded-3xl font-black uppercase text-[11px] tracking-widest hover:text-white transition-all">Relatório</button>
+                           </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </motion.div>
               )}
 
@@ -279,6 +363,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                       <h2 className="text-7xl font-serif text-white italic tracking-tighter">Site <span className="text-blue-600">Identity.</span></h2>
                       <p className="text-slate-500 text-xl font-light italic">DNA Visual e Comportamento Master da Plataforma.</p>
                    </header>
+
                    <div className="grid lg:grid-cols-2 gap-12">
                       <div className="p-12 bg-slate-900/40 border border-white/5 rounded-[4rem] space-y-12">
                          <h4 className="text-2xl font-serif italic text-white">Visual DNA</h4>
@@ -290,15 +375,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                                   <input type="text" value={siteConfig?.theme?.primary} onChange={(e) => setSiteConfig({...siteConfig, theme: {...siteConfig.theme, primary: e.target.value}})} className="bg-black border border-white/10 rounded-xl px-6 py-4 text-white font-mono text-sm uppercase" />
                                </div>
                             </div>
+                            <div>
+                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-6">Escala H1: {siteConfig?.typography?.h1_size}</label>
+                               <input type="range" className="w-full accent-blue-600" min="4" max="15" step="0.5" value={parseFloat(siteConfig?.typography?.h1_size)} onChange={(e) => setSiteConfig({...siteConfig, typography: {...siteConfig.typography, h1_size: `${e.target.value}rem` }})} />
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="p-12 bg-slate-900/40 border border-white/5 rounded-[4rem] space-y-12">
+                         <h4 className="text-2xl font-serif italic text-white">Matrix Protocol</h4>
+                         <div className="space-y-10">
+                            <div className="flex justify-between items-center">
+                               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">Matrix Rain Ativo</span>
+                               <button onClick={() => setSiteConfig({...siteConfig, ux: {...siteConfig.ux, matrix_mode: !siteConfig.ux.matrix_mode}})} className={`w-16 h-8 rounded-full transition-all relative px-1 flex items-center ${siteConfig?.ux?.matrix_mode ? 'bg-blue-600 justify-end' : 'bg-slate-800 justify-start'}`}><div className="w-6 h-6 bg-white rounded-full shadow-lg"></div></button>
+                            </div>
+                            <div>
+                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-6">Velocidade da Chuva: {siteConfig?.ux?.matrix_speed}</label>
+                               <input type="range" className="w-full accent-green-600" min="0.1" max="5" step="0.1" value={siteConfig?.ux?.matrix_speed} onChange={(e) => setSiteConfig({...siteConfig, ux: {...siteConfig.ux, matrix_speed: parseFloat(e.target.value)}})} />
+                            </div>
                          </div>
                       </div>
                    </div>
+
                    <div className="flex flex-col gap-6">
-                      <button onClick={saveVisualDNA} disabled={syncStatus === 'syncing'} className="w-full py-8 bg-blue-600 text-white rounded-[2.5rem] font-black uppercase tracking-[0.6em] text-[11px] shadow-2xl shadow-blue-600/30 hover:bg-blue-500 transition-all">
-                         {syncStatus === 'syncing' ? 'SINCRONIZANDO...' : 'PERSISTIR DNA VISUAL'}
+                      <button 
+                        onClick={saveVisualDNA} 
+                        disabled={syncStatus === 'syncing'}
+                        className="w-full py-8 bg-blue-600 text-white rounded-[2.5rem] font-black uppercase tracking-[0.6em] text-[11px] shadow-2xl shadow-blue-600/30 hover:bg-blue-500 transition-all active:scale-95"
+                      >
+                         {syncStatus === 'syncing' ? 'SINCRONIZANDO COM SUPABASE...' : 'PERSISTIR DNA VISUAL'}
                       </button>
+                      {syncStatus === 'success' && <p className="text-center text-green-500 text-[9px] font-black uppercase tracking-widest animate-pulse">Sincronia Completa! O site irá atualizar no próximo load.</p>}
                       {syncStatus === 'cache_warning' && <p className="text-center text-orange-500 text-[9px] font-black uppercase tracking-widest animate-pulse">Aviso: Schema Cache Desatualizado no Servidor. O banco foi atualizado, mas a API pode levar 1 min para refletir.</p>}
                    </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'products' && (
+                <motion.div key="products" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                   <AdminCrudSection tableName="products" title="Ativos da Loja" fields={[{ key: 'title', label: 'Título' }, { key: 'slug', label: 'Slug' }, { key: 'subtitle', label: 'Subtítulo', type: 'textarea' }, { key: 'image_url', label: 'URL Imagem' }, { key: 'featured', label: 'Destaque', type: 'toggle' }, { key: 'pricing_type', label: 'Tipo de Preço (subscription/one_time)' }]} displayColumns={['title', 'slug']} />
                 </motion.div>
               )}
 
@@ -312,6 +427,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                 <motion.div key="infra" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-12">
                    <header className="space-y-4">
                       <h2 className="text-7xl font-serif text-white italic tracking-tighter">Database <span className="text-red-600">Kernel.</span></h2>
+                      <p className="text-slate-500 text-xl font-light italic">Execução direta de comandos e provisionamento de tabelas.</p>
                    </header>
                    <div className="p-10 bg-black/60 border border-white/5 rounded-[4rem] space-y-8">
                       <div className="flex justify-between items-center">
@@ -324,11 +440,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                    </div>
                 </motion.div>
               )}
+
             </AnimatePresence>
           </div>
         </main>
       </div>
 
+      {/* STATUS FOOTER */}
       <footer className="h-14 bg-black border-t border-white/5 px-10 flex items-center justify-between shrink-0 z-[2001]">
          <div className="flex gap-10 text-[8px] font-black uppercase tracking-widest text-slate-700">
             <span>Kernel Status: <span className="text-green-500">ONLINE_SOVEREIGN</span></span>
