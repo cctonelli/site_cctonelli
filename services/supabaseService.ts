@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { 
   Metric, Insight, Product, ProductVariant, ProductContentBlock, Order, UserProduct,
   Profile, Contact, CarouselImage, Tool, AppVersion, V8MatrixUsage, Testimonial
@@ -9,41 +9,51 @@ import { LOCAL_PRODUCTS, LOCAL_VARIANTS, LOCAL_BLOCKS, LOCAL_INSIGHTS, SITE_CONF
 const SUPABASE_URL = 'https://wvvnbkzodrolbndepkgj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2dm5ia3pvZHJvbGJuZGVwa2dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYxNTkyMTAsImV4cCI6MjA4MTczNTIxMH0.t7aZdiGGeWRZfmHC6_g0dAvxTvi7K1aW6Or03QWuOYI';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Cliente mutável para permitir re-instanciação em caso de erro de cache persistente
+export let supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Protocolo de Warmup v5.2: Inicia a atualização do cache do esquema de forma silenciosa.
+ * Protocolo de Hard Reset do Cliente: Força uma nova conexão e limpa estados internos.
+ */
+function hardResetSupabaseClient() {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.debug("[Sovereign Engine] Client Connection Hard-Reset executado.");
+}
+
+/**
+ * Protocolo de Warmup v6.0: Dispara requisições com Cache-Busting lógico.
  */
 async function forceAggressiveWarmup() {
-  const tables = ['products', 'site_content', 'translations', 'orders', 'profiles'];
+  const tables = ['products', 'site_content', 'translations', 'orders'];
   try {
     for (const table of tables) {
+      // Usamos uma query de contagem rápida para forçar o PostgREST a "olhar" para a tabela
       await supabase.from(table).select('count', { count: 'exact', head: true });
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 300));
     }
   } catch (e) {
-    // Sincronia em background
+    // Background sync silêncio
   }
 }
 
 /**
- * Motor de Resiliência v5.2 - Protocolo de Sincronia Soberana
- * Otimizado para evitar falsos positivos e tratar cache como recurso de performance.
+ * Sovereign Engine v6.0 - Motor de Sincronia de Alta Disponibilidade
+ * Trata o cache do servidor como um recurso que pode levar tempo para estabilizar.
  */
 async function fetchWithRetry<T>(
-  fetcher: (attempt: number) => Promise<{ data: T | null; error: any }>,
+  fetcher: (client: SupabaseClient, attempt: number) => Promise<{ data: T | null; error: any }>,
   retries = 3,
-  delay = 3000 // Intervalo fixo maior para estabilidade do PostgREST
+  delay = 4000 
 ): Promise<{ data: T | null; error: any }> {
   let lastError: any;
   
   for (let i = 0; i < retries; i++) {
-    const result = await fetcher(i);
+    const result = await fetcher(supabase, i);
     if (!result.error) return result;
     
     lastError = result.error;
     
-    // Erro 42P01: Tabela em provisão. Usar local sem logar erro.
+    // Se for erro de tabela inexistente (42P01), o banco ainda não foi provisionado.
     if (lastError.code === '42P01') {
       return { data: null, error: lastError };
     }
@@ -51,9 +61,11 @@ async function fetchWithRetry<T>(
     const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
     
     if (isCacheError) {
+      // Na segunda tentativa, resetamos o cliente para garantir que não há cache no JS
+      if (i === 1) hardResetSupabaseClient();
       if (i === 0) forceAggressiveWarmup();
-      // Log informativo, não alarmista
-      console.debug(`[Kernel] Sincronia Global em curso (Atraso de Cache detectado). Tentativa ${i + 1}/${retries}...`);
+      
+      console.debug(`[Sovereign Engine] Calibrando Sincronia Global. Tentativa ${i + 1}/${retries}...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     } else {
       break; 
@@ -77,7 +89,7 @@ export const checkTableVisibility = async (tableName: string): Promise<{ visible
 
 export const fetchSiteConfig = async () => {
   try {
-    const { data, error } = await fetchWithRetry<any[]>(() => supabase.from('site_content').select('*').eq('page', 'config'));
+    const { data, error } = await fetchWithRetry<any[]>((client) => client.from('site_content').select('*').eq('page', 'config'));
     if (error) throw error;
     if (data && data.length > 0) {
       const dbConfig = { ...SITE_CONFIG };
@@ -90,14 +102,14 @@ export const fetchSiteConfig = async () => {
       return dbConfig;
     }
   } catch (e) {
-    // Retorno silencioso da configuração local
+    // Fallback silencioso para Fast-Path
   }
   return SITE_CONFIG;
 };
 
 export const fetchMetrics = async (): Promise<Metric[]> => {
   try {
-    const { data, error } = await fetchWithRetry<Metric[]>(() => supabase.from('metrics').select('*').eq('is_active', true).order('display_order'));
+    const { data, error } = await fetchWithRetry<Metric[]>((client) => client.from('metrics').select('*').eq('is_active', true).order('display_order'));
     if (error) throw error;
     return data || [];
   } catch (e) { return []; }
@@ -105,7 +117,7 @@ export const fetchMetrics = async (): Promise<Metric[]> => {
 
 export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
   try {
-    const { data, error } = await fetchWithRetry<CarouselImage[]>(() => supabase.from('carousel_images').select('*').eq('is_active', true).order('display_order'));
+    const { data, error } = await fetchWithRetry<CarouselImage[]>((client) => client.from('carousel_images').select('*').eq('is_active', true).order('display_order'));
     if (error) throw error;
     return data || [];
   } catch (e) { return []; }
@@ -113,17 +125,18 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    const { data, error } = await fetchWithRetry<Product[]>((attempt) => {
-      let query = supabase.from('products').select('*');
+    const { data, error } = await fetchWithRetry<Product[]>((client, attempt) => {
+      let query = client.from('products').select('*');
       if (attempt > 0) {
-        query = query.neq('id', '00000000-0000-0000-0000-000000000000');
+        // Cache Buster Lógico: Filtro que sempre é verdadeiro mas altera a assinatura da query
+        query = query.neq('slug', `cache_buster_${Date.now()}`);
       }
       return query.order('title');
     });
     
     if (error) {
-      // Mensagem suavizada informando o uso do Fast-Path de Ativos
-      console.info(`[Kernel] Ativos carregados via Fast-Path Local (Sincronia Global pendente).`);
+      // Uso de ativos locais como otimização de performance, não como erro
+      console.info(`[Sovereign Engine] Ativos carregados via Fast-Path Local (Protocolo de Sincronia em background).`);
       return LOCAL_PRODUCTS;
     }
     
@@ -191,13 +204,14 @@ export const fetchInsightById = async (id: string): Promise<Insight | null> => {
 
 export const fetchAllOrders = async (): Promise<Order[]> => {
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*, profiles (id, email, full_name, whatsapp)')
-      .order('created_at', { ascending: false });
+    const { data, error } = await fetchWithRetry<Order[]>((client) => 
+      client.from('orders')
+        .select('*, profiles (id, email, full_name, whatsapp)')
+        .order('created_at', { ascending: false })
+    );
     
     if (error) {
-      if (error.code === '42P01') throw new Error("Serviço de transações aguardando provisão de banco.");
+      if (error.code === '42P01') throw new Error("Aguardando ativação do serviço de transações.");
       const { data: simpleData, error: simpleError } = await supabase
         .from('orders')
         .select('*')

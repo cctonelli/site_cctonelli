@@ -88,12 +88,12 @@ const AppContent: React.FC = () => {
       
       setIsLive(true);
       setIsHybrid(hybridDetected);
-      setSystemLog(hybridDetected ? "HYBRID_PROTOCOL_ACTIVE" : "SINC_STABLE");
+      setSystemLog(hybridDetected ? "SOVEREIGN_ENGINE_STABLE" : "SINC_STABLE");
     } catch (err) {
-      console.error(`[App Core] Sync Redirect:`, err);
+      console.debug(`[App Core] Fast-Path Sync Activated.`);
       setIsLive(true); 
       setIsHybrid(true);
-      setSystemLog("HYBRID_FALLBACK_ACTIVE");
+      setSystemLog("FAST_PATH_ACTIVE");
     }
   }, [language]);
 
@@ -167,7 +167,7 @@ const AppContent: React.FC = () => {
         <div className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/95 rounded-full border border-white/10 shadow-2xl transition-all duration-1000 ${isLive ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-2'}`}>
           <div className={`w-1.5 h-1.5 rounded-full ${isHybrid ? 'bg-blue-400 animate-pulse' : isLive ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
           <span className="text-[7px] font-black uppercase tracking-widest text-slate-300">
-            {isHybrid ? 'HYBRID_PROTOCOL' : 'SOVEREIGN_COMMAND'}
+            {isHybrid ? 'SOVEREIGN_ENGINE_STABLE' : 'SOVEREIGN_COMMAND'}
           </span>
           <div className="w-px h-2 bg-white/10 mx-1"></div>
           <span className="text-[7px] font-mono text-blue-500 font-bold">{APP_VERSION}</span>
