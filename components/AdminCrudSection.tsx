@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '../services/supabaseService';
+import { supabase, mutateWithRetry, masterHandshakeReset } from '../services/supabaseService';
 import RichTextEditor from './RichTextEditor';
 
 interface Field {
@@ -25,7 +25,6 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   displayColumns = [],
   idColumn = 'id' 
 }) => {
-  // Ensure the table name is sanitized for PostgREST
   const tableName = useMemo(() => (rawTableName || '').replace('public.', '').trim(), [rawTableName]);
 
   const [items, setItems] = useState<any[]>([]); 
@@ -37,7 +36,6 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
   const loadData = useCallback(async () => {
     if (!tableName) return;
     setLoading(true);
-    setStatus(null);
     try {
       const { data, error } = await supabase
         .from(tableName)
@@ -47,12 +45,7 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
       if (error) throw error;
       setItems(Array.isArray(data) ? data : []);
     } catch (e: any) {
-      const errorMsg = e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
-      console.error(`[Admin Crud] Load fail for ${tableName}:`, errorMsg);
-      setStatus({ 
-        text: `Erro ao carregar ${tableName}: ${errorMsg}`, 
-        type: 'error' 
-      });
+      setStatus({ text: `Erro de Sincronia: ${e.message}`, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -68,52 +61,77 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const forceReset = () => {
+    masterHandshakeReset();
+    setStatus({ text: 'Handshake resetado. Tente salvar novamente.', type: 'warning' });
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setStatus(null);
     try {
+      const payload = { ...formData };
+      if (!editingId && tableName === 'insights') {
+        payload.published_at = new Date().toISOString();
+      }
+
+      // Usando o motor de mutação resiliente
       const { error } = editingId
-        ? await supabase.from(tableName).update(formData).eq(idColumn, editingId)
-        : await supabase.from(tableName).insert([formData]);
+        ? await mutateWithRetry((client) => client.from(tableName).update(payload).eq(idColumn, editingId))
+        : await mutateWithRetry((client) => client.from(tableName).insert([payload]));
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('column')) {
+          setStatus({ text: 'Sincronia de Esquema Pendente: A API ainda não reconhece as colunas. Aguarde 1 min ou resete o handshake.', type: 'warning' });
+          return;
+        }
+        throw error;
+      }
 
-      setStatus({ text: 'Registro sincronizado com o Kernel!', type: 'success' });
+      setStatus({ text: 'Protocolo de Dados Persistido com Sucesso!', type: 'success' });
       setFormData({});
       setEditingId(null);
       await loadData();
     } catch (e: any) {
-      const errorMsg = e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
-      setStatus({ text: `Erro ao salvar: ${errorMsg}`, type: 'error' });
+      setStatus({ text: `Falha na Persistência: ${e.message}`, type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: any) => {
-    if (!confirm('Deseja excluir este item permanentemente do banco de dados?')) return;
+    if (!confirm('Deseja deletar este registro permanentemente do Kernel?')) return;
     try {
-      const { error } = await supabase.from(tableName).delete().eq(idColumn, id);
+      const { error } = await mutateWithRetry((client) => client.from(tableName).delete().eq(idColumn, id));
       if (error) throw error;
       await loadData();
     } catch (e: any) {
-      const errorMsg = e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e));
-      alert(`Erro ao excluir: ${errorMsg}`);
+      alert(`Erro: ${e.message}`);
     }
   };
 
   return (
     <div className="space-y-12">
-      <div className="bg-slate-900/60 p-10 lg:p-14 rounded-[4rem] border border-white/5 space-y-10 shadow-3xl backdrop-blur-3xl">
-        <h3 className="text-3xl font-serif italic text-white flex items-center gap-5">
-          <span className="w-1.5 h-12 bg-blue-600 rounded-full"></span>
-          {editingId ? 'Refinar' : 'Forjar'} {title}
-        </h3>
+      <div className="bg-slate-900/40 p-12 lg:p-16 rounded-[4rem] border border-white/5 space-y-12 shadow-3xl backdrop-blur-3xl">
+        <header className="flex justify-between items-center">
+           <h3 className="text-3xl font-serif italic text-white flex items-center gap-6">
+             <div className="w-1.5 h-10 bg-blue-600 rounded-full"></div>
+             {editingId ? 'Refinar' : 'Forjar'} {title}
+           </h3>
+           <div className="flex gap-4">
+             {status?.type === 'warning' && (
+               <button onClick={forceReset} className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-white border border-blue-500/20 px-4 py-2 rounded-xl">Forçar Handshake</button>
+             )}
+             {editingId && (
+                <button onClick={() => { setEditingId(null); setFormData({}); }} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white">Cancelar Edição</button>
+             )}
+           </div>
+        </header>
 
         <div className="grid md:grid-cols-2 gap-10">
           {(fields || []).map(f => (
             <div key={f.key} className={f.type === 'textarea' || f.type === 'rich-text' || f.type === 'json' ? 'md:col-span-2' : ''}>
-              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-4">{f.label}</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-5">{f.label}</label>
               
               {f.type === 'rich-text' ? (
                 <RichTextEditor 
@@ -122,29 +140,22 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
                 />
               ) : f.type === 'textarea' ? (
                 <textarea 
-                  placeholder={f.placeholder || "Descreva os detalhes aqui..."}
-                  className="w-full bg-black border border-white/5 rounded-[2rem] p-8 text-sm text-slate-300 h-48 focus:border-blue-600 outline-none transition-all placeholder:opacity-30"
+                  placeholder={f.placeholder}
+                  className="w-full bg-black border border-white/5 rounded-[2.5rem] p-10 text-sm text-slate-300 h-64 focus:border-blue-600 outline-none transition-all placeholder:text-slate-700"
                   value={formData[f.key] || ''} 
                   onChange={e => setFormData({...formData, [f.key]: e.target.value})}
-                />
-              ) : f.type === 'number' ? (
-                <input 
-                  type="number"
-                  className="w-full bg-black border border-white/5 rounded-2xl p-6 text-sm text-white focus:border-blue-600 outline-none"
-                  value={formData[f.key] || ''} 
-                  onChange={e => setFormData({...formData, [f.key]: parseFloat(e.target.value)})}
                 />
               ) : f.type === 'toggle' ? (
                 <button 
                   onClick={() => setFormData({...formData, [f.key]: !formData[f.key]})}
-                  className={`px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData[f.key] ? 'bg-blue-600 text-white' : 'bg-black text-slate-600 border border-white/5'}`}
+                  className={`px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${formData[f.key] ? 'bg-blue-600 text-white' : 'bg-black text-slate-600 border border-white/5'}`}
                 >
-                  {formData[f.key] ? 'ATIVO' : 'DESATIVADO'}
+                  {formData[f.key] ? 'STATUS_ACTIVE' : 'STATUS_OFFLINE'}
                 </button>
               ) : (
                 <input 
-                  placeholder={f.placeholder || "Insira o valor..."}
-                  className="w-full bg-black border border-white/5 rounded-2xl p-6 text-sm text-white focus:border-blue-600 outline-none transition-all placeholder:opacity-30"
+                  placeholder={f.placeholder}
+                  className="w-full bg-black border border-white/5 rounded-2xl p-6 text-sm text-white focus:border-blue-600 outline-none transition-all placeholder:text-slate-700"
                   value={formData[f.key] || ''} 
                   onChange={e => setFormData({...formData, [f.key]: e.target.value})}
                 />
@@ -153,41 +164,31 @@ const AdminCrudSection: React.FC<AdminCrudSectionProps> = ({
           ))}
         </div>
         
-        <div className="flex gap-6">
-          <button 
-            disabled={loading}
-            onClick={handleSave} 
-            className="flex-1 bg-blue-600 text-white py-6 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl shadow-blue-600/20 disabled:opacity-50 hover:bg-blue-500 transition-all active:scale-95"
-          >
-            {editingId ? 'SINCRONIZAR ATUALIZAÇÃO' : 'PUBLICAR NO KERNEL'}
-          </button>
-          {editingId && (
-            <button onClick={() => { setEditingId(null); setFormData({}); }} className="px-12 bg-white/5 text-slate-500 py-6 rounded-2xl font-black uppercase text-[11px] hover:text-white transition-colors">DESCARTAR</button>
-          )}
-        </div>
+        <button 
+          disabled={loading}
+          onClick={handleSave} 
+          className="w-full py-8 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-[0.5em] text-[11px] shadow-2xl shadow-blue-600/20 disabled:opacity-50 hover:bg-blue-500 transition-all active:scale-95"
+        >
+          {loading ? 'Sincronizando...' : (editingId ? 'SALVAR NO SUPABASE' : 'PUBLICAR REGISTRO')}
+        </button>
+
         {status && (
-          <div className={`p-6 rounded-2xl text-[10px] font-black uppercase text-center transition-all ${status.type === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 animate-pulse border border-red-500/20'}`}>
+          <div className={`p-6 rounded-2xl text-[10px] font-black uppercase text-center transition-all ${status.type === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : status.type === 'warning' ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
             {status.text}
           </div>
         )}
       </div>
 
-      {/* Grid de Registros */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {items.length === 0 && !loading && !status && (
-          <div className="col-span-full text-center py-20 text-slate-700 uppercase tracking-widest text-[10px] border border-dashed border-white/10 rounded-[3rem] italic">
-            Ledger Vazio. Nenhum registro detectado.
-          </div>
-        )}
         {items.map(item => (
-          <div key={item[idColumn]} className="bg-slate-900/40 p-10 rounded-[3rem] border border-white/5 flex flex-col justify-between gap-8 group hover:border-blue-600/30 transition-all backdrop-blur-3xl shadow-xl">
-            <div className="space-y-3">
-               <div className="text-white font-serif italic text-2xl group-hover:text-blue-500 transition-colors">{item.title || item.name || item.label || 'Sem Identificação'}</div>
+          <div key={item[idColumn]} className="bg-slate-900/40 p-10 rounded-[3rem] border border-white/5 flex flex-col justify-between gap-10 group hover:border-blue-600/40 transition-all backdrop-blur-3xl shadow-xl">
+            <div className="space-y-4">
+               <div className="text-white font-serif italic text-2xl group-hover:text-blue-500 transition-colors">{item.title || item.name || item.label || 'Sem Identificador'}</div>
                <div className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-600 truncate">{item.slug || item.id}</div>
             </div>
-            <div className="flex gap-4 border-t border-white/5 pt-6">
-              <button onClick={() => handleEdit(item)} className="flex-1 py-3 text-slate-500 hover:text-white bg-white/5 rounded-xl transition-all text-[10px] font-black tracking-widest uppercase">EDITAR</button>
-              <button onClick={() => handleDelete(item[idColumn])} className="px-6 py-3 text-slate-800 hover:text-red-500 bg-black/50 rounded-xl transition-all text-[10px] font-black tracking-widest uppercase">DEL</button>
+            <div className="flex gap-4 border-t border-white/5 pt-8">
+              <button onClick={() => handleEdit(item)} className="flex-1 py-4 text-slate-500 hover:text-white bg-white/5 rounded-2xl transition-all text-[10px] font-black tracking-widest uppercase">EDIT</button>
+              <button onClick={() => handleDelete(item[idColumn])} className="px-8 py-4 text-slate-800 hover:text-red-500 bg-black/50 rounded-2xl transition-all text-[10px] font-black tracking-widest uppercase">DEL</button>
             </div>
           </div>
         ))}

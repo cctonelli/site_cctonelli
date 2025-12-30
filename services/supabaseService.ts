@@ -15,13 +15,13 @@ export let supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /**
  * Protocolo de Hard Reset Master: Força a invalidação de qualquer cache de conexão local.
  */
-function masterHandshakeReset() {
+export function masterHandshakeReset() {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.debug("[Sovereign Engine v6.2] Master Handshake executado: Conexão reiniciada.");
+  console.debug("[Sovereign Engine] Master Handshake executado: Conexão reiniciada.");
 }
 
 /**
- * Motor de Resiliência v6.2 - Camada de Sincronia Master
+ * Motor de Resiliência v6.2 - Camada de Sincronia Master (Fetches)
  */
 async function fetchWithRetry<T>(
   fetcher: (client: SupabaseClient, attempt: number) => Promise<{ data: T | null; error: any }>,
@@ -36,10 +36,7 @@ async function fetchWithRetry<T>(
     
     lastError = result.error;
     
-    // Erro 42P01: Tabela inexistente. Silenciar e usar local.
-    if (lastError.code === '42P01') {
-      return { data: null, error: lastError };
-    }
+    if (lastError.code === '42P01') return { data: null, error: lastError };
 
     const isCacheError = lastError.code === 'PGRST205' || lastError.status === 404;
     
@@ -50,6 +47,34 @@ async function fetchWithRetry<T>(
     } else {
       break; 
     }
+  }
+  
+  return { data: null, error: lastError };
+}
+
+/**
+ * Motor de Mutação v2.0 - Garante que updates/inserts lidem com cache teimoso
+ */
+export async function mutateWithRetry(
+  operation: (client: SupabaseClient) => Promise<{ data: any; error: any }>,
+  retries = 2
+): Promise<{ data: any; error: any }> {
+  let lastError: any;
+  
+  for (let i = 0; i < retries; i++) {
+    const result = await operation(supabase);
+    if (!result.error) return result;
+    
+    lastError = result.error;
+    
+    // Erro de Cache (PGRST205): Coluna não encontrada mas sabemos que existe
+    if (lastError.code === 'PGRST205' || lastError.message?.includes('column')) {
+      masterHandshakeReset();
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      continue;
+    }
+    
+    break;
   }
   
   return { data: null, error: lastError };
@@ -103,32 +128,16 @@ export const fetchCarouselImages = async (): Promise<CarouselImage[]> => {
 
 export const fetchProducts = async (): Promise<Product[]> => {
   try {
-    const { data, error } = await fetchWithRetry<Product[]>((client, attempt) => {
-      let query = client.from('products').select('*');
-      if (attempt > 0) {
-        query = query.neq('slug', `mb_${Date.now()}`); // Master Cache Buster
-      }
-      return query.order('title');
-    });
-    
-    if (error) {
-      console.info(`[Kernel] Ativos carregados via Soberania Local.`);
-      return LOCAL_PRODUCTS;
-    }
+    const { data, error } = await fetchWithRetry<Product[]>((client) => client.from('products').select('*').order('title'));
+    if (error) return LOCAL_PRODUCTS;
     
     const dbProducts = data || [];
     const merged = [...(dbProducts as Product[])];
-    
     LOCAL_PRODUCTS.forEach(lp => {
-      if (!merged.find(p => (p as any).id === lp.id || p.slug === lp.slug)) {
-        merged.push(lp);
-      }
+      if (!merged.find(p => (p as any).id === lp.id || p.slug === lp.slug)) merged.push(lp);
     });
-    
     return merged.sort((a, b) => (a.featured === b.featured) ? 0 : a.featured ? -1 : 1);
-  } catch (e) {
-    return LOCAL_PRODUCTS;
-  }
+  } catch (e) { return LOCAL_PRODUCTS; }
 };
 
 export const fetchProductBySlug = async (slug: string): Promise<Product | null> => {
@@ -145,9 +154,7 @@ export const fetchProductVariants = async (productId: string): Promise<ProductVa
     const { data, error } = await supabase.from('product_variants').select('*').eq('product_id', productId).order('order_index');
     if (error) throw error;
     return (data && data.length > 0) ? data : (LOCAL_VARIANTS[productId] || []);
-  } catch (e) {
-    return LOCAL_VARIANTS[productId] || [];
-  }
+  } catch (e) { return LOCAL_VARIANTS[productId] || []; }
 };
 
 export const fetchProductContentBlocks = async (productId: string): Promise<ProductContentBlock[]> => {
@@ -155,9 +162,7 @@ export const fetchProductContentBlocks = async (productId: string): Promise<Prod
     const { data, error } = await supabase.from('product_content_blocks').select('*').eq('product_id', productId).order('order');
     if (error) throw error;
     return (data && data.length > 0) ? data : (LOCAL_BLOCKS[productId] || []);
-  } catch (e) {
-    return LOCAL_BLOCKS[productId] || [];
-  }
+  } catch (e) { return LOCAL_BLOCKS[productId] || []; }
 };
 
 export const fetchInsights = async (): Promise<Insight[]> => {
@@ -165,9 +170,7 @@ export const fetchInsights = async (): Promise<Insight[]> => {
     const { data, error } = await supabase.from('insights').select('*').eq('is_active', true).order('display_order');
     if (error) throw error;
     return (data && data.length > 0) ? data : LOCAL_INSIGHTS;
-  } catch (e) {
-    return LOCAL_INSIGHTS;
-  }
+  } catch (e) { return LOCAL_INSIGHTS; }
 };
 
 export const fetchInsightById = async (id: string): Promise<Insight | null> => {
@@ -181,21 +184,11 @@ export const fetchInsightById = async (id: string): Promise<Insight | null> => {
 export const fetchAllOrders = async (): Promise<Order[]> => {
   try {
     const { data, error } = await fetchWithRetry<Order[]>((client) => 
-      client.from('orders')
-        .select('*, profiles (id, email, full_name, whatsapp)')
-        .order('created_at', { ascending: false })
+      client.from('orders').select('*, profiles (id, email, full_name, whatsapp)').order('created_at', { ascending: false })
     );
-    
-    if (error) {
-      if (error.code === '42P01') throw new Error("Aguardando ativação do Ledger de Vendas.");
-      const { data: simpleData, error: simpleError } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-      if (simpleError) throw simpleError;
-      return simpleData || [];
-    }
+    if (error) return [];
     return data || [];
-  } catch (e: any) {
-    throw e;
-  }
+  } catch (e) { return []; }
 };
 
 export const getProfile = async (id: string): Promise<Profile | null> => {
@@ -203,9 +196,7 @@ export const getProfile = async (id: string): Promise<Profile | null> => {
   return data;
 };
 
-export const signOut = async () => {
-  await supabase.auth.signOut();
-};
+export const signOut = async () => { await supabase.auth.signOut(); };
 
 export const fetchTestimonials = async (): Promise<Testimonial[]> => {
   try {
@@ -232,9 +223,7 @@ export const fetchGlobalTranslations = async (lang: string): Promise<Record<stri
     const transMap: Record<string, string> = {};
     data?.forEach(item => { transMap[item.key] = item.value; });
     return transMap;
-  } catch (e) {
-    return {};
-  }
+  } catch (e) { return {}; }
 };
 
 export const signIn = async (email: string, password: string) => {
@@ -242,31 +231,27 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const signUp = async (email: string, password: string, metadata: any) => {
-  return await supabase.auth.signUp({ 
-    email, 
-    password, 
-    options: { data: metadata } 
-  });
+  return await supabase.auth.signUp({ email, password, options: { data: metadata } });
 };
 
 export const createProfile = async (profile: Profile) => {
-  return await supabase.from('profiles').upsert(profile);
+  return await mutateWithRetry((client) => client.from('profiles').upsert(profile));
 };
 
 export const createOrder = async (order: Partial<Order>): Promise<Order | null> => {
-  const { data, error } = await supabase.from('orders').insert([order]).select().single();
+  const { data, error } = await mutateWithRetry((client) => client.from('orders').insert([order]).select().single());
   if (error) throw error;
   return data;
 };
 
 export const upsertItem = async (table: string, payload: any) => {
-  const { data, error } = await supabase.from(table).upsert(payload).select();
+  const { data, error } = await mutateWithRetry((client) => client.from(table).upsert(payload).select());
   if (error) throw error;
   return data;
 };
 
 export const deleteItem = async (table: string, id: string | number) => {
-  const { error } = await supabase.from(table).delete().eq('id', id);
+  const { error } = await mutateWithRetry((client) => client.from(table).delete().eq('id', id));
   if (error) throw error;
 };
 
@@ -285,12 +270,10 @@ export const fetchTools = async (): Promise<Tool[]> => {
     const { data, error } = await supabase.from('tools').select('*').eq('is_active', true).order('name');
     if (error) return [];
     return data || [];
-  } catch (e) {
-    return [];
-  }
+  } catch (e) { return []; }
 };
 
 export const submitContact = async (contact: Contact): Promise<boolean> => {
-  const { error } = await supabase.from('contacts').insert([contact]);
+  const { error } = await mutateWithRetry((client) => client.from('contacts').insert([contact]));
   return !error;
 };
