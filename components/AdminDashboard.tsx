@@ -131,7 +131,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
       setProducts(prod || []);
       setSiteConfig(config);
       
-      const tables = ['orders', 'profiles', 'products', 'site_content', 'translations', 'user_products', 'insights', 'metrics'];
+      const tables = ['orders', 'profiles', 'products', 'site_content', 'product_variants', 'product_content_blocks', 'insights', 'metrics'];
       const statusResults: Record<string, any> = {};
       for (const t of tables) {
         statusResults[t] = await checkTableVisibility(t);
@@ -163,7 +163,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
     try {
       const settings = [
         { page: 'config', key: 'setting_theme_primary', value: siteConfig.theme.primary },
+        { page: 'config', key: 'setting_theme_secondary', value: siteConfig.theme.secondary },
         { page: 'config', key: 'setting_typography_h1_size', value: siteConfig.typography.h1_size },
+        { page: 'config', key: 'setting_ux_matrix_mode', value: siteConfig.ux.matrix_mode.toString() },
         { page: 'config', key: 'setting_ux_matrix_speed', value: siteConfig.ux.matrix_speed.toString() }
       ];
 
@@ -242,6 +244,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
           <NavItem tab="orders" label="Sales Vault" icon="💰" />
           <div className="h-px bg-white/5 my-2"></div>
           <NavItem tab="products" label="Produtos" icon="📦" />
+          <NavItem tab="variants" label="Planos & Preços" icon="🏷️" />
           <NavItem tab="canvas" label="Canvas Builder" icon="🎨" />
           <NavItem tab="insights" label="Editorial Journal" icon="✍️" />
           <div className="h-px bg-white/5 my-2"></div>
@@ -367,8 +370,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-6">Cor Primária (HEX)</label>
                                <div className="flex gap-4 items-center">
                                   <input type="color" value={siteConfig?.theme?.primary} onChange={(e) => setSiteConfig({...siteConfig, theme: {...siteConfig.theme, primary: e.target.value}})} className="w-16 h-16 bg-transparent border-none cursor-pointer rounded-xl overflow-hidden" />
-                                  <input type="text" value={siteConfig?.theme?.primary} onChange={(e) => setSiteConfig({...siteConfig, theme: {...siteConfig.theme, primary: e.target.value}})} className="bg-black border border-white/10 rounded-xl px-6 py-4 text-white font-mono text-sm uppercase" />
+                                  <input type="text" placeholder="ex: #00ff41" value={siteConfig?.theme?.primary} onChange={(e) => setSiteConfig({...siteConfig, theme: {...siteConfig.theme, primary: e.target.value}})} className="bg-black border border-white/10 rounded-xl px-6 py-4 text-white font-mono text-sm uppercase" />
                                </div>
+                            </div>
+                            <div>
+                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-6">Cor Secundária / Acento</label>
+                               <div className="flex gap-4 items-center">
+                                  <input type="color" value={siteConfig?.theme?.secondary} onChange={(e) => setSiteConfig({...siteConfig, theme: {...siteConfig.theme, secondary: e.target.value}})} className="w-16 h-16 bg-transparent border-none cursor-pointer rounded-xl overflow-hidden" />
+                                  <input type="text" placeholder="ex: #b4975a" value={siteConfig?.theme?.secondary} onChange={(e) => setSiteConfig({...siteConfig, theme: {...siteConfig.theme, secondary: e.target.value}})} className="bg-black border border-white/10 rounded-xl px-6 py-4 text-white font-mono text-sm uppercase" />
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="p-12 bg-slate-900/40 border border-white/5 rounded-[4rem] space-y-12">
+                         <h4 className="text-2xl font-serif italic text-white">Matrix & Typography</h4>
+                         <div className="space-y-10">
+                            <div>
+                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-6">Tamanho H1 Hero: {siteConfig?.typography?.h1_size}</label>
+                               <input type="range" className="w-full accent-blue-600" min="4" max="15" step="0.5" value={parseFloat(siteConfig?.typography?.h1_size)} onChange={(e) => setSiteConfig({...siteConfig, typography: {...siteConfig.typography, h1_size: `${e.target.value}rem` }})} />
+                            </div>
+                            <div className="flex justify-between items-center">
+                               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-300">Matrix Rain Mode</span>
+                               <button onClick={() => setSiteConfig({...siteConfig, ux: {...siteConfig.ux, matrix_mode: !siteConfig.ux.matrix_mode}})} className={`w-16 h-8 rounded-full transition-all relative px-1 flex items-center ${siteConfig?.ux?.matrix_mode ? 'bg-blue-600 justify-end' : 'bg-slate-800 justify-start'}`}><div className="w-6 h-6 bg-white rounded-full shadow-lg"></div></button>
+                            </div>
+                            <div>
+                               <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 block mb-6">Velocidade Matrix: {siteConfig?.ux?.matrix_speed}</label>
+                               <input type="range" className="w-full accent-green-600" min="0.1" max="5" step="0.1" value={siteConfig?.ux?.matrix_speed} onChange={(e) => setSiteConfig({...siteConfig, ux: {...siteConfig.ux, matrix_speed: parseFloat(e.target.value)}})} />
                             </div>
                          </div>
                       </div>
@@ -387,9 +415,75 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onClose, profile }) => 
                 </motion.div>
               )}
 
+              {activeTab === 'products' && (
+                <motion.div key="products" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                   <AdminCrudSection 
+                      tableName="products" 
+                      title="Marketplace Forge" 
+                      fields={[
+                        { key: 'title', label: 'Título do Produto', placeholder: 'ex: V8 MATRIX EDITION v6.0' }, 
+                        { key: 'slug', label: 'Slug / URL Amigável', placeholder: 'ex: v8-matrix-edition' }, 
+                        { key: 'subtitle', label: 'Resumo Curto', type: 'textarea', placeholder: 'ex: A ferramenta mais poderosa e indetectável do Brasil.' }, 
+                        { key: 'description', label: 'Descrição Completa', type: 'textarea', placeholder: 'ex: Detalhes técnicos, benefícios e ROI esperado.' },
+                        { key: 'image_url', label: 'URL da Imagem Capa', placeholder: 'ex: https://images.unsplash.com/photo-...' }, 
+                        { key: 'featured', label: 'Ativo em Destaque', type: 'toggle' }, 
+                        { key: 'pricing_type', label: 'Tipo de Cobrança', placeholder: 'subscription, one_time, free' }
+                      ]} 
+                      displayColumns={['title', 'slug']} 
+                   />
+                </motion.div>
+              )}
+
+              {activeTab === 'variants' && (
+                <motion.div key="variants" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                   <AdminCrudSection 
+                      tableName="product_variants" 
+                      title="Planos & Preços" 
+                      fields={[
+                        { key: 'product_id', label: 'ID do Produto (UUID)', placeholder: 'Cole o ID do produto aqui' },
+                        { key: 'name', label: 'Nome do Plano', placeholder: 'ex: Plano Mensal, Elite Anual' },
+                        { key: 'price', label: 'Preço (R$)', type: 'number', placeholder: 'ex: 299.00' },
+                        { key: 'interval', label: 'Intervalo', placeholder: 'month, semester, year ou vazio' },
+                        { key: 'quantity_limit', label: 'Limite de Unidades/Disparos', type: 'number', placeholder: 'ex: 2400' },
+                        { key: 'is_most_popular', label: 'Destaque (Popular)', type: 'toggle' },
+                        { key: 'order_index', label: 'Ordem de Exibição', type: 'number', placeholder: '0, 1, 2...' }
+                      ]} 
+                      displayColumns={['name', 'price']} 
+                   />
+                </motion.div>
+              )}
+
+              {activeTab === 'canvas' && (
+                <motion.div key="canvas" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                   <AdminCrudSection 
+                      tableName="product_content_blocks" 
+                      title="Canvas Builder (Landing Page Blocks)" 
+                      fields={[
+                        { key: 'product_id', label: 'ID do Produto', placeholder: 'Vincule ao produto principal' },
+                        { key: 'block_type', label: 'Tipo de Bloco', placeholder: 'hero, features, video, comparison, etc.' },
+                        { key: 'order', label: 'Sequência', type: 'number', placeholder: '1, 2, 3...' },
+                        { key: 'content', label: 'Configurações do Bloco (JSON)', type: 'textarea', placeholder: '{"title": "Texto", "style": "matrix", ...}' }
+                      ]} 
+                      displayColumns={['block_type', 'order']} 
+                   />
+                </motion.div>
+              )}
+
               {activeTab === 'insights' && (
                 <motion.div key="insights" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                   <AdminCrudSection tableName="insights" title="Editorial Master" fields={[{ key: 'title', label: 'Título' }, { key: 'category', label: 'Categoria' }, { key: 'excerpt', label: 'Resumo', type: 'textarea' }, { key: 'content', label: 'Conteúdo Rich Text (Tiptap)', type: 'rich-text' }, { key: 'image_url', label: 'URL Capa' }, { key: 'is_active', label: 'Publicado', type: 'toggle' }]} displayColumns={['title', 'category']} />
+                   <AdminCrudSection 
+                      tableName="insights" 
+                      title="Editorial Journal" 
+                      fields={[
+                        { key: 'title', label: 'Título do Artigo', placeholder: 'ex: A Revolução do WhatsApp Marketing' }, 
+                        { key: 'category', label: 'Categoria', placeholder: 'ex: ESTRATÉGIA, TECNOLOGIA' }, 
+                        { key: 'excerpt', label: 'Resumo / Olho', type: 'textarea', placeholder: 'ex: Uma breve introdução impactante.' }, 
+                        { key: 'content', label: 'Conteúdo Master (Rich Text)', type: 'rich-text', placeholder: 'Escreva aqui o artigo completo...' }, 
+                        { key: 'image_url', label: 'URL da Imagem Capa', placeholder: 'ex: https://...' }, 
+                        { key: 'is_active', label: 'Status: Publicado', type: 'toggle' }
+                      ]} 
+                      displayColumns={['title', 'category']} 
+                   />
                 </motion.div>
               )}
 

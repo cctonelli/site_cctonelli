@@ -8,16 +8,17 @@ import Link from '@tiptap/extension-link';
 interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
+  placeholder?: string;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ content, onChange }) => {
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ content, onChange, placeholder = "Digite o conteúdo completo aqui..." }) => {
   const editor = useEditor({
     extensions: [
       StarterKit,
       Underline,
       Link.configure({ openOnClick: false }),
     ],
-    content: content,
+    content: content || `<p style="color: #64748b; font-style: italic;">${placeholder}</p>`,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
